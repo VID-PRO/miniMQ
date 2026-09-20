@@ -38,6 +38,8 @@ src/main.cpp
     - ArtPoll/ArtPollReply responder -> MagicQ auto-discovers all 4 universes
       (note: MagicQ declares a short ArtDmx length but always sends 512 slots;
       the node uses the real datagram size, so all channels pass through)
+    - ArtAddress (0x6000) responder -> MagicQ can remap net/subnet/universe and
+      switch a port's direction over Art-Net; confirmed with a fresh unicast ArtPollReply
     - DMX input ports publish received frames as ArtDmx broadcasts
     - Config web page at http://10.0.0.10/ (WebServer; per-port direction + net/subnet/universe)
 ```
@@ -220,6 +222,32 @@ MagicQ mapping with the defaults: MagicQ Uni 1 -> address 0/0/0 -> DMX GPIO2,
 Uni 2 -> 0/0/1 -> GPIO3, Uni 3 -> 0/0/2 -> GPIO4, Uni 4 -> 0/0/3 -> GPIO5. The
 node advertises `SwOut = subnet<<4|universe` per port (exact for net 0, the
 typical setup).
+
+## Remote programming via ArtAddress
+
+Instead of the web page, a controller (MagicQ) can reprogram addressing and port
+direction over the network by sending an **ArtAddress** packet (OpCode `0x6000`)
+directly to the node's IP. The node parses it, applies the changes live, stores
+them in flash, and confirms by unicasting a **fresh ArtPollReply** that reflects
+the new state (so MagicQ picks up the new SwIn/SwOut mappings automatically).
+
+Supported ArtAddress fields:
+
+| Field | Byte | Effect |
+|-------|------|--------|
+| NetSwitch | 12 | New `net` (0–127), applied to all ports when the new-value flag (bit 7) is set; `0x7F` = no change |
+| ShortName | 14–31 | Node short name (ignored if the string is null) |
+| LongName | 32–95 | Node long name (ignored if the string is null) |
+| SwIn[4] | 96–99 | Universe (0–15) for **input** ports, applied when bit 7 is set |
+| SwOut[4] | 100–103 | Universe (0–15) for **output** ports, applied when bit 7 is set |
+| SubSwitch | 104 | New `subnet` (0–15) for all ports, applied when bit 7 is set |
+| Command | 106 | `0x20–0x23` = set port 0–3 to **output**, `0x30–0x33` = set port 0–3 to **input** |
+
+A port switched to **input** immediately stops streaming DMX and `DE` is held low
+so the receiver listens on the bus; its `DMX in -> ArtDmx` path starts publishing
+frames on the configured address. A port switched to **output** resumes streaming
+`ArtDmx -> DMX` (and RDM bridging). Both direction changes persist across power
+cycles.
 
 ## Notes & hardware verification
 
