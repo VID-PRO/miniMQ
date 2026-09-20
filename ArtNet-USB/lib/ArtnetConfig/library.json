@@ -1,0 +1,9 @@
+{
+    "name": "ArtnetConfig",
+    "version": "1.0.0",
+    "frameworks": "arduino",
+    "platforms": "raspberrypi",
+    "build": {
+        "srcDir": "src"
+    }
+}

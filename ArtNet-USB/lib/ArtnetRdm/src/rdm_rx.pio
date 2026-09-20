@@ -1,0 +1,45 @@
+// RDM/DMX UART receiver for the RP2040 PIO.
+//
+// Runs the state machine at 4 MHz; 250 kbaud => 16 PIO cycles per bit.
+//
+// Continuously samples the RX pin (RO of the RS485 receiver) as a classic
+// async UART (1 start + 8 data LSB-first + 2 stop). Every fully-received
+// byte is pushed to the RX FIFO, which the driver drains. The E1.20 framing
+// (BREAK / MAB / start code 0xCC / packet assembly / timing) is handled at
+// the protocol layer where it is easier to test and debug.
+
+.program rdm_rx
+
+.wrap_target
+start_bit_wait:
+    ; Wait for the line to be idle-high first. This makes the receiver
+    ; edge-triggered: a long BREAK (line held low) yields exactly one 0x00
+    ; byte, and after each byte we resynchronise on the next falling edge
+    ; instead of re-sampling while the line is still low.
+    wait 1 pin 0
+
+    ; wait for the start bit (falling edge / line goes low)
+    wait 0 pin 0
+
+    ; skip 8 cycles to land in the middle of the start bit
+    set x, 7
+rx_centering:
+    jmp x--, rx_centering
+
+    ; clear ISR so each byte starts fresh
+    mov isr, ::null
+
+    ; sample 8 data bits, LSB first
+    set y, 7
+rx_data_loop:
+    in pins, 1
+    set x, 13
+rx_bit_delay:
+    jmp x--, rx_bit_delay
+    jmp y--, rx_data_loop
+
+    ; push the byte; caller drains the FIFO
+    push block
+
+    ; loop back to wait for the next start bit
+    jmp start_bit_wait
