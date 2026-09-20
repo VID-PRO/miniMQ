@@ -12,6 +12,8 @@ individually configurable as an **output** (ArtDmx -> DMX out) or an **input**
   class via the Arduino-Pico core's `NCMEthernetlwIP` (TinyUSB + lwIP). Modern
   Windows 10/11, macOS and Linux mount an NCM network adapter with **no driver install**.
   The Pico has no Wi-Fi or wired Ethernet of its own — the USB link *is* the network.
+  See *macOS: the NCM interface* below for two firmware details that keep the link
+  reliable on Apple machines.
 - The device gets a **static IP 10.0.0.10** on the USB link by default, and can
   run a **DHCP server** that hands the host an automatic address in
   **10.0.0.1–10.0.0.9** — no manual IP configuration needed on the PC. IP,
@@ -30,6 +32,7 @@ platformio.ini      build config (RP2040, Arduino-Pico / earlephilhower core)
 lib/DmxOut/          custom DMX512 TX PIO (BREAK ~185 µs, MAB 16 µs) + DMA driver
 lib/ArtnetRdm/       RDM gateway: E1.20 protocol, per-port RDM RX (pio1), ArtRdm bridge
 lib/ArtnetConfig/    persisted per-port direction + Art-Net address map (EEPROM-backed)
+lib/lwIP_USB_NCM/    vendored NCMEthernetlwIP with the local fixes below
 src/main.cpp
     - DMX driver (DmxOut, PIO + DMA)
     - USB CDC-NCM Ethernet (NCMEthernetlwIP + lwIP, static IP 10.0.0.10)
@@ -249,6 +252,33 @@ frames on the configured address. A port switched to **output** resumes streamin
 `ArtDmx -> DMX` (and RDM bridging). Both direction changes persist across power
 cycles.
 
+## macOS: the NCM interface
+
+Two firmware details, both in the vendored `lib/lwIP_USB_NCM/` plus `src/main.cpp`,
+keep the Ethernet-over-USB link reliable on macOS (Apple's `com.apple.driver.usb.cdc.ncm`):
+
+1. **ncm_bmNetworkCapabilities = 0x01.** Without it macOS enumerates the NCM
+   interface but never brings the link up; advertising
+   `SetEthernetPacketFilter` in the NCM functional descriptor (`desc[45] = 0x01`
+   in `usbInterfaceCB`) works around Apple's bug (r.170072016). Windows/Linux are
+   unaffected but accept the field.
+
+2. **NCM registration must happen *after* the `USBClass` constructor.** The
+   RP2040 core's `src/main.cpp` runs all static constructors, then calls
+   `USB.begin()` which *resets* the interface/endpoint/string tables. If
+   `NCMEthernet` registers itself from its own constructor, that registration is
+   silently wiped before the device enumerates — with only CDC/Serial surviving.
+   Symptom: no NCM interface on the host, `enX` never appears. Fix: the ctor is
+   empty and `src/main.cpp` calls `eth.usbRegisterInterfaces()` from the
+   framework's `initVariant()` hook (runs after all static ctors, before
+   `USB.begin()`).
+
+A healthy macOS boot shows a CDC ACM interface (`Pico Serial`), a CDC data
+interface, an NCM control interface (`Pico NCM`, interface class 2 sub-class 13)
+and an NCM data interface; the host then creates an `enX` (e.g. `en7`) with an
+address from the Pico's DHCP pool (`10.0.0.1`). `ping 10.0.0.10` and the config
+page are the quick checks.
+
 ## Notes & hardware verification
 
 - **Serial logs**: with USB used for NCM networking, the standard `Serial` USB-CDC
@@ -259,7 +289,8 @@ cycles.
   (i.e. the host has mounted the USB NCM interface). The node only reports
   `READY` once that is true; if the host is slow to enumerate it keeps checking
   and recovers without a re-plug. If `ping 10.0.0.10` fails, first check that
-  the host has picked up the NCM adapter and is on the 10.0.0.x subnet.
+  the host has picked up the NCM adapter and is on the 10.0.0.x subnet (on
+  macOS, see *macOS: the NCM interface* above).
 - **Warm reboot / Save &amp; reboot**: a plain watchdog reset can leave the USB
   pull-up asserted, so the host never notices the disconnect and fails to
   re-enumerate the NCM interface (the page then only works after a cold boot).

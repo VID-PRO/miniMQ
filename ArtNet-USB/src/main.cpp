@@ -93,6 +93,11 @@ static const uint16_t ARTNET_PORT_STYLE_DMX = 0x88; // 0x80 DMX512 output + 0x08
 static const uint32_t ARTNET_OEM            = 0x1234;
 static const uint16_t ARTNET_ESTA           = 0x0000; // ESTA manufacturer code
 
+// Fixed node MAC for the NCM link. Must match ncm_default_mac in the vendored
+// NCMEthernet.cpp so the lwIP netif MAC matches the USB descriptor string that
+// from the very first enumeration (host interface MAC = NCM_MAC flipped).
+static const uint8_t NCM_MAC[6] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+
 static uint8_t our_mac[6] = {0};
 static uint32_t last_announce = 0;
 
@@ -728,15 +733,16 @@ static bool bringUpNetwork() {
   static bool eth_started = false;   // eth.begin() can only run once
   IPAddress node_ip = config.ipAddr();
 
-  // Let the host finish enumerating the CDC interface before eth.begin()
-  // re-enumerates the composite device for NCM.
-  delay(300);
-
   if (!eth_started) {
     bool ok = false;
     for (int attempt = 1; attempt <= 5 && !ok; attempt++) {
       eth.config(node_ip, node_ip, config.maskAddr());
-      ok = eth.begin();
+      // Pass a fixed MAC so the lwIP netif MAC matches the NCM descriptor
+      // registered at boot (see NCMEthernet.cpp). begin() no longer
+      // disconnects/re-enumerates USB; the CDC+NCM composite is present from
+      // the very first enumeration, which is what macOS needs to hand out an
+      // Ethernet interface.
+      ok = eth.begin(NCM_MAC);
       if (!ok) {
         Serial.printf("NCM Ethernet init attempt %d failed; retrying\n", attempt);
         delay(500);
@@ -790,6 +796,16 @@ static bool bringUpNetwork() {
 // ------------------------------------------------------------------
 // Arduino lifecycle
 // ------------------------------------------------------------------
+// The framework calls this between C++ global construction and USB.begin(),
+// after the USBClass USB global is fully constructed but before the USB
+// descriptor is built. The NCM interface must be registered here, NOT from a
+// global constructor: the "eth" global may be constructed before the "USB"
+// global (link order), and USB's constructor would then wipe the registered
+// interfaces/endpoints, leaving macOS with a CDC-only descriptor.
+void initVariant() {
+    eth.usbRegisterInterfaces();
+}
+
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
   digitalWrite(STATUS_LED, 0);
