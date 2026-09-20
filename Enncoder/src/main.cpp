@@ -79,7 +79,7 @@ void setMagicQMode(bool programming) {
   Keyboard.press(KEY_CAPS_LOCK);
   Keyboard.release(KEY_CAPS_LOCK);
   capsLockOn = programming;                // optimistisch; bestätigt der LED-Report
-  delay(25);                               // Host/MagicQ den Umschalt verarbeiten lassen
+  delay(10);                               // Host/MagicQ den Umschalt verarbeiten lassen
 }
 
 // Eine Taste im "Programming-Burst" senden (Caps an, Burst-Timer frisch).
@@ -101,11 +101,25 @@ void endEncoderBurst() {
 #endif
 }
 
-// Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose)
+// Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose).
+// Nicht-blockierend: setzt die LED an und lässt serviceLed() den Blink
+// zeitgesteuert abbauen, damit der Loop keine 8 ms stillsteht.
+const unsigned long LED_FLASH_MS = 8;
+unsigned long lastLedOnMs = 0;
+bool ledFlashPending = false;
+
 void ledFlash() {
   digitalWrite(ledPin, HIGH);
-  delay(8);
-  digitalWrite(ledPin, LOW);
+  lastLedOnMs = millis();
+  ledFlashPending = true;
+}
+
+// In loop() aufrufen: LED nach LED_FLASH_MS wieder abdunkeln.
+void serviceLed() {
+  if (ledFlashPending && (millis() - lastLedOnMs >= LED_FLASH_MS)) {
+    ledFlashPending = false;
+    digitalWrite(ledPin, LOW);
+  }
 }
 
 // Sendet eine Tastenkombination mit gedrückter Strg-Taste
@@ -369,6 +383,8 @@ void loop() {
   if (burstActive && (millis() - lastBurstMs > BURST_TIMEOUT_MS)) {
     endEncoderBurst();
   }
+
+  serviceLed();
 
   delay(2);
 #endif
