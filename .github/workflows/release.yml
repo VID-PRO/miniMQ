@@ -1,0 +1,62 @@
+name: Release firmware
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and attach firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO Core
+        run: python -m pip install platformio
+
+      - name: Build all projects
+        run: |
+          set -e
+          python -m platformio run -d Fader
+          python -m platformio run -d Enncoder
+          python -m platformio run -d ArtNet-USB
+
+      - name: Stage release assets
+        run: |
+          set -e
+          mkdir -p dist
+          cp Fader/.pio/build/pico/firmware.uf2     dist/miniMQ-mini-wing.uf2
+          cp Enncoder/.pio/build/pico/firmware.uf2   dist/miniMQ-encoder.uf2
+          cp ArtNet-USB/.pio/build/pico/firmware.uf2 dist/miniMQ-artnet-usb.uf2
+          (cd dist && sha256sum *.uf2 > SHA256SUMS)
+          (cd dist && zip -j miniMQ-all-firmwares.zip *.uf2 SHA256SUMS)
+
+      - name: Attach firmware to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+
+      - name: Append installation notes to release body
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          tag="${{ github.event.release.tag_name }}"
+          body="$(gh release view "$tag" --json body -q '.body // ""')"
+          notes="$(cat .github/release-install.md)"
+          if printf '%s' "$body" | grep -q '^## Installation'; then
+            echo "Installation section already present, skipping append"
+            exit 0
+          fi
+          gh release edit "$tag" --notes "$(printf '%s\n\n%s\n' "$body" "$notes")"
