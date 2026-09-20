@@ -66,10 +66,11 @@ static WebServer http(80);
 // Art-Net autodiscovery: respond to ArtPoll with an ArtPollReply so
 // MagicQ & co. discover all 4 universes automatically.
 // ------------------------------------------------------------------
-static const uint16_t OP_POLL   = 0x2000;   // ArtPoll
+static const uint16_t OP_POLL    = 0x2000;  // ArtPoll
 static const uint16_t OP_POLLREPLY = 0x2100; // ArtPollReply
-static const uint16_t OP_DMX    = 0x5000;   // ArtDmx
-static const uint16_t OP_RDM    = 0x00CC;   // ArtRdm
+static const uint16_t OP_DMX     = 0x5000;  // ArtDmx
+static const uint16_t OP_ADDRESS = 0x6000;  // ArtAddress (remote programming)
+static const uint16_t OP_RDM     = 0x00CC;  // ArtRdm
 
 // On-board LED (GPIO25 on the plain Pico), flashed on each received packet.
 static const uint8_t STATUS_LED = PIN_LED;
@@ -228,6 +229,107 @@ static void handlePoll(const uint8_t *pkt, int size, IPAddress src) {
 }
 
 // ------------------------------------------------------------------
+// ArtAddress (OpCode 0x6000) - remote programming.
+//
+// A controller (e.g. MagicQ) can reprogram a node's net/subnet/universe
+// mapping without touching the web UI. Field layout (Art-Net 4 spec):
+//   12 NetSwitch, 13 BindIndex, 14..31 ShortName, 32..95 LongName,
+//   96..99 SwIn[4], 100..103 SwOut[4], 104 SubSwitch, 105 AcnPriority,
+//   106 Command.
+// A switch value is applied only when its new-value flag (bit 7) is set;
+// 0x00 resets to the physical setting, 0x7F means "no change". Names are
+// ignored if the string is null. Per spec the node confirms with a fresh
+// unicast ArtPollReply.
+// ------------------------------------------------------------------
+static void handleAddress(const uint8_t *pkt, int n, IPAddress src) {
+  // ProtVer must be 14. Minimum ArtAddress payload has a full 107-byte
+  // packet (up to Command); names/SwIn/SwOut need at least 104/106.
+  if (pkt[10] != 0x00 || pkt[11] != 0x0E) return;
+  if (n < 30) return;   // nothing beyond the header
+
+  bool changed = false;
+
+  // NetSwitch: new value only when bit 7 set (0x7F = no change).
+  if ((pkt[12] & 0x80) && (pkt[12] & 0x7F) != 0x7F) {
+    uint8_t net = pkt[12] & 0x7F;
+    for (int i = 0; i < NUM_UNIVERSES; i++) if (config.net[i] != net) changed = true;
+    for (int i = 0; i < NUM_UNIVERSES; i++) config.net[i] = net;
+  }
+  // SubSwitch: same rule for bits 7-4 of the Port-Address.
+  if ((pkt[104] & 0x80) && (pkt[104] & 0x0F) != 0x0F) {
+    uint8_t sub = pkt[104] & 0x0F;
+    for (int i = 0; i < NUM_UNIVERSES; i++) if (config.subnet[i] != sub) changed = true;
+    for (int i = 0; i < NUM_UNIVERSES; i++) config.subnet[i] = sub;
+  }
+  // SwIn/SwOut: per-port universe (bits 3-0), apply only when bit 7 set.
+  if (n >= 104) {
+    for (int i = 0; i < NUM_UNIVERSES; i++) {
+      uint8_t sw = config.isInput(i) ? pkt[96 + i] : pkt[100 + i];
+      if (sw & 0x80) {
+        uint8_t uni = sw & 0x0F;
+        if (config.universe[i] != uni) { config.universe[i] = uni; changed = true; }
+      }
+    }
+  }
+
+  // Names: apply only if the string is not null (first byte != 0).
+  if (n >= 32 && pkt[14] != 0) {
+    size_t len = strnlen((const char *)&pkt[14], 17);
+    if (memcmp(pkt + 14, config.short_name, len) != 0 || config.short_name[len] != 0) {
+      memcpy(config.short_name, &pkt[14], len);
+      config.short_name[len] = '\0';
+      changed = true;
+    }
+  }
+  if (n >= 96 && pkt[32] != 0) {
+    size_t len = strnlen((const char *)&pkt[32], 63);
+    if (memcmp(pkt + 32, config.long_name, len) != 0 || config.long_name[len] != 0) {
+      memcpy(config.long_name, &pkt[32], len);
+      config.long_name[len] = '\0';
+      changed = true;
+    }
+  }
+
+  // Command (byte 106): AcDirectionTx0..3 = port to output,
+  // AcDirectionRx0..3 = port to input (Art-Net spec: retained on power-off).
+  if (n >= 107) {
+    uint8_t cmd = pkt[106];
+    if (cmd >= 0x20 && cmd < 0x24) {
+      int port = cmd - 0x20;
+      if (config.isInput(port)) {
+        config.direction[port] = PORT_OUTPUT;
+        rdm_port[port].setTransmitMode();   // DE high: stream DMX again
+        changed = true;
+      }
+    } else if (cmd >= 0x30 && cmd < 0x34) {
+      int port = cmd - 0x30;
+      if (!config.isInput(port)) {
+        config.direction[port] = PORT_INPUT;
+        rdm_port[port].setReceiveMode();    // DE low: listen on the bus
+        last_in[port] = 0;                  // clear stale "input active" state
+        in_state[port] = 0;                 // reset the DMX-in framing
+        in_idx[port] = 0;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    bool ok = config.save();
+    Serial.printf("ADDR: net=%u sub=%u uni=[%u,%u,%u,%u] dir=[%u%u%u%u] save=%d\n",
+                  config.net[0], config.subnet[0],
+                  config.universe[0], config.universe[1],
+                  config.universe[2], config.universe[3],
+                  config.direction[0], config.direction[1],
+                  config.direction[2], config.direction[3], ok);
+  }
+
+  // Confirm to the requester with a fresh ArtPollReply reflecting the
+  // just-applied address (spec: node replies to ArtAddress by unicasting).
+  sendPollReply(src);
+}
+
+// ------------------------------------------------------------------
 // DMX input: for each port configured as an input, capture the incoming
 // DMX stream (BREAK + start code 0x00 + 512 slots) from the RDM RX PIO
 // and publish it as ArtDmx to the network.
@@ -369,6 +471,13 @@ void readArtnet() {
                       D(0), D(1), D(2), D(3), D(4), D(5), D(6), D(7));
         #undef D
       }
+      break;
+    }
+
+    case OP_ADDRESS: {
+      // MagicQ reprograms the node (net/subnet/universe/names) via
+      // ArtAddress. Apply and confirm with a fresh unicast ArtPollReply.
+      handleAddress(pkt, n, src);
       break;
     }
 
