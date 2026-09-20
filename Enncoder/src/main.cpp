@@ -50,6 +50,57 @@ const int ledPin = 25;
 const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit aller Tasten
 const unsigned long SHIFT_KEEPALIVE_MS = 60; // Nachsendung Shift DOWN, solange gehalten
 
+// ==========================================
+// MagicQ-Modus-Toggle per CAPS LOCK
+// ==========================================
+// MagicQ (Playback shortcuts) wechselt per CAPS LOCK den Keyboard-Modus:
+//   Caps AUS = Playback shortcuts (Busking)
+//   Caps AN  = Standard/Programming (Encoder-Kommandos wie "1+"/"2-")
+// Während eines Encoder-Bursts (Drehen/Klick) wird kurz CAPS aktiviert,
+// damit die Kommandos als Programming-Shortcuts ankommen; nach einer Ruhezeit
+// wird automatisch zurückgeschaltet (endEncoderBurst -> Playback shortcuts).
+#define MAGICQ_CAPS_TOGGLE 1
+
+const unsigned long BURST_TIMEOUT_MS = 250;   // Ruhezeit bis zum Rück-Toggle
+
+bool capsLockOn = false;          // echter Caps-Zustand (Host-LED-Report)
+bool burstActive = false;
+unsigned long lastBurstMs = 0;
+
+// Der Host meldet den Caps-Lock-Zustand über das HID-LED-Report -> resync.
+void onCapsLed(bool numlock, bool capslock, bool scrolllock,
+               bool compose, bool kana, void *d) {
+  capsLockOn = capslock;
+}
+
+// Wechselt den MagicQ-Keyboard-Modus über einen CAPS-Tap (nur bei Bedarf).
+void setMagicQMode(bool programming) {
+  if (capsLockOn == programming) return;   // schon im Zielmodus
+  Keyboard.press(KEY_CAPS_LOCK);
+  Keyboard.release(KEY_CAPS_LOCK);
+  capsLockOn = programming;                // optimistisch; bestätigt der LED-Report
+  delay(25);                               // Host/MagicQ den Umschalt verarbeiten lassen
+}
+
+// Eine Taste im "Programming-Burst" senden (Caps an, Burst-Timer frisch).
+void sendEncoderKey(char c) {
+#if MAGICQ_CAPS_TOGGLE
+  setMagicQMode(true);        // sicherstellen: Standard/Programming-Modus
+  lastBurstMs = millis();
+  burstActive = true;
+#endif
+  Keyboard.write(c);
+}
+
+// Nach Ruhezeit automatisch zurück in Playback shortcuts (Caps aus).
+void endEncoderBurst() {
+#if MAGICQ_CAPS_TOGGLE
+  if (!burstActive) return;
+  burstActive = false;
+  setMagicQMode(false);       // Caps aus -> Playback shortcuts
+#endif
+}
+
 // Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose)
 void ledFlash() {
   digitalWrite(ledPin, HIGH);
@@ -116,6 +167,9 @@ void setup() {
 
   // USB-HID-Tastatur starten (eingebaut im Arduino-Pico-Core)
   Keyboard.begin();
+#if MAGICQ_CAPS_TOGGLE
+  Keyboard.onLED(onCapsLed);   // Caps-Zustand vom Host verfolgen
+#endif
 
   Serial.println("[BOOT] ready: encoders=F5-F8=shift=GP18-22, group=GP26, fx=GP27");
 
@@ -233,11 +287,11 @@ void loop() {
     // Drehung: process() liefert DIR_CW, DIR_CCW oder DIR_NONE
     unsigned char dir = encoders[i]->process();
     if (dir == DIR_CW) {
-      Keyboard.write(encChars[i]);
-      Keyboard.write('+');
+      sendEncoderKey(encChars[i]);
+      sendEncoderKey('+');
     } else if (dir == DIR_CCW) {
-      Keyboard.write(encChars[i]);
-      Keyboard.write('-');
+      sendEncoderKey(encChars[i]);
+      sendEncoderKey('-');
     }
 
     // Encoder-Klick: nur auswerten, wenn der Expander vorhanden ist.
@@ -254,7 +308,7 @@ void loop() {
         encBtnStable[i] = readingEnc;
         if (readingEnc == LOW) {
           ledFlash();
-          Keyboard.write(encChars[i]);
+          sendEncoderKey(encChars[i]);
         }
       }
     }
@@ -309,6 +363,11 @@ void loop() {
       }
     }
     lastCustomKeyState[i] = readingCustomKey;
+  }
+
+  // Burst beenden (-> Playback shortcuts), wenn lange keine Encoder-Aktion kam
+  if (burstActive && (millis() - lastBurstMs > BURST_TIMEOUT_MS)) {
+    endEncoderBurst();
   }
 
   delay(2);
