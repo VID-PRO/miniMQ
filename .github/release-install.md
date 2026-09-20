@@ -2,7 +2,7 @@
 
 All three controllers communicate with your PC over USB with **no drivers to install**:
 
-- **miniMQ Mini Wing** and **miniMQ Encoder** present themselves as a USB keyboard (HID).
+- **miniMQ Fader** and **miniMQ Encoder** present themselves as a USB keyboard (HID).
 - **miniMQ ArtNet-USB** presents itself as a USB Ethernet adapter (NCM) and drives up to four Art-Net ↔ DMX universes.
 
 ### Flashing a Raspberry Pi Pico (any variant, first time)
@@ -16,11 +16,11 @@ If you ever need to recover the factory state, hold BOOTSEL again and re-flash t
 
 ---
 
-### 1. Mini Wing — `miniMQ-mini-wing.uf2`
+### 1. Fader — `miniMQ-fader.uf2`
 
-DIY version of the MagicQ Compact Mini Connect layout: 3×13 key grid + 10 faders + grand master.
+DIY fader wing compatible with the MagicQ Compact layouts: 10 faders + grand master (+ 3×13 key grid in the full Mini Connect layout).
 
-1. Flash `miniMQ-mini-wing.uf2` to the wing's Pico.
+1. Flash `miniMQ-fader.uf2` to the wing's Pico.
 2. In MagicQ: **Setup → View Settings → Keypad Encoders**.
 3. Set **MagicQ PC Keyboard Mode** to **Playback shortcuts**.
 4. Use the **US keyboard layout** on the operating system so special characters are typed correctly.
@@ -42,11 +42,11 @@ Notes:
 
 The F5–F8 keys open INT/POS/COL/BEAM (`Ctrl+I/P/K/J`), Group opens the Group window, FX the FX window, and holding Shift gives 0.1 % ultra-fine adjustment.
 
-### 3. ArtNet-USB — `miniMQ-artnet-usb.uf2`
+### 3. ArtNet-USB — `miniMQ-artnet.uf2`
 
 4-port Art-Net ↔ DMX bridge. The Pico appears to the lighting PC as a USB Ethernet adapter.
 
-1. Flash `miniMQ-artnet-usb.uf2` to the node's Pico.
+1. Flash `miniMQ-artnet.uf2` to the node's Pico.
 2. Plug it into the lighting PC with a USB cable. A "USB Ethernet / NCM" adapter appears — **nothing to configure**: the node runs a DHCP server and assigns the adapter an address in `10.0.0.1–10.0.0.9` (leave the adapter on "Obtain an IP address automatically"). The node itself is at **10.0.0.10**.
 3. Config web page: open **http://10.0.0.10/** (per-port direction output/input, IP/netmask/DHCP, Art-Net net/subnet/universe).
 4. In MagicQ: add an Art-Net output pointing at **10.0.0.10**. The node answers ArtPoll, so MagicQ auto-discovers all four DMX ports.

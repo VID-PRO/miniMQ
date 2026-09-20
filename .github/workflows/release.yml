@@ -42,9 +42,9 @@ jobs:
         run: |
           set -e
           mkdir -p dist
-          cp Fader/.pio/build/pico/firmware.uf2     dist/miniMQ-mini-wing.uf2
+          cp Fader/.pio/build/pico/firmware.uf2     dist/miniMQ-fader.uf2
           cp Enncoder/.pio/build/pico/firmware.uf2   dist/miniMQ-encoder.uf2
-          cp ArtNet-USB/.pio/build/pico/firmware.uf2 dist/miniMQ-artnet-usb.uf2
+          cp ArtNet-USB/.pio/build/pico/firmware.uf2 dist/miniMQ-artnet.uf2
           (cd dist && sha256sum *.uf2 > SHA256SUMS)
           (cd dist && zip -j miniMQ-all-firmwares.zip *.uf2 SHA256SUMS)
 
