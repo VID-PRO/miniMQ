@@ -47,6 +47,21 @@ The mapping is defined in `src/main.cpp` as `MATRIX[3][13]` and checked via the 
 * **ALT:** held like a modifier (`Ctrl+Alt+0`) until the key is released.
 * **MASTER GO / MASTER PAUSE:** in this layout they sit top right (GO) or bottom right (PAUSE) instead of being stacked vertically.
 
+**Fader handling (deadzone & smoothing):**
+
+* Each fader is read 8× per scan and **averaged** to reject ADC noise (`FADER_SAMPLES`).
+* A **deadzone** (`FADER_DEADZONE`, default 2%) suppresses command spam: a new `pbX @ Y` is only typed when the fader moved more than 2% away from the **last sent** value. A resting fader no longer re-sends its level on jitter.
+* Both ends **snap** to exactly 0/100 within `FADER_ENDSTOP` (1%) – many pots never reach the true rail.
+* The typed command is coalesced: a `FADER_QUIET_MS` (150 ms) settle window skips intermediate levels while you drag, then types the final value once.
+* Fader commands also appear on the USB serial as `FADER <n> -> <pct>`.
+* On boot a **fader ADC scan** prints every mux channel (`ch<no> raw=<adc> <pct>%`) to verify the 74HC4067 wiring.
+* All knobs are tunable at the top of `src/main.cpp`.
+
+**Diagnostics combos:**
+
+* **S10 + GO10** (keep both held): types the currently pressed matrix cells as `M R2C3 R0C1` into the focused editor.
+* **S1 + GO1**: types the **fader levels** as `F GM=42 PB1=99 ...` (uses the last sent values).
+
 ## 2. Required hardware & shopping list
 
 * **1x Raspberry Pi Pico** (standard or Pico H).

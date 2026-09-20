@@ -74,6 +74,7 @@ body{padding-bottom:42px}
   <div class="pill"><span id="s-dhcp" class="dot warn"></span>DHCP <b id="t-dhcp">-</b></div>
   <div class="pill"><span id="s-art" class="dot bad"></span>Art-Net <b id="t-fps">0</b> fps</div>
   <div class="pill">Up <b id="t-up">-</b></div>
+  <div class="pill" id="t-namepi" style="display:none"><b id="t-name">-</b></div>
 </header>
 <nav>
   <button id="tab-ch" class="active" onclick="showTab('ch')">Channels</button>
@@ -107,6 +108,13 @@ body{padding-bottom:42px}
               <span class="hint">Hands the host an address 10.0.0.x / your subnet</span></div>
         </div>
         <p class="hint">The node always uses a static address on the USB link. DHCP only configures the host. Changing the subnet means you must reach the new IP afterwards.</p>
+      </fieldset>
+      <fieldset><legend>Node identity</legend>
+        <div class="row">
+          <div><label>Short name</label><input type="text" name="name" maxlength="17" spellcheck="false" placeholder="MagicQ Compact"></div>
+          <div><label>Long name</label><input type="text" name="longname" maxlength="63" spellcheck="false" placeholder="MagicQ Compact Mini Connect"></div>
+        </div>
+        <p class="hint">Advertised in ArtPollReply; MagicQ lists this name in its DMX output node list. Visible next to the Art-Net tablet in the header.</p>
       </fieldset>
       <fieldset><legend>Art-Net ports</legend>
         <div class="row" id="univ-rows"></div>
@@ -186,6 +194,8 @@ function update(d){
   document.getElementById('s-art').className='dot '+(d.artnet.connected?'ok':'bad');
   document.getElementById('t-fps').textContent=d.artnet.fps;
   document.getElementById('t-up').textContent=fmtUp(d.uptime_ms);
+  document.getElementById('t-name').textContent=d.name||'';
+  document.getElementById('t-namepi').style.display=(d.name)?'':'none';
   var sel=document.getElementById('port');
   for(var i=0;i<sel.options.length;i++){
     var a='N'+(d.net?d.net[i]:0)+'/S'+(d.subnet?d.subnet[i]:0)+'/U'+(d.universe?d.universe[i]:0);
@@ -213,6 +223,8 @@ function fill(cfg){
   document.getElementById('cfg-form').elements['ip'].value=cfg.ip;
   document.getElementById('cfg-form').elements['mask'].value=cfg.mask;
   document.getElementById('cfg-form').elements['dhcp'].checked=cfg.dhcp;
+  document.getElementById('cfg-form').elements['name'].value=cfg.name||'';
+  document.getElementById('cfg-form').elements['longname'].value=cfg.longname||'';
   var nets=cfg.net, subs=cfg.subnet, unis=cfg.universe;
   var dirs=cfg.direction||[0,0,0,0];
   UNIV_N=nets?nets.length:4;
@@ -239,6 +251,8 @@ function save(){
   p.set('ip',e['ip'].value.trim());
   p.set('mask',e['mask'].value.trim());
   p.set('dhcp',e['dhcp'].checked?'true':'false');
+  p.set('name',e['name'].value.trim());
+  p.set('longname',e['longname'].value.trim());
   for(var i=0;i<UNIV_N;i++){
     p.set('n'+i, e['n'+i].value);
     p.set('s'+i, e['s'+i].value);
@@ -259,7 +273,7 @@ function factory(){ if(confirm('Reset all settings to defaults and reboot?')) re
 
 fetch('api/config').then(r=>r.json()).then(fill).catch(function(){
   // still populate the universe fields with a sensible default
-  fill({ip:'10.0.0.10',mask:'255.0.0.0',dhcp:true,net:[0,0,0,0],subnet:[0,0,0,0],universe:[0,1,2,3],direction:[0,0,0,0]});
+  fill({ip:'10.0.0.10',mask:'255.0.0.0',dhcp:true,net:[0,0,0,0],subnet:[0,0,0,0],universe:[0,1,2,3],direction:[0,0,0,0],name:'MagicQ Compact',longname:'MagicQ Compact Mini Connect'});
 });
 </script>
 </body>

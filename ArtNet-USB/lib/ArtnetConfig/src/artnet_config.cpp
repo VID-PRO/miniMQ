@@ -29,6 +29,9 @@ void ArtnetConfig::begin() {
     }
     if (ip_zero || mask_zero) ok = false;   // invalid network config
     dhcp_enabled = EEPROM.read(26) != 0;
+    // Node names (may be empty/uninitialised -> keep defaults below).
+    EEPROM.get(27, short_name);
+    EEPROM.get(45, long_name);
     if (ok) return;
     // fall through: corrupted or stale layout -> defaults
   }
@@ -47,6 +50,10 @@ void ArtnetConfig::reset() {
   memcpy(ip, def_ip, 4);
   memcpy(mask, def_mask, 4);
   dhcp_enabled = true;
+  strncpy(short_name, "MagicQ Compact", sizeof(short_name) - 1);
+  short_name[sizeof(short_name) - 1] = '\0';
+  strncpy(long_name, "MagicQ Compact Mini Connect", sizeof(long_name) - 1);
+  long_name[sizeof(long_name) - 1] = '\0';
   save();
 }
 
@@ -64,5 +71,7 @@ bool ArtnetConfig::save() {
     EEPROM.write(22 + i, mask[i]);
   }
   EEPROM.write(26, dhcp_enabled ? 1 : 0);
+  EEPROM.put(27, short_name);
+  EEPROM.put(45, long_name);
   return EEPROM.commit();
 }

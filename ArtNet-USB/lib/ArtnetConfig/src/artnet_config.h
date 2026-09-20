@@ -4,7 +4,7 @@
 
 // EEPROM layout:
 //   0        magic 0xAA
-//   1        version (4)
+//   1        version (5)
 //   2..5     net[4]       (Art-Net net    0..127 per port)
 //   6..9     subnet[4]    (Art-Net subnet 0..15  per port)
 //   10..13   universe[4]  (Art-Net universe 0..15 per port)
@@ -12,10 +12,14 @@
 //   18..21   ip[4]        (static IP of the node)
 //   22..25   mask[4]      (netmask)
 //   26       dhcp_enabled (1/0)
-#define CFG_MAGIC      0xAA
-#define CFG_VERSION    4
-#define CFG_NUM_PORTS  4
-#define CFG_EEPROM_SZ  32
+//   27..44   short_name[18] (NUL-terminated, ArtPollReply ShortName)
+//   45..108  long_name[64]  (NUL-terminated, ArtPollReply LongName)
+#define CFG_MAGIC        0xAA
+#define CFG_VERSION      5
+#define CFG_NUM_PORTS    4
+#define CFG_EEPROM_SZ    128
+#define CFG_SHORT_NAME_SZ 18
+#define CFG_LONG_NAME_SZ  64
 
 // Per-port signal direction.
 enum : uint8_t { PORT_OUTPUT = 0, PORT_INPUT = 1 };
@@ -41,6 +45,10 @@ public:
 
   // Serve DHCP so the host auto-configures within ip/mask.
   bool dhcp_enabled;
+
+  // ArtNode names advertised in ArtPollReply (ShortName 18, LongName 64).
+  char short_name[CFG_SHORT_NAME_SZ];
+  char long_name[CFG_LONG_NAME_SZ];
 
   // Load from EEPROM; falls back to defaults on first boot / bad layout.
   void begin();

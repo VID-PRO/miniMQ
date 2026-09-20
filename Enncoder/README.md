@@ -272,5 +272,11 @@ The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core l
   the respective MagicQ windows directly.
 - **USB-HID:** The Pico appears to the PC as a keyboard. Key presses are only sent
   after the USB-HID device has been mounted.
+- **Shift keep-alive:** While the Shift key is held, the firmware re-sends the Shift-down
+  report every 60 ms (`SHIFT_KEEPALIVE_MS`). macOS/MagicQ would otherwise treat a single
+  down event as a "tap" and drop the modifier.
+- **MCP23017 guard:** If the expander is missing or unreadable at boot, the firmware logs
+  `[WARN] MCP23017 nicht erkannt` and disables only the encoder clicks (`mcpOK=false`) –
+  rotation and all direct keys keep working instead of crashing on a missing I²C device.
 - **I²C address:** The MCP23017 is set to address `0x20` with A0/A1/A2 = GND (standard).
 - The **serial output (115200)** is only for debugging and is not required for operation.

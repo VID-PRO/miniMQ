@@ -162,12 +162,14 @@ static void buildPollReply(uint8_t *p) {
   p[25] = (ARTNET_ESTA >> 8) & 0xFF;
 
   // ShortName (18)
-  const char *shortName = "MagicQ Compact";
+  const char *shortName = config.short_name;
+  if (shortName[0] == '\0') shortName = "ArtNet-USB";
   strncpy((char *)&p[26], shortName, 17);
   p[26 + 17] = 0x00;
 
   // LongName (64)
-  const char *longName = "MagicQ Compact Mini Connect";
+  const char *longName = config.long_name;
+  if (longName[0] == '\0') longName = "ArtNet-USB 4xDMX node";
   strncpy((char *)&p[44], longName, 63);
   p[44 + 63] = 0x00;
 
@@ -421,6 +423,17 @@ static void webRoot() {
   http.send(200, "text/html", INDEX_HTML);
 }
 
+// Escape a name for safe embedding in a JSON string token
+// (quotes and backslashes only - sufficient for our use).
+static String jsonEscape(const char *s) {
+  String out;
+  for (; *s; s++) {
+    if (*s == '"' || *s == '\\') out += '\\';
+    out += *s;
+  }
+  return out;
+}
+
 // Live status for the header pills + the 512-channel grid.
 static void webStatus() {
   int port = http.arg("port").toInt();
@@ -429,6 +442,8 @@ static void webStatus() {
   String j = "{\"ip\":\"" + config.ipAddr().toString() + "\",";
   j += "\"mask\":\"" + config.maskAddr().toString() + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",";
+  j += "\"name\":\"" + jsonEscape(config.short_name) + "\",";
+  j += "\"longname\":\"" + jsonEscape(config.long_name) + "\",";
   j += "\"ports\":" + String(NUM_UNIVERSES) + ",";
   j += "\"uptime_ms\":" + String(millis()) + ",";
   j += "\"artnet\":{\"fps\":" + String(art_fps) + ",";
@@ -492,13 +507,23 @@ static void webGetConfig() {
     j += String((int)config.direction[i]);
     if (i < NUM_UNIVERSES - 1) j += ",";
   }
-  j += "]}";
+  j += "],\"name\":\"" + jsonEscape(config.short_name) + "\",";
+  j += "\"longname\":\"" + jsonEscape(config.long_name) + "\"}";
   http.send(200, "application/json", j);
 }
 
 static void sendJsonError(const char *error) {
   http.send(400, "application/json",
             String("{\"ok\":false,\"error\":\"") + error + "\"}");
+}
+
+// Copy a (possibly longer) web form value into a fixed-size config buffer,
+// truncated and NUL-terminated safely.
+static void setConfigName(char *dst, size_t dst_sz, const String &value) {
+  size_t n = (size_t)value.length();
+  if (n >= dst_sz) n = dst_sz - 1;
+  memcpy(dst, value.c_str(), n);
+  dst[n] = '\0';
 }
 
 // Saves the form (urlencoded) and reboots so the new network settings
@@ -529,6 +554,12 @@ static void webSaveConfig() {
   memcpy(config.mask, mask, 4);
   config.dhcp_enabled = http.hasArg("dhcp") &&
                         (http.arg("dhcp") == "true" || http.arg("dhcp") == "on");
+
+  // Optional: override the ArtPollReply node names.
+  if (http.hasArg("name"))
+    setConfigName(config.short_name, sizeof(config.short_name), http.arg("name"));
+  if (http.hasArg("longname"))
+    setConfigName(config.long_name, sizeof(config.long_name), http.arg("longname"));
 
   bool ok = config.save();
   Serial.printf("CFG: ip=%u.%u.%u.%u mask=%u.%u.%u.%u dhcp=%d addr=[%u/%u/%u,%u/%u/%u,%u/%u/%u,%u/%u/%u] dir=%u%u%u%u save=%d\n",

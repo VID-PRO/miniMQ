@@ -44,6 +44,12 @@ const int ledPin = 25;
 //   1x=GP20 2x=GP21 3x=GP22 4x=GP23 5x=GP24 6x=GP26 7x=GP27 8x=GP28
 #define PIN_FINDER 0
 
+// ==========================================
+// 2. ZEIT-/VERHALTENS-KONFIGURATION
+// ==========================================
+const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit aller Tasten
+const unsigned long SHIFT_KEEPALIVE_MS = 60; // Nachsendung Shift DOWN, solange gehalten
+
 // Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose)
 void ledFlash() {
   digitalWrite(ledPin, HIGH);
@@ -59,21 +65,22 @@ void sendCtrlKey(char c) {
 }
 
 Adafruit_MCP23X17 mcp;
+bool mcpOK = false;   // true, wenn der MCP23017 erkannt wurde
+bool shiftStable = HIGH;
 
 // ==========================================
-// 2. MAPPINGS & CONFIGURATION
+// 3. MAPPINGS & CONFIGURATION
 // ==========================================
 
 // Attribute in MagicQ via Strg-Kombination: INT/POS/COL/BEAM
 const char fKeyMapping[] = {'I', 'P', 'K', 'J'};
 const char encChars[] = {'1', '2', '3', '4', '5', '6', '7', '8'};
-const unsigned long debounceDelay = 50;
 
 // Ctrl+Kombinationen: Group = Strg+g, FX = Strg+f
 const char customKeyMapping[] = {'g', 'f'};
 
 // ==========================================
-// 3. STATUS-VARIABLEN (SPEICHER)
+// 4. STATUS-VARIABLEN (SPEICHER)
 // ==========================================
 
 bool lastEncBtnState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
@@ -86,7 +93,6 @@ bool fKeyStable[] = {HIGH, HIGH, HIGH, HIGH};
 
 bool lastShiftState = HIGH;
 unsigned long lastShiftDebounce = 0;
-bool shiftStable = HIGH;
 
 bool lastCustomKeyState[] = {HIGH, HIGH};
 unsigned long lastCustomKeyDebounceTime[] = {0, 0};
@@ -119,9 +125,14 @@ void setup() {
   Wire.begin();
 
   // MCP23017 mit Pullups konfigurieren (Tasten schalten gegen GND)
+  // Fehlgeschlagene Erkennung => mcpOK=false, die Encoder-Klicks werden
+  // sicher übersprungen statt die I²C-Register zu lesen (BusIO-Crash).
   if (!mcp.begin_I2C(0x20)) {
+    mcpOK = false;
     Serial.println("[WARN] MCP23017 nicht erkannt! (I2C-Adresse 0x20?) - Encoder-Klicks gehen nicht, Rest weiter");
   } else {
+    mcpOK = true;
+    Serial.println("[BOOT] MCP23017 erkannt (0x20)");
     // Encoder-SW (GPA0-GPA7): INPUT_PULLUP
     for (int i = 0; i < 8; i++) {
       mcp.pinMode(encBtnMCP[i], INPUT_PULLUP);
@@ -186,7 +197,7 @@ void loop() {
   if (readingShift != lastShiftState) {
     lastShiftDebounce = currentMillis;
   }
-  if ((currentMillis - lastShiftDebounce) > debounceDelay) {
+  if ((currentMillis - lastShiftDebounce) > DEBOUNCE_MS) {
     if (readingShift != shiftStable) {
       shiftStable = readingShift;
       ledFlash();
@@ -199,6 +210,17 @@ void loop() {
   }
   lastShiftState = readingShift;
 
+  // Keep-alive: macOS/MagicQ werten ein einzelnes Shift-DOWN als "Tap" ab.
+  // Während die Shift-Taste gehalten wird, sendet das Pico periodisch das
+  // DOWN-Report erneut (wie der Auto-Repeat einer echten Tastatur).
+  if (shiftStable == LOW) {
+    static unsigned long lastShiftKeep = 0;
+    if (currentMillis - lastShiftKeep > SHIFT_KEEPALIVE_MS) {
+      lastShiftKeep = currentMillis;
+      Keyboard.press(KEY_LEFT_SHIFT);
+    }
+  }
+
   // ------------------------------------------
   // TEIL 2: ENCODER DREHUNG & KLICK (8 Stück)
   // ------------------------------------------
@@ -207,22 +229,23 @@ void loop() {
     // Drehung: process() liefert DIR_CW, DIR_CCW oder DIR_NONE
     unsigned char dir = encoders[i]->process();
     if (dir == DIR_CW) {
-      ledFlash();
       Keyboard.write(encChars[i]);
-      ledFlash();
       Keyboard.write('+');
     } else if (dir == DIR_CCW) {
-      ledFlash();
       Keyboard.write(encChars[i]);
-      ledFlash();
       Keyboard.write('-');
     }
+
+    // Encoder-Klick: nur lesen, wenn der Expander vorhanden ist.
+    // Ohne MCP bleibt der Klick deaktiviert, aber Dreh- und F-Tasten
+    // funktionieren trotzdem weiter.
+    if (!mcpOK) continue;
 
     bool readingEnc = mcp.digitalRead(encBtnMCP[i]);
     if (readingEnc != lastEncBtnState[i]) {
       lastEncDebounceTime[i] = currentMillis;
     }
-    if ((currentMillis - lastEncDebounceTime[i]) > debounceDelay) {
+    if ((currentMillis - lastEncDebounceTime[i]) > DEBOUNCE_MS) {
       if (readingEnc != encBtnStable[i]) {
         encBtnStable[i] = readingEnc;
         if (readingEnc == LOW) {
@@ -243,7 +266,7 @@ void loop() {
     if (readingFKey != lastFKeyState[i]) {
       lastFKeyDebounceTime[i] = currentMillis;
     }
-    if ((currentMillis - lastFKeyDebounceTime[i]) > debounceDelay) {
+    if ((currentMillis - lastFKeyDebounceTime[i]) > DEBOUNCE_MS) {
       if (readingFKey != fKeyStable[i]) {
         fKeyStable[i] = readingFKey;
         if (readingFKey == LOW) {
@@ -267,7 +290,7 @@ void loop() {
       lastCustomKeyDebounceTime[i] = currentMillis;
     }
 
-    if ((currentMillis - lastCustomKeyDebounceTime[i]) > debounceDelay) {
+    if ((currentMillis - lastCustomKeyDebounceTime[i]) > DEBOUNCE_MS) {
       if (readingCustomKey != customKeyStable[i]) {
         customKeyStable[i] = readingCustomKey;
         if (readingCustomKey == LOW) {

@@ -186,11 +186,15 @@ layout with two tabs:
     Art-Net address, `net` (0–127), `subnet` (0–15), `universe` (0–15). The 15-bit
     address a port uses is `net<<8 | subnet<<4 | universe`; it applies to
     ArtDmx data (and ArtRdm traffic for output ports).
+  - **Node identity**: **Short name** (max 17 chars) and **Long name** (max 63
+    chars) advertised in the ArtPollReply. MagicQ shows them in its output node
+    list; the short name also appears in the web header pill. Both are stored in
+    flash alongside the network settings.
   - **Save &amp; reboot** applies everything (node reboots, then re-announces
     via ArtPollReply so MagicQ picks up the new mapping).
 
-All settings — direction, per-port address, IP/netmask/DHCP — are stored in
-flash (EEPROM, layout v4) and survive power cycles and reboots.
+All settings — direction, per-port address, IP/netmask/DHCP, node names — are
+stored in flash (EEPROM, layout v5) and survive power cycles and reboots.
 
 A save triggers a warm reboot. Before resetting, the node intentionally drops
 the USB link so the host always sees the device unplug and re-enumerates the
@@ -201,9 +205,10 @@ immediately, give the host a moment to re-run DHCP, then reopen
 The same API the page uses: `GET /api/status?port=N`, `GET/POST /api/config`,
 `POST /api/reboot`, `POST /api/factory`. `/api/config` carries the address
 triples as arrays `net`, `subnet`, `universe` plus a `direction` array
-(0 = output, 1 = input); the POST form uses fields `n0..n3`, `s0..s3`, `u0..u3`
-and `d0..d3`. `/api/status` also returns `direction` and a per-port
-`input_active` flag.
+(0 = output, 1 = input) and the node names `name`/`longname`; the POST form
+uses fields `n0..n3`, `s0..s3`, `u0..u3`, `d0..d3`, `name` and `longname`.
+`/api/status` also returns `direction`, a per-port `input_active` flag and the
+active `name`.
 
 Defaults: IP `10.0.0.10`, netmask `255.0.0.0`, DHCP **on** (pool
 `<ip>.1–.9`), all four ports **output**, addresses `0/0/0`, `0/0/1`, `0/0/2`,
