@@ -3,7 +3,7 @@
 // USB CDC-NCM "Ethernet over USB" + lwIP (Arduino-Pico core)
 #include <NCMEthernetlwIP.h>
 // lwIP UDP socket that routes over the NCM netif
-#include <WiFiUDP.h>
+#include <WiFiUdp.h>
 // DMX512 via the RP2040 PIO (our own transmitter with spec-compliant timing)
 #include <DmxOut.h>
 // DHCP server for the USB link (bundled in the Arduino-Pico WiFi lib)

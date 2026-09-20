@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include "rdm_port.h"
-#include "WiFiUDP.h"
+#include "WiFiUdp.h"
 
 class ArtnetConfig;
 
