@@ -440,6 +440,7 @@ static void webStatus() {
   if (port < 0 || port >= NUM_UNIVERSES) port = 0;
 
   String j = "{\"ip\":\"" + config.ipAddr().toString() + "\",";
+  j.reserve(4096);   // full JSON incl. the 512 channel values: avoid reallocation churn
   j += "\"mask\":\"" + config.maskAddr().toString() + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",";
   j += "\"name\":\"" + jsonEscape(config.short_name) + "\",";
@@ -475,8 +476,8 @@ static void webStatus() {
   }
   j += "],\"values\":[0";   // values[i] == DMX channel i (page uses 1..512)
   for (int c = 1; c <= DMX_UNIVERSE_SIZE; c++) {
-    j += ",";
-    j += String(dmx_buffer[port][c]);
+    j += ',';
+    j += dmx_buffer[port][c];
   }
   j += "]}";
   http.send(200, "application/json", j);
@@ -485,6 +486,7 @@ static void webStatus() {
 static void webGetConfig() {
   String j = "{\"ip\":\"" + String(config.ip[0]) + "." + String(config.ip[1])
            + "." + String(config.ip[2]) + "." + String(config.ip[3]) + "\",";
+  j.reserve(512);
   j += "\"mask\":\"" + String(config.mask[0]) + "." + String(config.mask[1])
      + "." + String(config.mask[2]) + "." + String(config.mask[3]) + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",\"net\":[";

@@ -225,6 +225,10 @@ void loop() {
   // TEIL 2: ENCODER DREHUNG & KLICK (8 Stück)
   // ------------------------------------------
 
+  // Encoder-Klick-Status: ein I²C-Read für alle 8 SW statt 8 Einzelreads.
+  // GPA0..GPA7 (Encoder-SW 1..8) = Bits 0..7 des GPIOAB-Registers (aktiv-Low).
+  uint16_t encSw = mcpOK ? mcp.readGPIOAB() : 0xFFFF;
+
   for (int i = 0; i < 8; i++) {
     // Drehung: process() liefert DIR_CW, DIR_CCW oder DIR_NONE
     unsigned char dir = encoders[i]->process();
@@ -236,12 +240,12 @@ void loop() {
       Keyboard.write('-');
     }
 
-    // Encoder-Klick: nur lesen, wenn der Expander vorhanden ist.
+    // Encoder-Klick: nur auswerten, wenn der Expander vorhanden ist.
     // Ohne MCP bleibt der Klick deaktiviert, aber Dreh- und F-Tasten
     // funktionieren trotzdem weiter.
     if (!mcpOK) continue;
 
-    bool readingEnc = mcp.digitalRead(encBtnMCP[i]);
+    bool readingEnc = ((encSw >> encBtnMCP[i]) & 1) ? HIGH : LOW;
     if (readingEnc != lastEncBtnState[i]) {
       lastEncDebounceTime[i] = currentMillis;
     }

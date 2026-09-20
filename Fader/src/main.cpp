@@ -241,7 +241,7 @@ void setup() {
     // Debug output (USB serial, 115200)
     Serial.begin(115200);
     uint32_t serialWait = millis();
-    while (!Serial && (millis() - serialWait < 5000)) { delay(10); }
+    while (!Serial && (millis() - serialWait < 1000)) { delay(10); }
     Serial.println("chamsys-wing boot OK");
 
     // Mux select pins

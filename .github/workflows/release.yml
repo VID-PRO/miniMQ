@@ -23,6 +23,14 @@ jobs:
       - name: Install PlatformIO Core
         run: python -m pip install platformio
 
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('Fader/platformio.ini', 'Enncoder/platformio.ini', 'ArtNet-USB/platformio.ini') }}
+          restore-keys: |
+            pio-
+
       - name: Build all projects
         run: |
           set -e
