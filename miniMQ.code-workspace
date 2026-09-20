@@ -1,0 +1,8 @@
+{
+  "folders": [
+    { "path": "ArtNet-USB" },
+    { "path": "Enncoder" },
+    { "path": "Fader" }
+  ],
+  "settings": {}
+}
