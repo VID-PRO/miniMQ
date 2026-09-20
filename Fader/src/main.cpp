@@ -3,7 +3,7 @@
 // PlatformIO (earlephilhower Arduino core, native TinyUSB HID)
 
 // Temporäre Fader-Deaktivierung (Testing ohne Fader): auf 1 setzen zum Wiedereinschalten
-#define ENABLE_FADERS 0
+#define ENABLE_FADERS 1
 
 // Temporärer HID-Selbsttest: auf 1 setzen, flashen, Cursor in TextEdit setzen,
 // Pico neu einstecken. Die Firmware tippt nach 5 s "HID-OK" in den fokussierten
