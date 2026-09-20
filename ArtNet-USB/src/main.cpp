@@ -516,6 +516,7 @@ static bool parseIPv4(const String &s, uint8_t *out) {
 }
 
 static void webRoot() {
+  http.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   http.send(200, "text/html", INDEX_HTML);
 }
 
@@ -589,8 +590,10 @@ static void webStatus() {
       j += ',';
       j += dmx_buffer[port][c];
     }
+    j += "]";
   }
-  j += "]}";
+  j += "}";
+  http.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   http.send(200, "application/json", j);
 }
 

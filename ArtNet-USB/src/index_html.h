@@ -248,7 +248,7 @@ function drawCell(i){
 }
 
 function poll(){
-  fetch('api/status?port='+port).then(r=>r.json()).then(update).catch(()=>{});
+  fetch('api/status?port='+port,{cache:'no-store'}).then(r=>r.json()).then(update).catch(()=>{});
 }
 function setPort(){ port=+document.getElementById('port').value; poll(); }
 setInterval(poll, 300); poll(); build(); render();
