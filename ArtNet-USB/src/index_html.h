@@ -73,8 +73,8 @@ body{padding-bottom:42px}
   <div class="pill">Mask <b id="t-mask">-</b></div>
   <div class="pill"><span id="s-dhcp" class="dot warn"></span>DHCP <b id="t-dhcp">-</b></div>
   <div class="pill"><span id="s-art" class="dot bad"></span>Art-Net <b id="t-fps">0</b> fps</div>
+  <div class="pill" id="t-namepi" style="display:none">ID <b id="t-name">-</b></div>
   <div class="pill">Up <b id="t-up">-</b></div>
-  <div class="pill" id="t-namepi" style="display:none"><b id="t-name">-</b></div>
 </header>
 <nav>
   <button id="tab-ch" class="active" onclick="showTab('ch')">Channels</button>
@@ -133,6 +133,8 @@ body{padding-bottom:42px}
 
 <script>
 var N=512, vals=new Array(513).fill(0);
+var valsByPort=[[],[],[],[]];   // last known frame per port (for port switches)
+var curPort=-1;
 var port=0;
 var UNIV_N=4;
 
@@ -186,7 +188,7 @@ function fmtUp(ms){
 }
 
 function update(d){
-  vals=d.values;
+  var name=d.longname||d.name||'';
   document.getElementById('t-ip').textContent=d.ip;
   document.getElementById('t-mask').textContent=d.mask;
   document.getElementById('t-dhcp').textContent=d.dhcp?'on':'off';
@@ -194,8 +196,8 @@ function update(d){
   document.getElementById('s-art').className='dot '+(d.artnet.connected?'ok':'bad');
   document.getElementById('t-fps').textContent=d.artnet.fps;
   document.getElementById('t-up').textContent=fmtUp(d.uptime_ms);
-  document.getElementById('t-name').textContent=d.name||'';
-  document.getElementById('t-namepi').style.display=(d.name)?'':'none';
+  document.getElementById('t-name').textContent=name;
+  document.getElementById('t-namepi').style.display=name?'':'none';
   var sel=document.getElementById('port');
   for(var i=0;i<sel.options.length;i++){
     var a='N'+(d.net?d.net[i]:0)+'/S'+(d.subnet?d.subnet[i]:0)+'/U'+(d.universe?d.universe[i]:0);
@@ -203,8 +205,40 @@ function update(d){
     sel.options[i].textContent='Port '+(i+1)+' - '+dir+a;
     sel.options[i].title=dir+a;
   }
-  for(var i=1;i<=512;i++) drawCell(i);
-  render();
+  syncForm(d);
+  if(d.values) valsByPort[port]=d.values;   // keep latest frame per port
+  if(port!==curPort || d.changed!==false){
+    curPort=port;
+    vals=valsByPort[port]||vals;
+    for(var i=1;i<=512;i++) drawCell(i);
+    render();
+  }
+}
+
+// Keep the Settings form in sync with what the node actually has. The node
+// can be reprogrammed out-of-band (MagicQ ArtAddress), so every poll refills
+// the fields; the browser may simply keep this page open and watch changes.
+// Fields currently being edited (focused) are left alone.
+function syncForm(d){
+  var e=document.getElementById('cfg-form').elements;
+  if(!e['ip']) return;
+  var net=d.net||[], sub=d.subnet||[], uni=d.universe||[], dir=d.direction||[];
+  var f={
+    ip:d.ip, mask:d.mask, dhcp:d.dhcp?true:false,
+    name:d.name||'', longname:d.longname||''
+  };
+  for(var k in f){
+    var el=e[k]; if(!el || el===document.activeElement) continue;
+    if(el.type==='checkbox'){ if(el.checked!==f[k]) el.checked=f[k]; }
+    else if(el.value!==f[k]) el.value=f[k];
+  }
+  for(var i=0;i<net.length;i++){
+    var n=e['n'+i], s=e['s'+i], u=e['u'+i], dd=e['d'+i];
+    if(n && n!==document.activeElement && n.value!=net[i]) n.value=net[i];
+    if(s && s!==document.activeElement && s.value!=sub[i]) s.value=sub[i];
+    if(u && u!==document.activeElement && u.value!=uni[i]) u.value=uni[i];
+    if(dd && dd!==document.activeElement && dd.value!=dir[i]) dd.value=dir[i];
+  }
 }
 function drawCell(i){
   var v=vals[i]||0;

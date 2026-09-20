@@ -316,12 +316,7 @@ static void handleAddress(const uint8_t *pkt, int n, IPAddress src) {
 
   if (changed) {
     bool ok = config.save();
-    Serial.printf("ADDR: net=%u sub=%u uni=[%u,%u,%u,%u] dir=[%u%u%u%u] save=%d\n",
-                  config.net[0], config.subnet[0],
-                  config.universe[0], config.universe[1],
-                  config.universe[2], config.universe[3],
-                  config.direction[0], config.direction[1],
-                  config.direction[2], config.direction[3], ok);
+    (void)ok;
   }
 
   // Confirm to the requester with a fresh ArtPollReply reflecting the
@@ -434,11 +429,15 @@ void readArtnet() {
       uint16_t length = (uint16_t)(pkt[17] << 8) | pkt[16];
       if (length > DMX_UNIVERSE_SIZE) length = DMX_UNIVERSE_SIZE;
 
-      // Route by the configured net/subnet/universe -> OUTPUT port mapping.
-      // Input ports ignore incoming ArtDmx (they only publish their own).
       int port = config.outputPortForAddress(address);
       if (port < 0) return;
       last_art[port] = millis();
+
+      // If the previous frame is still draining out via DMA, skip this one
+      // entirely. Rewriting dmx_buffer or restarting the SM while DMA reads
+      // it would corrupt the frame in progress. MagicQ retransmits ArtDmx at
+      // ~30-40 Hz, so the next packet lands within a frame period anyway.
+      if (dmx[port].busy()) return;
 
       uint8_t *data = &pkt[18];
       int avail = n - 18;                       // bytes actually received
@@ -459,18 +458,6 @@ void readArtnet() {
       }
       dmx[port].write(dmx_buffer[port], DMX_UNIVERSE_SIZE + 1);
 
-      // One debug line per second showing what MagicQ is actually sending.
-      // Report the RECEIVED data (n-18 bytes) so a wrong/quirky length
-      // field can't hide real channel values.
-      static uint32_t last_dbg = 0;
-      if (DMX_DEBUG_LOG && (millis() - last_dbg > 1000)) {
-        last_dbg = millis();
-        #define D(c) ((n > 18 + c) ? data[c] : 0)
-        Serial.printf("ArtDmx a%u(n%u/s%u/u%u) psz%u len%u frames%u recv[1..8]=%u,%u,%u,%u,%u,%u,%u,%u\n",
-                      address, addr_net, sub, uni, n, length, frame_len,
-                      D(0), D(1), D(2), D(3), D(4), D(5), D(6), D(7));
-        #undef D
-      }
       break;
     }
 
@@ -548,8 +535,20 @@ static void webStatus() {
   int port = http.arg("port").toInt();
   if (port < 0 || port >= NUM_UNIVERSES) port = 0;
 
+  // Cheap 32-bit FNV hash of the requested port's frame. When unchanged, the
+  // ~1.5 KB "values" array is skipped so the 300 ms poll does far less work
+  // on the Pico and over the USB link; the browser keeps its last grid.
+  static uint32_t last_hash[NUM_UNIVERSES] = {0};
+  uint32_t hash = 2166136261u;
+  for (int c = 0; c <= DMX_UNIVERSE_SIZE; c++) {
+    hash ^= dmx_buffer[port][c];
+    hash *= 16777619u;
+  }
+  bool values_changed = (hash != last_hash[port]);
+  last_hash[port] = hash;
+
   String j = "{\"ip\":\"" + config.ipAddr().toString() + "\",";
-  j.reserve(4096);   // full JSON incl. the 512 channel values: avoid reallocation churn
+  j.reserve(values_changed ? 4096 : 512);   // only budget for values if changed
   j += "\"mask\":\"" + config.maskAddr().toString() + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",";
   j += "\"name\":\"" + jsonEscape(config.short_name) + "\",";
@@ -583,10 +582,13 @@ static void webStatus() {
     j += (config.isInput(i) && inputActive(i)) ? "true" : "false";
     if (i < NUM_UNIVERSES - 1) j += ",";
   }
-  j += "],\"values\":[0";   // values[i] == DMX channel i (page uses 1..512)
-  for (int c = 1; c <= DMX_UNIVERSE_SIZE; c++) {
-    j += ',';
-    j += dmx_buffer[port][c];
+  j += "],\"changed\":" + String(values_changed ? "true" : "false");
+  if (values_changed) {
+    j += ",\"values\":[0";   // values[i] == DMX channel i (page uses 1..512)
+    for (int c = 1; c <= DMX_UNIVERSE_SIZE; c++) {
+      j += ',';
+      j += dmx_buffer[port][c];
+    }
   }
   j += "]}";
   http.send(200, "application/json", j);
@@ -673,16 +675,6 @@ static void webSaveConfig() {
     setConfigName(config.long_name, sizeof(config.long_name), http.arg("longname"));
 
   bool ok = config.save();
-  Serial.printf("CFG: ip=%u.%u.%u.%u mask=%u.%u.%u.%u dhcp=%d addr=[%u/%u/%u,%u/%u/%u,%u/%u/%u,%u/%u/%u] dir=%u%u%u%u save=%d\n",
-                config.ip[0], config.ip[1], config.ip[2], config.ip[3],
-                config.mask[0], config.mask[1], config.mask[2], config.mask[3],
-                config.dhcp_enabled ? 1 : 0,
-                config.net[0], config.subnet[0], config.universe[0],
-                config.net[1], config.subnet[1], config.universe[1],
-                config.net[2], config.subnet[2], config.universe[2],
-                config.net[3], config.subnet[3], config.universe[3],
-                config.direction[0], config.direction[1],
-                config.direction[2], config.direction[3], ok);
   http.send(200, "application/json",
             String("{\"ok\":") + (ok ? "true" : "false") + ",\"reboot\":true}");
   if (ok) rebootNode();
@@ -730,7 +722,7 @@ static void blinkReadyLed() {
 static bool bringUpNetwork() {
   if (net_ready) return true;
 
-  static bool eth_started = false;
+  static bool eth_started = false;   // eth.begin() can only run once
   IPAddress node_ip = config.ipAddr();
 
   // Let the host finish enumerating the CDC interface before eth.begin()
@@ -811,7 +803,6 @@ void setup() {
       digitalWrite(RDM_DE_PINS[i], HIGH);   // keep driver enabled
       digitalWrite(DMX_PINS[i], LOW);
     }
-    Serial.println("SELF_TEST A: DI 4Hz square (8s)");
     uint32_t t0 = millis();
     while (millis() - t0 < 8000) {
       bool v = (millis() / 125) & 1;         // 4 Hz square
@@ -823,23 +814,18 @@ void setup() {
 
     // Phase B: hammer DmxOutput::write() back-to-back with an alternating
     // byte pattern so BREAK+data are continuous (~high duty on data-).
-    Serial.println("SELF_TEST B: continuous DmxOutput frames (8s)");
     for (int i = 0; i < NUM_UNIVERSES; i++) {
       memset(dmx_buffer[i], 0, sizeof(dmx_buffer[i]));
       for (int c = 1; c < DMX_UNIVERSE_SIZE + 1; c++)
         dmx_buffer[i][c] = (c & 1) ? 0xAA : 0x55;
     }
     t0 = millis();
-    uint32_t frames = 0;
     while (millis() - t0 < 8000) {
       for (int i = 0; i < NUM_UNIVERSES; i++)
         dmx[i].write(dmx_buffer[i], DMX_UNIVERSE_SIZE + 1);
-      frames++;
     }
     digitalWrite(STATUS_LED, 1);
-    Serial.printf("SELF_TEST B: %lu frames pushed\n", frames);
     delay(1000);
-    Serial.println("SELF_TEST done");        // falls through to normal setup
   }
 
   // DMX outputs on GPIO 2/3/4/5 (all on pio0)
@@ -863,7 +849,6 @@ void setup() {
       dmx_buffer[i][4] = 255;
       dmx[i].write(dmx_buffer[i], DMX_UNIVERSE_SIZE + 1);
     }
-    Serial.println("TEST: all universes ch1-4=255 rest 0");
   }
 
   // RDM receivers on pio1 (one SM per port on pins 6..9), DE/RE on 10..13.
@@ -929,6 +914,9 @@ void loop() {
     last_stream = now_ms;
     for (int i = 0; i < NUM_UNIVERSES; i++) {
       if (config.isInput(i)) continue;
+      // Never restart the PIO/DMA while a frame is still on the wire; the
+      // next 30 ms tick picks it up once the current frame finished.
+      if (dmx[i].busy()) continue;
       dmx[i].write(dmx_buffer[i], DMX_UNIVERSE_SIZE + 1);
     }
   }
