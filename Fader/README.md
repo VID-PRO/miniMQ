@@ -1,12 +1,12 @@
-# DIY MagicQ Compact Mini Connect Wing (Projekthandbuch)
+# DIY MagicQ Compact Mini Connect Wing (Project Handbook)
 
-Dieses Handbuch beschreibt den Eigenbau eines Lichtpults, das dem modernen **MagicQ Compact Mini Connect Layout** nachempfunden ist. Das Pult steuert die MagicQ-Software über **Tastaturbefehle (HID-Emulation)** über die integrierte Playback-Shortcuts-Funktion der Software.
+This handbook describes building your own lighting console modeled after the modern **MagicQ Compact Mini Connect layout**. The console controls the MagicQ software via **keyboard commands (HID emulation)** using the software's built-in playback shortcuts function.
 
-> **Hinweis:** Die Firmware verwendet ein **3×13-Tasterraster**. In diesem Handbuch wird die Keymap nach dem **verifizierten** Zustand dokumentiert (per Diagnose-Dump der Firmware geprüft). Die Beschriftung der einzelnen Tastern kann sich an Ihren Bedürfnissen orientieren – maßgeblich ist die Zuordnung Zelle → Tastencode in der Tabelle unten.
+> **Note:** The firmware uses a **3×13 button grid**. This handbook documents the keymap according to the **verified** state (checked via the firmware's diagnostic dump). The labeling of the individual keys can follow your own needs – what matters is the cell → key code mapping in the table below.
 
-## 1. Das Layout (Physische Anordnung)
+## 1. The layout (physical arrangement)
 
-Das Pult besitzt **3 Tasterreihen à 13 Tasten** und darunter die Fader-Sektion. Oben: die **S-Reihe** (Playback wählen) mit **MASTER GO** ganz rechts. Mitte: die **GO-Reihe**. Unten: die **Flash-Reihe (F1–F10)** mit **SWOP/PREV** links und **MASTER PAUSE** ganz rechts.
+The console has **3 rows of 13 buttons** and the fader section below them. At the top: the **S row** (select playback) with **MASTER GO** far right. Middle: the **GO row**. Bottom: the **flash row (F1–F10)** with **SWOP/PREV** on the left and **MASTER PAUSE** far right.
 
 ```
                                       [ MINI CONNECT WING ]
@@ -21,165 +21,165 @@ Das Pult besitzt **3 Tasterreihen à 13 Tasten** und darunter die Fader-Sektion.
   Master                   1       2       3       4       5       6       7       8       9       10
 ```
 
-### 1.1 Firmware-Keymap (verifiziert)
+### 1.1 Firmware keymap (verified)
 
-Die Zuordnung wird in `src/main.cpp` als `MATRIX[3][13]` definiert und per Diagnose-Kombination S10+GO10 (tippt die Zellentabelle in den Editor) geprüft:
+The mapping is defined in `src/main.cpp` as `MATRIX[3][13]` and checked via the diagnostic combination S10+GO10 (which types the cell table into the editor):
 
-| Zelle | Taste(n) | Tastencode | Funktion in MagicQ „Playback shortcuts" |
-|-------|----------|-----------|------------------------------------------|
-| 0,0   | ALT      | `Ctrl+Alt+0` (halten) | **Dead Black Out (DBO)** kurzschließen |
-| 0,1   | NEXT     | `[`        | Nächste Playback-Seite |
+| Cell | Key(s) | Key code | Function in MagicQ "Playback shortcuts" |
+|------|--------|----------|-----------------------------------------|
+| 0,0   | ALT      | `Ctrl+Alt+0` (hold) | **Dead Black Out (DBO)** short-circuit |
+| 0,1   | NEXT     | `[`        | Next playback page |
 | 0,2–0,11 | S1–S10 | `1 2 3 4 5 6 7 8 9 0` | **Select Playback 1–10** |
 | 0,12  | MASTER GO | `Space`   | **Manual GO** |
-| 1,0   | DBO      | `F11`      | **Dead Black Out** (Mac-Tastaturbelegung) |
-| 1,1   | NEXT     | `[`        | Nächste Playback-Seite (2. Key) |
+| 1,0   | DBO      | `F11`      | **Dead Black Out** (Mac keyboard layout) |
+| 1,1   | NEXT     | `[`        | Next playback page (2nd key) |
 | 1,2–1,11 | GO1–GO10 | `q w e r t y u i o p` | **GO Playback 1–10** |
 | 1,12  | RELEASE | `-`       | **Release Playback** |
 | 2,0   | SWOP     | `` ` ``    | **Add/Swap** |
-| 2,1   | PREV     | `]`        | Vorherige Playback-Seite |
-| 2,2–2,11 | F1–F10  | `\ z x c v b n m , .` | **Flash Playback 1–10** (momentan) |
+| 2,1   | PREV     | `]`        | Previous playback page |
+| 2,2–2,11 | F1–F10  | `\ z x c v b n m , .` | **Flash Playback 1–10** (momentary) |
 | 2,12  | MASTER PAUSE | `#`  | **Manual STOP** |
 
-**Besondere Verhaltensweisen der Firmware:**
+**Special firmware behaviors:**
 
-* **Flash (F1–F10):** MagicQ-„Test"-Tasten toggeln das Playback auf 100% – die Firmware sendet daher beim Drücken einen Tastendruck (**an**) und beim Loslassen erneut (**aus**). Ergebnis: ein **momentanes** Flashen, solange der Finger auf der Taste liegt.
-* **S + GO (gleiches Playback) = PAUSE/STOP:** Solange S_n und GO_n zusammen gehalten werden, sendet die Firmware die **STOP-Taste** (`a s d f g h j k l ;`). STOP ist in MagicQ ein Toggle – jede Betätigung pausiert/startet. Damit kein „ws"-Geistertastendruck entsteht, wird jede S-/GO-Taste ~40 ms verzögert; die Chord-Erkennung entscheidet, ob STOP oder die Einzeltaste gesendet wird.
-* **ALT:** wie ein Modifier gehalten (`Ctrl+Alt+0`), bis die Taste losgelassen wird.
-* **MASTER GO / MASTER PAUSE:** liegen bei diesem Layout oben rechts (GO) bzw. unten rechts (PAUSE) statt vertikal gestapelt.
+* **Flash (F1–F10):** MagicQ "Test" keys toggle the playback to 100% – the firmware therefore sends a key press (**on**) when pressed and again (**off**) when released. Result: a **momentary** flash while your finger is on the key.
+* **S + GO (same playback) = PAUSE/STOP:** While S_n and GO_n are held together, the firmware sends the **STOP key** (`a s d f g h j k l ;`). STOP is a toggle in MagicQ – every press pauses/starts. To avoid a "ws" ghost key press, each S/GO key is delayed ~40 ms; the chord detection decides whether STOP or the individual key is sent.
+* **ALT:** held like a modifier (`Ctrl+Alt+0`) until the key is released.
+* **MASTER GO / MASTER PAUSE:** in this layout they sit top right (GO) or bottom right (PAUSE) instead of being stacked vertically.
 
-## 2. Benötigte Hardware & Einkaufsliste
+## 2. Required hardware & shopping list
 
-* **1x Raspberry Pi Pico** (Standard oder Pico H).
-* **1x 74HC4067 Multiplexer Board** (16-Kanal Analog-Multiplexer zum Einlesen der Fader).
-* **11x Schiebepotentiometer (Fader)**:
-  * **Empfehlung**: Bourns PTA6043 oder ALPS RS6011Y.
-  * **Spezifikation**: **10k Ohm, LINEAR** (Wichtig: Gekennzeichnet mit "B10K" oder "10K Lin"). **60mm** Regelweg entspricht dem Original.
-* **38x Mechanische Tastenschalter** (3×13-Raster, davon 38 Zellen belegt, 1 Reserve):
-  * **Empfehlung**: Cherry MX Black oder Cherry MX Red (lineares Tippgefühl ohne hörbares Klicken für schnelles, lautloses Flashen).
-* **38x Tastenkappen (Keycaps)**: Standardgröße 1U. Farbschema-Vorschlag: Grau (S), Blau (Flash), Grün (GO).
-* **38x Dioden**: Modell **1N4148** (Unabdingbar zur Vermeidung von "Ghosting" in der Tastermatrix).
+* **1x Raspberry Pi Pico** (standard or Pico H).
+* **1x 74HC4067 multiplexer board** (16-channel analog multiplexer for reading the faders).
+* **11x slide potentiometers (faders)**:
+  * **Recommendation**: Bourns PTA6043 or ALPS RS6011Y.
+  * **Specification**: **10k Ohm, LINEAR** (Important: labeled "B10K" or "10K Lin"). **60mm** travel corresponds to the original.
+* **38x mechanical key switches** (3×13 grid, 38 cells populated, 1 spare):
+  * **Recommendation**: Cherry MX Black or Cherry MX Red (linear feel without audible clicking for fast, silent flashing).
+* **38x keycaps**: standard 1U size. Suggested color scheme: gray (S), blue (Flash), green (GO).
+* **38x diodes**: model **1N4148** (indispensable for avoiding "ghosting" in the key matrix).
 
-## 3. Hardware-Verkabelung
+## 3. Hardware wiring
 
-### 3.1 Die Fader (Über den 74HC4067 Multiplexer)
-Der Pico besitzt nur 3 analoge Eingänge (ADC), wir benötigen für 10 Playbacks + 1 Grand Master jedoch 11 Eingänge. Der Multiplexer schaltet diese extrem schnell auf einen einzigen Pin um.
+### 3.1 The faders (via the 74HC4067 multiplexer)
+The Pico has only 3 analog inputs (ADC), but we need 11 inputs for 10 playbacks + 1 grand master. The multiplexer switches these extremely quickly onto a single pin.
 
-* **Stromversorgung Fader**: Verbinden Sie den linken Pin aller 11 Fader mit **3V3(OUT)** (Pico Pin 36) und den rechten Pin aller Fader mit **GND** (z. B. Pico Pin 38).
-* **Signalleitungen Fader**: Der mittlere Pin (Schleifer) von Fader 1 bis 10 geht an die Eingänge **C1 bis C10** des Multiplexers. Der Grand Master Fader geht an den ersten Eingang **C0**.
-* **Multiplexer an Raspberry Pi Pico**:
-  * **VCC** -> 3V3 (Pico Pin 36)
-  * **GND** -> GND (Pico Pin 38)
-  * **SIG / COM** -> **GP27** (Pico Pin 32 / ADC1)
-  * **S0** -> **GP17** (Pico Pin 22)
-  * **S1** -> **GP18** (Pico Pin 24)
-  * **S2** -> **GP19** (Pico Pin 25)
-  * **S3** -> **GP20** (Pico Pin 26)
+* **Fader power**: connect the left pin of all 11 faders to **3V3(OUT)** (Pico pin 36) and the right pin of all faders to **GND** (e.g. Pico pin 38).
+* **Fader signal lines**: the middle pin (wiper) of faders 1 to 10 goes to inputs **C1 to C10** of the multiplexer. The grand master fader goes to the first input **C0**.
+* **Multiplexer to Raspberry Pi Pico**:
+  * **VCC** -> 3V3 (Pico pin 36)
+  * **GND** -> GND (Pico pin 38)
+  * **SIG / COM** -> **GP27** (Pico pin 32 / ADC1)
+  * **S0** -> **GP17** (Pico pin 22)
+  * **S1** -> **GP18** (Pico pin 24)
+  * **S2** -> **GP19** (Pico pin 25)
+  * **S3** -> **GP20** (Pico pin 26)
 
-### 3.2 Die Tastermatrix (3x13 Matrix) & Dioden-Schaltplan
-Um Pins zu sparen, verdrahten wir die Tasten in 3 Zeilen (Rows) und 13 Spalten (Columns). An jedem Schalter wird eine Diode **1N4148** angelötet, um Fehlauslösungen beim gleichzeitigen Drücken mehrerer Tasten (Ghosting) zu verhindern.
+### 3.2 The key matrix (3x13 matrix) & diode wiring plan
+To save pins, we wire the keys in 3 rows and 13 columns. A **1N4148** diode is soldered onto each switch to prevent false triggers when pressing multiple keys at once (ghosting).
 
-**Es gibt zwei gültige Kombinationen aus Dioden-Richtung und Scan-Polarität — die Abschnitte müssen zusammenpassen!**
+**There are two valid combinations of diode direction and scan polarity — the sections must match!**
 
-**Variante A "Active-Low" (Original, Dioden-Kathode Richtung Row):**
-Diode: Anode Richtung Column, **Kathode (schwarzer Ring) Richtung Row/Switch**. Scaling: Zeilen auf LOW, Spalten mit internen Pull-ups, Taste erkannt bei LOW.
+**Variant A "Active-Low" (original, diode cathode toward row):**
+Diode: anode toward column, **cathode (black ring) toward row/switch**. Scanning: rows pulled LOW, columns with internal pull-ups, key detected at LOW.
 
 ```text
-Zeilen-Leitung (Row von Pico-Ausgang, z.B. GP2)
-       |   (Ausgang, wird beim Scannen auf LOW gezogen)
+Row line (row from Pico output, e.g. GP2)
+       |   (output, pulled LOW during scanning)
        |
        v
        +-----------------------+
                                |
                         [Cherry MX Switch]
                                |
-                               | (Anderer Pin des Schalters)
+                               | (other pin of the switch)
                                v
-                             \   /  (1N4148 Diode)
+                             \   /  (1N4148 diode)
                               \ /
-                             -----  (Anode, kein Ring)
+                             -----  (anode, no ring)
                                |
                                v
-                       (Kathode / schwarzer Ring)
+                       (cathode / black ring)
                                |
                                v
-Spalten-Leitung (Column zu Pico-Eingang, z.B. GP6)
+Column line (column to Pico input, e.g. GP6)
 ```
 
-Leitpfad beim Tastendruck: **Column** (Pull-up, HIGH) -> **Anode** -> **Kathode** -> **Switch** -> **Row** (LOW). Die Diode leitet den Strom von der Spalte zur niedrigen Zeile und zieht die Spalte auf LOW.
+Current path when pressing a key: **Column** (pull-up, HIGH) -> **Anode** -> **Cathode** -> **Switch** -> **Row** (LOW). The diode conducts current from the column to the low row and pulls the column LOW.
 
-**Variante B "Active-High" (Standard bei vielen PCBs, Dioden-Kathode Richtung Column):**
-Diode: **Kathode (schwarzer Ring) Richtung Column**, Anode Richtung Row/Switch. Scaling: Zeilen auf HIGH, Spalten mit internen Pull-downs, Taste erkannt bei HIGH.
+**Variant B "Active-High" (standard on many PCBs, diode cathode toward column):**
+Diode: **cathode (black ring) toward column**, anode toward row/switch. Scanning: rows driven HIGH, columns with internal pull-downs, key detected at HIGH.
 
 ```text
-Zeilen-Leitung (Row von Pico-Ausgang, z.B. GP2)
-       |   (Ausgang, wird beim Scannen auf HIGH gezogen)
+Row line (row from Pico output, e.g. GP2)
+       |   (output, driven HIGH during scanning)
        |
        v
        +-----------------------+
                                |
                         [Cherry MX Switch]
                                |
-                               | (Anderer Pin des Schalters)
+                               | (other pin of the switch)
                                v
-                             \   /  (1N4148 Diode)
+                             \   /  (1N4148 diode)
                               \ /
-                             -----  (Kathode / schwarzer Ring)
+                             -----  (cathode / black ring)
                                |
                                |
                                v
-Spalten-Leitung (Column zu Pico-Eingang, z.B. GP6)
+Column line (column to Pico input, e.g. GP6)
 ```
 
-Leitpfad beim Tastendruck: **Row** (HIGH) -> **Switch** -> **Anode** -> **Kathode** -> **Column** (Pull-down, LOW). Die Diode leitet den Strom von der hohen Zeile zur Spalte und zieht die Spalte auf HIGH.
+Current path when pressing a key: **Row** (HIGH) -> **Switch** -> **Anode** -> **Cathode** -> **Column** (pull-down, LOW). The diode conducts current from the high row to the column and pulls the column HIGH.
 
-**Achtung bei bestehender Verdrahtung:** Falls die Dioden bereits gelötet sind und Richtung **Column** zeigen (Originalhandbuch), müssen Sie **nicht** umlöten — die **C++-Firmware (`src/main.cpp`) scannt bereits Active-High** und funktioniert damit. Die CircuitPython-Variante (`firmware/code.py`) scannt Active-Low und benötigt Dioden Richtung Row.
+**Caution with existing wiring:** If the diodes are already soldered and point toward the **Column** (original handbook), you do **not** need to re-solder them — the **C++ firmware (`src/main.cpp`) already scans Active-High** and works with that. The CircuitPython variant (`firmware/code.py`) scans Active-Low and requires diodes pointing toward the row.
 
-**Pinbelegung am Pico für die Matrix:**
-* **Zeilen (Ausgänge)**: Row 0 (S-Reihe) = **GP4**, Row 1 (GO-Reihe) = **GP2**, Row 2 (Flash-Reihe) = **GP3**
-* **Spalten (Eingänge)**: Spalte 1 bis 13 an **GP6 bis GP16, GP21, GP22**
+**Pin assignment on the Pico for the matrix:**
+* **Rows (outputs)**: Row 0 (S row) = **GP4**, Row 1 (GO row) = **GP2**, Row 2 (Flash row) = **GP3**
+* **Columns (inputs)**: Column 1 to 13 on **GP6 to GP16, GP21, GP22**
 
-## 4. Installation & Bootloader flashen
+## 4. Installation & flashing the bootloader
 
-### Variante A: CircuitPython (`firmware/code.py`)
+### Variant A: CircuitPython (`firmware/code.py`)
 
-1. Laden Sie die aktuelle stabile `.uf2`-Datei für den Raspberry Pi Pico von **circuitpython.org/downloads** herunter.
-2. Halten Sie die **BOOTSEL**-Taste auf dem Pico gedrückt und schließen Sie ihn per USB an den PC an.
-3. Lassen Sie die Taste los. Ein Laufwerk namens `RPI-RP2` öffnet sich.
-4. Ziehen Sie die heruntergeladene `.uf2`-Datei auf das Laufwerk. Der Pico startet neu und heißt ab jetzt **`CIRCUITPY`**.
-5. Kopieren Sie den Quellcode aus `firmware/code.py` direkt auf das `CIRCUITPY`-Laufwerk.
+1. Download the current stable `.uf2` file for the Raspberry Pi Pico from **circuitpython.org/downloads**.
+2. Hold the **BOOTSEL** button on the Pico and plug it into the PC via USB.
+3. Release the button. A drive named `RPI-RP2` opens.
+4. Drag the downloaded `.uf2` file onto the drive. The Pico restarts and is now called **`CIRCUITPY`**.
+5. Copy the source code from `firmware/code.py` directly onto the `CIRCUITPY` drive.
 
-### Variante B: PlatformIO / C++ (`platformio.ini` im Projekt-Root)
+### Variant B: PlatformIO / C++ (`platformio.ini` in the project root)
 
-Die C++-Version ist die **latency-optimierte** Variante (kompiliert zu nativem ARM-Code) und nutzt das eingebaute USB-HID-Keyboard des **earlephilhower Arduino-Cores** — derselbe Ansatz wie im Schwesterprojekt `chamsys-encoder`.
+The C++ version is the **latency-optimized** variant (compiled to native ARM code) and uses the built-in USB-HID keyboard of the **earlephilhower Arduino core** — the same approach as the sister project `chamsys-encoder`.
 
 ```bash
-# Projekt öffnen und bauen:
+# Open and build the project:
 cd Documents/Arduino/chamsys-wing
-pio run           # baut firmware.uf2
+pio run           # builds firmware.uf2
 
-# Auf den Pico flashen (BOOTSEL-Haltezustand nötig):
+# Flash to the Pico (BOOTSEL hold-state required):
 pio run -t upload
 ```
 
-Die erzeugte Datei liegt unter `.pio/build/pico/firmware.uf2` (alternativ per Drag & Drop auf das `RPI-RP2`-Laufwerk, nachdem der Pico im BOOTSEL-Modus gestartet wurde).
+The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag & drop onto the `RPI-RP2` drive after starting the Pico in BOOTSEL mode).
 
-## 5. Einrichtung in MagicQ
+## 5. Setup in MagicQ
 
-1. Starten Sie MagicQ, wählen Sie **Setup** -> **View Settings**.
-2. Wechseln Sie in den Reiter **Keypad Encoders**.
-3. Suchen Sie die Zeile **MagicQ PC Keyboard Mode** und ändern Sie diese auf **Playback shortcuts**.
-4. Stellen Sie das Betriebssystem Ihres PCs für die DIY-Tastatur idealerweise auf das **US-Tastaturlayout** um, damit Sonderzeichen wie `@` fehlerfrei vom Pico eingetippt werden können.
-5. **macOS-Tipp**: Falls die physische Shift-Taste des Mac sporadisch aussetzt, solange der Pico als zusätzliche USB-Tastatur angeschlossen ist — das ist ein bekanntes macOS-Verhalten bei mehreren HID-Tastaturen (der Pico injiziert Shift für Zeichen wie `#` und `@`). Die Firmware sendet deshalb Kleinbuchstaben (MagicQ wertet Keycodes case-insensitiv aus). Wer es gar nicht will, trennt den Pico, wenn nur am Mac-Board getippt wird.
-6. **Linux/Windows-Hinweis**: Die Flash-Tasten (F1–F10) funktionieren auf dem Mac, **nicht** auf dem PC (MagicQ-PC hat in den „Playback shortcuts" keine F-Tasten-Bindung). Die Firmware nutzt daher stattdessen die **Test-Tasten** (`\ z x c v b n m , .`), die auf jedem System funktionieren und togglen (100% Playback an/aus). Die Firmware kompensiert das Toggeln automatisch zu **momentanem Flash**.
+1. Start MagicQ, select **Setup** -> **View Settings**.
+2. Switch to the **Keypad Encoders** tab.
+3. Find the **MagicQ PC Keyboard Mode** line and change it to **Playback shortcuts**.
+4. Ideally set your PC's operating system to the **US keyboard layout** for the DIY keyboard, so that special characters like `@` are typed correctly by the Pico.
+5. **macOS tip**: If the Mac's physical Shift key occasionally drops out while the Pico is connected as an additional USB keyboard — that is known macOS behavior with multiple HID keyboards (the Pico injects Shift for characters like `#` and `@`). The firmware therefore sends lowercase letters (MagicQ evaluates key codes case-insensitively). If you don't want that at all, unplug the Pico when typing only on the Mac keyboard.
+6. **Linux/Windows note**: The flash keys (F1–F10) work on the Mac, **not** on the PC (MagicQ-PC has no F-key binding in "Playback shortcuts"). The firmware therefore uses the **Test keys** (`\ z x c v b n m , .`) instead, which work on every system and toggle (100% playback on/off). The firmware automatically compensates the toggling into **momentary flash**.
 
-## Projektstruktur
+## Project structure
 
 ```
 chamsys-wing/
-├── README.md            # Dieses Handbuch
-├── platformio.ini       # PlatformIO-Konfiguration (earlephilhower Core)
+├── README.md            # This handbook
+├── platformio.ini       # PlatformIO configuration (earlephilhower core)
 ├── src/
-│   └── main.cpp         # C++ Quellcode (latency-optimiert, USB-HID)
+│   └── main.cpp         # C++ source (latency-optimized, USB-HID)
 └── firmware/
-    └── code.py          # CircuitPython Quellcode (alternative Variante)
+    └── code.py          # CircuitPython source (alternative variant)
 ```

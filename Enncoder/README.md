@@ -1,72 +1,72 @@
 # ChamSys MagicQ Custom Controller (Raspberry Pi Pico)
 
-Ein eigener Hardware-Controller zur Steuerung der virtuellen Encoder und Fenster in **ChamSys MagicQ**, basierend auf einem **Raspberry Pi Pico** (RP2040).
+A custom hardware controller for controlling the virtual encoders and windows in **ChamSys MagicQ**, based on a **Raspberry Pi Pico** (RP2040).
 
-Der Pico emuliert über USB eine native Tastatur (HID), wodurch keine Treiber zusätzlich installiert werden müssen.
-
----
-
-## Inhaltsverzeichnis
-
-- [Funktionsweise](#funktionsweise)
-- [MagicQ Software-Einrichtung](#magicq-software-einrichtung)
-- [Pin-Belegung](#pin-belegung)
-- [Anschluss-Schemata (ASCII)](#anschluss-schemata-ascii)
-  - [Drehencoder (CLK / DT)](#drehencoder-clk--dt)
-  - [MCP23017 I/O-Expander für alle Tasten](#mcp23017-io-expander-für-alle-tasten)
-- [Projektstruktur](#projektstruktur)
-- [Build & Upload (PlatformIO)](#build--upload-platformio)
-- [Stückliste (BOM)](#stückliste-bom)
-- [Hinweise & Einschränkungen](#hinweise--einschränkungen)
+The Pico emulates a native keyboard (HID) over USB, so no additional drivers need to be installed.
 
 ---
 
-## Funktionsweise
+## Table of contents
 
-Das Projekt setzt **8 Drehencoder** mit Klick-Funktion sowie **7 weitere Tasten** um.
-Die 8 Drehencoder (CLK/DT) sowie die **F-Tasten, Shift, Group und FX** hängen **direkt an den GPIOs
-des Pico**. Nur die **8 Encoder-SW** liegen auf einem **MCP23017 I/O-Expander** (I²C).
+- [How it works](#how-it-works)
+- [MagicQ software setup](#magicq-software-setup)
+- [Pin assignments](#pin-assignments)
+- [Connection diagrams (ASCII)](#connection-diagrams-ascii)
+  - [Rotary encoder (CLK / DT)](#rotary-encoder-clk--dt)
+  - [MCP23017 I/O expander for all keys](#mcp23017-io-expander-for-all-keys)
+- [Project structure](#project-structure)
+- [Build & upload (PlatformIO)](#build--upload-platformio)
+- [Bill of materials (BOM)](#bill-of-materials-bom)
+- [Notes & limitations](#notes--limitations)
 
-Alle Taster und Schalter schalten direkt gegen **GND** (Pullup-Widerstände sind aktiviert).
+---
 
-| Bedienelement | Aktion | Gesendetes Tastaturzeichen |
+## How it works
+
+The project implements **8 rotary encoders** with click function as well as **7 additional keys**.
+The 8 rotary encoders (CLK/DT) and the **F keys, Shift, Group and FX** are connected **directly to the GPIOs
+of the Pico**. Only the **8 encoder SW** buttons sit on an **MCP23017 I/O expander** (I²C).
+
+All buttons and switches switch directly against **GND** (pull-up resistors are enabled).
+
+| Control | Action | Keyboard character sent |
 |---|---|---|
-| Encoder **rechts** | Wert + | `<nr>+` (z.B. `1+`) |
-| Encoder **links** | Wert – | `<nr>-` (z.B. `1-`) |
-| Encoder **Klick** (SW) | Soft-Button | `<nr>` (z.B. `1`) |
-| **Shift** (Methode A) | Ultra-Feinjustierung (0,1%-Schritte) | `KEY_LEFT_SHIFT` (gehalten) |
-| **Intensity (F5)** | INT-Fenster öffnen | `Ctrl+I` |
-| **Position (F6)** | POS-Fenster öffnen | `Ctrl+P` |
-| **Colour (F7)** | COL-Fenster öffnen | `Ctrl+K` |
-| **Beam (F8)** | BEAM-Fenster öffnen | `Ctrl+J` |
-| **Group** | Group-Fenster öffnen | `Ctrl+G` |
-| **FX** | FX-Fenster öffnen | `Ctrl+F` |
+| Encoder **right** | Value + | `<nr>+` (e.g. `1+`) |
+| Encoder **left** | Value – | `<nr>-` (e.g. `1-`) |
+| Encoder **click** (SW) | Soft button | `<nr>` (e.g. `1`) |
+| **Shift** (method A) | Ultra fine adjustment (0.1% steps) | `KEY_LEFT_SHIFT` (held) |
+| **Intensity (F5)** | Open INT window | `Ctrl+I` |
+| **Position (F6)** | Open POS window | `Ctrl+P` |
+| **Colour (F7)** | Open COL window | `Ctrl+K` |
+| **Beam (F8)** | Open BEAM window | `Ctrl+J` |
+| **Group** | Open Group window | `Ctrl+G` |
+| **FX** | Open FX window | `Ctrl+F` |
 
-> **Hinweis:** Die Attribut-Tasten (F5–F8), Group und FX senden **Strg-Kombinationen** (`Ctrl+I`,
-> `Ctrl+P`, `Ctrl+K`, `Ctrl+J`, `Ctrl+G`, `Ctrl+F`) und öffnen damit direkt die entsprechenden
-> MagicQ-Fenster. Die **Shift-Taste** hält `KEY_LEFT_SHIFT` als Modifier für die Ultra-Feinjustierung.
-
----
-
-## MagicQ Software-Einrichtung
-
-Damit der Pico die Tastaturbefehle korrekt an die Software übergibt, muss MagicQ in den richtigen Modus versetzt werden:
-
-1. Navigieren zu: **Setup > View Settings > Keypad Encoders**.
-2. Option **MagicQ PC Keyboard Mode** auf **Programming Shortcuts** stellen.
-
-Danach können die Encoder-Nummern (`1`–`8`) direkt den gewünschten Fenstern bzw. Soft-Buttons zugeordnet werden.
+> **Note:** The attribute keys (F5–F8), Group and FX send **Ctrl combinations** (`Ctrl+I`,
+> `Ctrl+P`, `Ctrl+K`, `Ctrl+J`, `Ctrl+G`, `Ctrl+F`) and thus open the corresponding
+> MagicQ windows directly. The **Shift key** holds `KEY_LEFT_SHIFT` as a modifier for ultra fine adjustment.
 
 ---
 
-## Pin-Belegung
+## MagicQ software setup
 
-Die **8 Drehencoder (CLK/DT)** sowie die **F-Tasten, Shift, Group und FX** hängen direkt an den
-GPIOs des Pico. Der **MCP23017** (I²C, SDA = GP16, SCL = GP17) übernimmt nur noch die **Encoder-SW**.
+So that the Pico passes the keyboard commands to the software correctly, MagicQ must be put into the right mode:
 
-### Encoder-Direktverbindung (Pico GPIO)
+1. Navigate to: **Setup > View Settings > Keypad Encoders**.
+2. Set the option **MagicQ PC Keyboard Mode** to **Programming Shortcuts**.
 
-| Bauteil | CLK / DT |
+Afterwards the encoder numbers (`1`–`8`) can be assigned directly to the desired windows or soft buttons.
+
+---
+
+## Pin assignments
+
+The **8 rotary encoders (CLK/DT)** and the **F keys, Shift, Group and FX** are connected directly to the
+GPIOs of the Pico. The **MCP23017** (I²C, SDA = GP16, SCL = GP17) only handles the **encoder SW**.
+
+### Encoder direct connection (Pico GPIO)
+
+| Component | CLK / DT |
 |---|---|
 | **Encoder 1** | GP0 / GP1 |
 | **Encoder 2** | GP2 / GP3 |
@@ -77,57 +77,57 @@ GPIOs des Pico. Der **MCP23017** (I²C, SDA = GP16, SCL = GP17) übernimmt nur n
 | **Encoder 7** | GP12 / GP13 |
 | **Encoder 8** | GP14 / GP15 |
 
-### Direkte Tasten am Pico (GPIO, gegen GND)
+### Direct keys on the Pico (GPIO, against GND)
 
-| Funktion | Pico-Pin | Shortcut |
+| Function | Pico pin | Shortcut |
 |---|---|---|
 | **Intensity (F5)** | GP18 | `Ctrl+I` |
 | **Position (F6)** | GP19 | `Ctrl+P` |
 | **Colour (F7)** | GP20 | `Ctrl+K` |
 | **Beam (F8)** | GP21 | `Ctrl+J` |
-| **Shift** (Methode A) | GP22 | gehalten `KEY_LEFT_SHIFT` |
+| **Shift** (method A) | GP22 | held `KEY_LEFT_SHIFT` |
 | **Group** | GP26 | `Ctrl+G` |
 | **FX** | GP27 | `Ctrl+F` |
 
-### Tasten am MCP23017 (I/O-Expander, Adresse `0x20`)
+### Keys on the MCP23017 (I/O expander, address `0x20`)
 
-Der MCP23017 wird über I²C (Adresse `0x20`) mit dem Pico verbunden. Er nimmt nur noch die
-**Encoder-SW** (8 von 16 Pins) auf; alle schalten gegen GND (Pullup im MCP aktiviert).
+The MCP23017 is connected to the Pico via I²C (address `0x20`). It only takes the
+**encoder SW** (8 of 16 pins); all switch against GND (pull-up in the MCP enabled).
 
-| Expander-Pin | Funktion | Shortcut |
+| Expander pin | Function | Shortcut |
 |---|---|---|
-| **GPA0** (Pin 21) | Encoder 1 SW | `1` |
-| **GPA1** (Pin 22) | Encoder 2 SW | `2` |
-| **GPA2** (Pin 23) | Encoder 3 SW | `3` |
-| **GPA3** (Pin 24) | Encoder 4 SW | `4` |
-| **GPA4** (Pin 25) | Encoder 5 SW | `5` |
-| **GPA5** (Pin 26) | Encoder 6 SW | `6` |
-| **GPA6** (Pin 27) | Encoder 7 SW | `7` |
-| **GPA7** (Pin 28) | Encoder 8 SW | `8` |
-| GPB0–GPB7 | frei | – |
+| **GPA0** (pin 21) | Encoder 1 SW | `1` |
+| **GPA1** (pin 22) | Encoder 2 SW | `2` |
+| **GPA2** (pin 23) | Encoder 3 SW | `3` |
+| **GPA3** (pin 24) | Encoder 4 SW | `4` |
+| **GPA4** (pin 25) | Encoder 5 SW | `5` |
+| **GPA5** (pin 26) | Encoder 6 SW | `6` |
+| **GPA6** (pin 27) | Encoder 7 SW | `7` |
+| **GPA7** (pin 28) | Encoder 8 SW | `8` |
+| GPB0–GPB7 | free | – |
 
-> Der MCP23017 wird mit Pullups konfiguriert; jede Taste schaltet einen Expander-Pin gegen **GND**.
+> The MCP23017 is configured with pull-ups; each key switches an expander pin against **GND**.
 
 ---
 
-## Anschluss-Schemata (ASCII)
+## Connection diagrams (ASCII)
 
-### Drehencoder (CLK / DT)
+### Rotary encoder (CLK / DT)
 
-Inkremental-Drehencoder mit integriertem Druckknopf (SW). **CLK/DT** gehen direkt an den Pico,
-**SW** (Common) an den MCP23017:
+Incremental rotary encoder with integrated push button (SW). **CLK/DT** go directly to the Pico,
+**SW** (common) to the MCP23017:
 
 ```
-        Drehencoder (z.B. EC11)
+        Rotary encoder (e.g. EC11)
         ┌─────────────────────┐
-        │       ◯ (Welle)     │
+        │       ◯ (shaft)     │
         │                     │
         │  SW   C   A   B     │
         └──┬────┬───┬───┬─────┘
            │    │   │   │
-           │    │   │   └─────► Pico GPIO (DT)  z.B. GP0
+           │    │   │   └─────► Pico GPIO (DT)  e.g. GP0
            │    │   │
-           │    │   └─────────► Pico GPIO (CLK) z.B. GP1
+           │    │   └─────────► Pico GPIO (CLK) e.g. GP1
            │    │
            │    └─────────────► MCP23017 GPA0 (Encoder 1 SW)
            │
@@ -135,142 +135,142 @@ Inkremental-Drehencoder mit integriertem Druckknopf (SW). **CLK/DT** gehen direk
          │GND│◄──────────────── GND
          └───┘
 
-   CLK/DT → Pico GPIO (direkt)
-   SW     → MCP23017 I/O-Pin (gegen GND, Pullup im Expander)
+   CLK/DT → Pico GPIO (direct)
+   SW     → MCP23017 I/O pin (against GND, pull-up in the expander)
 ```
 
-> Bei Encodern mit Common-Anschluss (C) den **C auf GND** legen; A/B (CLK/DT) auf die Pico-GPIOs,
-> der Druckknopf (SW) ist intern gegen C geschaltet und geht an den MCP23017.
+> For encoders with a common connection (C), connect **C to GND**; A/B (CLK/DT) to the Pico GPIOs,
+> the push button (SW) is internally switched against C and goes to the MCP23017.
 
-### MCP23017 I/O-Expander (nur Encoder-SW)
+### MCP23017 I/O expander (encoder SW only)
 
-Verbindung Pico ↔ MCP23017 (I²C, Adresse 0x20):
+Connection Pico ↔ MCP23017 (I²C, address 0x20):
 
 ```
   Raspberry Pi Pico                MCP23017 (DIP-28)
   ─────────────────               ─────────────────
-       3V3 ─────────────────────► VDD (Pin 9)
-       GND ─────────────────────► VSS (Pin 10)
-       GND ─────────────────────► A0 (Pin 15)      (Adresse 0x20)
-       GND ─────────────────────► A1 (Pin 16)
-       GND ─────────────────────► A2 (Pin 17)
-       GP16 (SDA) ──────────────► SDA (Pin 13)     [über 2,2kΩ → VDD optional]
-       GP17 (SCL) ──────────────► SCL (Pin 12)     [über 2,2kΩ → VDD optional]
-       GND ─────────────────────► RESET (Pin 18)   [Pullup → VDD empfohlen]
+       3V3 ─────────────────────► VDD (pin 9)
+       GND ─────────────────────► VSS (pin 10)
+       GND ─────────────────────► A0 (pin 15)      (address 0x20)
+       GND ─────────────────────► A1 (pin 16)
+       GND ─────────────────────► A2 (pin 17)
+       GP16 (SDA) ──────────────► SDA (pin 13)     [via 2.2kΩ → VDD optional]
+       GP17 (SCL) ──────────────► SCL (pin 12)     [via 2.2kΩ → VDD optional]
+       GND ─────────────────────► RESET (pin 18)   [pull-up → VDD recommended]
 
 
-  Tasten am MCP23017 (schalten gegen GND):
-   Encoder-SW 1..8  → GPA0..GPA7  (Pins 21..28)
+  Keys on the MCP23017 (switch against GND):
+   Encoder-SW 1..8  → GPA0..GPA7  (pins 21..28)
 
-   Taster                    MCP23017 (INPUT_PULLUP)
+   Button                    MCP23017 (INPUT_PULLUP)
    ──────                    ─────────────────────
-    ──║── (momentan)        ──► z.B. GPA0
+    ──║── (momentary)        ──► e.g. GPA0
       │                       │
      GND───────────────────-──┘
-                            Pin = LOW  → gedrückt
+                            Pin = LOW  → pressed
 ```
 
-### Direkte Tasten am Pico (F5–F8, Shift, Group, FX)
+### Direct keys on the Pico (F5–F8, Shift, Group, FX)
 
-Gilt für alle direkt am Pico angeschlossenen Tasten – alle schalten gegen GND:
+Applies to all keys connected directly to the Pico – all switch against GND:
 (F5=GP18, F6=GP19, F7=GP20, F8=GP21, Shift=GP22, Group=GP26, FX=GP27)
 
 ```
-         Taster (momentan, Normal open)
-         ──║──            (oder Kippschalter für Shift)
+         Button (momentary, normally open)
+         ──║──            (or toggle switch for Shift)
            │
-           ├──────────────► Pico GPIO  (z.B. GP18 für F5)
+           ├──────────────► Pico GPIO  (e.g. GP18 for F5)
            │
         ┌──┴──┐
         │ GND │◄───────────── GND
         └─────┘
 
    Software: pinMode(gpio, INPUT_PULLUP)
-   GPIO = LOW  → Taste gedrückt
-   GPIO = HIGH → Taste losgelassen
+   GPIO = LOW  → key pressed
+   GPIO = HIGH → key released
 ```
 
 ---
 
-## Projektstruktur
+## Project structure
 
 ```
 chamsys-encoder/
-├── chamsys-encoder.pdf   # Original-Dokumentation (Quellcode + Pin-Info)
-├── platformio.ini        # PlatformIO-Konfiguration
-├── README.md             # Diese Datei
+├── chamsys-encoder.pdf   # Original documentation (source code + pin info)
+├── platformio.ini        # PlatformIO configuration
+├── README.md             # This file
 └── src/
-    └── main.cpp          # Firmware für den Raspberry Pi Pico
+    └── main.cpp          # Firmware for the Raspberry Pi Pico
 ```
 
 ---
 
-## Build & Upload (PlatformIO)
+## Build & upload (PlatformIO)
 
-Voraussetzung: [PlatformIO Core](https://platformio.org/) installiert.
+Prerequisite: [PlatformIO Core](https://platformio.org/) installed.
 
 ```bash
-# Zum Projektverzeichnis wechseln
+# Switch to the project directory
 cd chamsys-encoder
 
-# Firmware kompilieren
+# Compile the firmware
 pio run
 
-# Kompilieren + auf den Pico hochladen (BOOTSEL-Halteknopf vor dem Einstecken)
+# Compile + upload to the Pico (hold the BOOTSEL button before plugging in)
 pio run -t upload
 
-# Serielle Konsole (Debug-Ausgaben)
+# Serial console (debug output)
 pio device monitor
 ```
 
-**Wichtig:** Für den Upload mit dem earlephilhower-Core muss der Pico normalerweise nur beim
-ersten Mal per **BOOTSEL** (halten, USB einstecken, loslassen) in den Bootloader-Modus versetzt
-werden. Spätere Uploads funktionieren direkt über USB.
+**Important:** For upload with the earlephilhower core, the Pico normally only needs to be put
+into bootloader mode via **BOOTSEL** (hold, plug in USB, release) the first time.
+Later uploads work directly over USB.
 
-**Hinweis zu Bibliotheken:** Die USB-Tastatur (`Keyboard`) kommt aus dem earlephilhower-Core selbst.
-Der `lib_ldf_mode = chain+` in `platformio.ini` sorgt dafür, dass die benötigte Core-Library
-`tusb-hid` automatisch mitgebaut wird. Es wird **kein** externes TinyUSB-Paket benötigt.
+**Note on libraries:** The USB keyboard (`Keyboard`) comes from the earlephilhower core itself.
+The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core library
+`tusb-hid` is built automatically. **No** external TinyUSB package is needed.
 
 ---
 
-## Stückliste (BOM)
+## Bill of materials (BOM)
 
-| Menge | Bauteil | Bemerkung |
+| Qty | Component | Note |
 |---|---|---|
-| 1 | Raspberry Pi Pico (RP2040) | mit Micro-USB |
-| 1 | MCP23017 I/O-Expander (DIP-28) | nur für die 8 Encoder-SW |
-| 8 | Mech. Drehencoder mit Druckknopf (z.B. EC11) | 20 Detents, 3-Pin Variante |
-| 4 | Taster (momentan) | F5–F8 (direkt am Pico) |
-| 1 | Taster oder Kippschalter | Shift (direkt am Pico, GP22) |
-| 2 | Taster (momentan) | Group, FX (direkt am Pico) |
-| 2 | Widerstände 2,2kΩ (optional) | Pullup für SDA/SCL |
-| 1 | Widerstand 10kΩ (empfohlen) | Pullup für RESET des MCP23017 |
-| - | bedrahtete Kabel / Litzen | für Verdrahtung |
-| - | optional: Pinleisten / Steckboards | |
+| 1 | Raspberry Pi Pico (RP2040) | with Micro-USB |
+| 1 | MCP23017 I/O expander (DIP-28) | only for the 8 encoder SW |
+| 8 | Mech. rotary encoders with push button (e.g. EC11) | 20 detents, 3-pin variant |
+| 4 | Buttons (momentary) | F5–F8 (directly on the Pico) |
+| 1 | Button or toggle switch | Shift (directly on the Pico, GP22) |
+| 2 | Buttons (momentary) | Group, FX (directly on the Pico) |
+| 2 | Resistors 2.2kΩ (optional) | pull-up for SDA/SCL |
+| 1 | Resistor 10kΩ (recommended) | pull-up for the MCP23017 RESET |
+| - | hook-up wires / stranded wire | for wiring |
+| - | optional: pin headers / breadboards | |
 
-> **Pico-Pin-Verwendung (25 von 27 GPIOs):**
-> - **GP0–GP15** = 8 Encoder (CLK/DT)
-> - **GP16/GP17** = I²C für MCP23017
+> **Pico pin usage (25 of 27 GPIOs):**
+> - **GP0–GP15** = 8 encoders (CLK/DT)
+> - **GP16/GP17** = I²C for the MCP23017
 > - **GP18–GP21** = F5–F8
 > - **GP22** = Shift
 > - **GP26** = Group, **GP27** = FX
 >
-> Der **MCP23017** nimmt nur noch die **8 Encoder-SW** auf. **GP28** bleibt als freie Reserve übrig.
+> The **MCP23017** only takes the **8 encoder SW**. **GP28** remains as a free reserve.
 
 ---
 
-## Hinweise & Einschränkungen
+## Notes & limitations
 
-- **Fast alles direkt am Pico:** Die **F-Tasten (F5–F8, GP18–GP21), Shift (GP22), Group (GP26) und FX
-  (GP27)** hängen **direkt am Pico**. Nur die **8 Encoder-SW** liegen auf dem einzelnen **MCP23017**,
-  damit alle 8 Encoder samt Klick-Funktion untergebracht werden können.
-- **Reserve-Pin:** **GP28** bleibt frei – dort ließe sich z.B. noch eine weitere Taste (z.B. Layout 1)
-  anschließen.
-- **Layout-Tasten (Lay 1–3):** Diese wurden entfernt. Falls gewünscht, lassen sie sich problemlos an
-  GP28 oder an die freien MCP23017-Pins (GPB0–GPB7) anschließen und im Code ergänzen.
-- **Strg-Kombinationen:** F5–F8 (INT/POS/COL/BEAM), Group und FX senden `Ctrl+<Taste>` und öffnen
-  damit die jeweiligen MagicQ-Fenster direkt.
-- **USB-HID:** Der Pico erscheint am PC als Tastatur. Erst nach dem Mounten des USB-HID-Geräts
-  werden Tastendrücke gesendet.
-- **I²C-Adresse:** Der MCP23017 wird mit A0/A1/A2 = GND auf Adresse `0x20` gesetzt (Standard).
-- Die **Serial-Ausgabe (115200)** dient nur zum Debuggen und ist nicht für den Betrieb erforderlich.
+- **Almost everything directly on the Pico:** The **F keys (F5–F8, GP18–GP21), Shift (GP22), Group (GP26) and FX
+  (GP27)** are connected **directly to the Pico**. Only the **8 encoder SW** sit on the single **MCP23017**,
+  so that all 8 encoders including the click function fit.
+- **Reserve pin:** **GP28** stays free – e.g. another key (e.g. Layout 1)
+  could be connected there.
+- **Layout keys (Lay 1–3):** These were removed. If desired, they can easily be connected to
+  GP28 or to the free MCP23017 pins (GPB0–GPB7) and added in the code.
+- **Ctrl combinations:** F5–F8 (INT/POS/COL/BEAM), Group and FX send `Ctrl+<key>` and thus open
+  the respective MagicQ windows directly.
+- **USB-HID:** The Pico appears to the PC as a keyboard. Key presses are only sent
+  after the USB-HID device has been mounted.
+- **I²C address:** The MCP23017 is set to address `0x20` with A0/A1/A2 = GND (standard).
+- The **serial output (115200)** is only for debugging and is not required for operation.

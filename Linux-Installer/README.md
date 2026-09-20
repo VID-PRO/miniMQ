@@ -1,215 +1,215 @@
-# MagicQ Show-Computer auf Dell Wyse 3040
+# MagicQ Show Computer on Dell Wyse 3040
 
-Ubuntu + Openbox + ChamSys MagicQ als dedizierter Show-PC für den **Compact Wing**, mit
-automatischem Mounten von USB-Sticks.
+Ubuntu + Openbox + ChamSys MagicQ as a dedicated show PC for the **Compact Wing**, with
+automatic USB stick mounting.
 
-> **Wichtiger Hinweis zur Hardware:** Der Wyse 3040 hat in vielen Ausführungen nur **2 GB RAM**
-> und **8 GB eMMC**. MagicQ ist relativ ressourcenhungrig und der Compact Wing wird für
-> „Unlocked"-Betrieb benötigt. Mit 2 GB RAM läuft alles knapp, aber funktioniert. Es wird
-> empfohlen, **nur ein leichtgewichtiges System** (Server-Install + Openbox) zu betreiben und
-> nichts weiter zu installieren.
-
----
-
-## 1. Voraussetzungen / Hardware
-
-| Teil | Empfehlung |
-|------|------------|
-| Wyse 3040 | Atom x5-Z8350, 2 GB RAM, 8 GB eMMC, UEFI-only (kein Legacy-Boot) |
-| USB-Stick | ≥ 4 GB, UEFI-bootfähig (empfohlen: mit **Ventoy** vorbereiten) |
-| Display | Dual DisplayPort → verwende aktiven **DP→HDMI-Adapter** (DP++ funktioniert oft nicht zuverlässig) |
-| Compact Wing | per USB anschließen (kein Treiber nötig) |
-
-**Eigenschaften des Wyse 3040:**
-- Speicher erscheint als `/dev/mmcblk0` (eMMC), *nicht* `/dev/sda`.
-- Nur 64-Bit-UEFI-Boot möglich.
-- Das eMMC-Gerät hat oft einen Namen mit einem Sonderzeichen (z. B. `MMC H8G4a\x92`),
-  was Installer verwirren kann → siehe Abschnitt 3.
+> **Important hardware note:** In many configurations the Wyse 3040 has only **2 GB RAM**
+> and **8 GB eMMC**. MagicQ is relatively resource-hungry and the Compact Wing is required
+> for "unlocked" operation. With 2 GB RAM everything runs tight but works. It is
+> recommended to run **only a lightweight system** (server install + Openbox) and
+> nothing else.
 
 ---
 
-## 2. BIOS vorbereiten
+## 1. Requirements / Hardware
 
-1. Gerät einschalten und wiederholt **F2** drücken.
-2. Falls gesperrt: BIOS mit Passwort **`Fireport`** (oder `Fireport2`) entsperren.
-3. **`General → Boot Sequence`**: USB-Stick an erste Stelle setzen.
-   - Merke dir den **File Name** der Boot-Option (meist `\EFI\BOOT\BOOTX64.EFI`).
-   - Der Wyse benötigt später genau diesen Pfad auf der internen eMMC (siehe Abschnitt 4).
-4. Optional: `Maintenance → Data Wipe` → `Wipe on Next Boot` aktivieren, um das eMMC zu löschen
-   (falls alte ThinOS-Installation vorhanden).
-5. Speichern und neu starten.
+| Part | Recommendation |
+|------|----------------|
+| Wyse 3040 | Atom x5-Z8350, 2 GB RAM, 8 GB eMMC, UEFI-only (no legacy boot) |
+| USB stick | ≥ 4 GB, UEFI-bootable (recommended: prepared with **Ventoy**) |
+| Display | Dual DisplayPort → use an active **DP→HDMI adapter** (DP++ often does not work reliably) |
+| Compact Wing | connect via USB (no driver needed) |
+
+**Wyse 3040 features:**
+- Storage appears as `/dev/mmcblk0` (eMMC), *not* `/dev/sda`.
+- Only 64-bit UEFI boot is possible.
+- The eMMC device often has a name containing a special character (e.g. `MMC H8G4a\x92`),
+  which can confuse installers → see section 3.
 
 ---
 
-## 3. Ubuntu installieren (empfohlen: 24.04 LTS Server)
+## 2. Prepare the BIOS
 
-> Wichtig: Der neuere Ubuntu-Installer (26.04) findet die eMMC teils nicht / friert ein.
-> **Ubuntu 24.04 LTS funktioniert nachweislich**.
+1. Power on the device and press **F2** repeatedly.
+2. If locked: unlock the BIOS with the password **`Fireport`** (or `Fireport2`).
+3. **`General → Boot Sequence`**: put the USB stick first.
+   - Note the **File Name** of the boot option (usually `\EFI\BOOT\BOOTX64.EFI`).
+   - The Wyse later needs exactly this path on the internal eMMC (see section 4).
+4. Optional: enable `Maintenance → Data Wipe` → `Wipe on Next Boot` to erase the eMMC
+   (if the same store has an old ThinOS installation).
+5. Save and restart.
 
-1. Ubuntu **22.04 oder 24.04 LTS (am besten Server-Image)** auf den USB-Stick bringen
-   (z. B. mit Ventoy oder `rufus`/`dd`).
-2. USB-Stick einstecken, Boot-Menü mit **F12** öffnen, vom USB-Stick booten.
-3. **Server-Installation** wählen (keine Desktop-Oberfläche nötig – wir bauen Openbox selbst auf,
-   das spart massiv RAM/Platz auf der kleinen eMMC).
-4. Bei der Festplattenauswahl: Das eMMC (`/dev/mmcblk0`) gewählt. Falls es **nicht angezeigt**
-   wird, liegt das am bekannten Gerätename-Problem:
-   - Boote das Live-System, öffne ein Terminal und führe aus:
+---
+
+## 3. Install Ubuntu (recommended: 24.04 LTS Server)
+
+> Important: The newer Ubuntu installer (26.04) sometimes cannot find the eMMC / freezes.
+> **Ubuntu 24.04 LTS is proven to work**.
+
+1. Put Ubuntu **22.04 or 24.04 LTS (ideally the Server image)** on the USB stick
+   (e.g. with Ventoy or `rufus`/`dd`).
+2. Insert the USB stick, open the boot menu with **F12**, boot from the USB stick.
+3. Choose the **Server installation** (no desktop environment is needed – we build
+   Openbox ourselves, which saves a lot of RAM/space on the small eMMC).
+4. At the disk selection: choose the eMMC (`/dev/mmcblk0`). If it is **not shown**,
+   this is caused by the known device-name problem:
+   - Boot the live system, open a terminal and run:
      ```bash
      sudo rm /dev/mmcblk0
      ```
-     (`udev` legt das Gerät danach sauber neu an.)
-5. **Wichtig – GRUB auf die UEFI-Wechselmedien-Position setzen**:
-   - GRUB nicht auf die eMMC installieren lassen, sondern in den **EFI-Pfad**.
-   - Nach der Installation feat den Abschnitt 4 (BOOTX64.EFI) beachten, sonst gibt es
-     „No bootable devices found".
-6. Den Benutzer anlegen, unter dem MagicQ laufen soll:
+     (`udev` re-creates the device cleanly afterwards.)
+5. **Important – install GRUB to the UEFI removable-media location**:
+   - Do not let GRUB install to the eMMC, but into the **EFI path**.
+   - After installation, follow section 4 (BOOTX64.EFI), otherwise you get
+     "No bootable devices found".
+6. Create the user under which MagicQ should run:
    ```bash
    sudo adduser chamsys
    ```
-   (Dieses Skript und der MagicQ-Autostart nutzen den Benutzer `chamsys`.)
-7. Nach der Installation vom USB-Stick booten (siehe Abschnitt 4).
+   (This script and the MagicQ autostart use the user `chamsys`.)
+7. After installation, boot from the USB stick (see section 4).
 
 ---
 
-## 4. Boot-Pfad reparieren (BOOTX64.EFI) – unbedingt nötig!
+## 4. Repair the boot path (BOOTX64.EFI) – absolutely required!
 
-Der Wyse 3040 startet **nur** von `\EFI\BOOT\BOOTX64.EFI`. Frisch installiertes Ubuntu/GRUB
-liefert aber `\EFI\debian\grubx64.efi` o. Ä. Ohne den Fallback-Pfad → „No bootable devices found".
+The Wyse 3040 boots **only** from `\EFI\BOOT\BOOTX64.EFI`. Freshly installed Ubuntu/GRUB
+however provides `\EFI\debian\grubx64.efi` or similar. Without the fallback path → "No bootable devices found".
 
-1. Boote mit dem Live-USB-Stick.
-2. eMMC-Boot-Partition mounten:
+1. Boot with the live USB stick.
+2. Mount the eMMC boot partition:
    ```bash
-   sudo blkid /dev/mmcblk0p1      # sollte TYPE="vfat" zeigen
+   sudo blkid /dev/mmcblk0p1      # should show TYPE="vfat"
    sudo mkdir -p /mnt/p1
    sudo mount /dev/mmcblk0p1 /mnt/p1
    ```
-3. Fallback anlegen:
+3. Create the fallback:
    ```bash
    sudo mkdir -p /mnt/p1/EFI/BOOT
    sudo cp /mnt/p1/EFI/ubuntu/grubx64.efi /mnt/p1/EFI/BOOT/BOOTX64.EFI
-   # oder falls "debian":
+   # or if "debian":
    sudo cp /mnt/p1/EFI/debian/grubx64.efi /mnt/p1/EFI/BOOT/BOOTX64.EFI
    sudo umount /mnt/p1
    ```
-4. USB-Stick entfernen und neu starten. Ubuntu sollte nun von der eMMC booten.
+4. Remove the USB stick and restart. Ubuntu should now boot from the eMMC.
 
 ---
 
-## 5. Setup-Skript ausführen
+## 5. Run the setup script
 
-**Wichtig:** Das Skript muss als **root** (`sudo`) ausgeführt werden, weil es Systempakete
-installiert. MagicQ läuft aber unter dem Benutzer **`chamsys`**. Das Skript erstellt/verwendet
-alle Benutzerdateien daher gezielt unter `/home/chamsys` (nicht unter `/root`).
+**Important:** The script must be run as **root** (`sudo`) because it installs system
+packages. MagicQ however runs under the user **`chamsys`**. The script therefore
+deliberately creates/uses all user files under `/home/chamsys` (not under `/root`).
 
-> ⚠️ **Voraussetzung:** Der Benutzer `chamsys` muss existieren, bevor du das Skript startest:
+> ⚠️ **Prerequisite:** The user `chamsys` must exist before you start the script:
 > ```bash
 > sudo adduser chamsys
 > ```
 
-Das Skript `setup_magicq_wyse.sh` macht Folgendes automatisch:
+The script `setup_magicq_wyse.sh` does the following automatically:
 
-- Legt **zuerst** `/home/chamsys/.config/openbox/` an (bevor darauf zugegriffen wird).
-- Installiert Openbox (leichter Window-Manager), xinit, **xserver-xorg** (der eigentliche
-  X-Server — ohne ihn scheitert `startx` mit `exec: /usr/bin/X: not found`), X-/USB-Basistools.
-- Installiert **Qt5-, xcb- und Laufzeit-Abhängigkeiten** (inkl. fix für den Fehler
-  „could not load QT plugin xcb").
-- Installiert MagicQ, falls eine `.deb` im selben Ordner liegt, und prüft die
-  Bibliotheken per `ldd`.
-- Richtet den Openbox-Autostart für `chamsys` ein:
-  1. X automatisch startet,
-  2. MagicQ im **Fullscreen / Panel-Modus für den Compact Wing** öffnet,
-  3. MagicQ **ohne Fensterdekorationen** anzeigt.
-- Setzt **alle Ethernet-Interfaces auf DHCP** (via netplan, `en*`).
-- Richtet **Autologin** ein (`tty1` → direkt zu Openbox + MagicQ, ohne Passwort).
-- Installiert **Plymouth-Splashscreen** (`splash.png`) und setzt GRUB auf `quiet splash`
-  mit `GRUB_GFXMODE=1280x800`.
-- Legt die Auflösung auf **1280x800** fest (GRUB/Splash **und** X11 via
-  `/etc/X11/xorg.conf.d/11-resolution.conf` → MagicQ läuft fullscreen in 1280x800).
-- Erstellt die nötigen Benutzer-/Systemdateien und setzt die Besitzer auf `chamsys`.
-- **Fährt den Show-PC automatisch herunter**, sobald MagicQ beendet wird (QUIT-Softbutton);
-  erlaubt `chamsys` dazu passwordloses `shutdown`/`systemctl poweroff` (sudoers-Regel).
+- Creates `/home/chamsys/.config/openbox/` **first** (before it is accessed).
+- Installs Openbox (lightweight window manager), xinit, **xserver-xorg** (the actual
+  X server — without it `startx` fails with `exec: /usr/bin/X: not found`), X-/USB base tools.
+- Installs **Qt5, xcb and runtime dependencies** (including fix for the error
+  "could not load QT plugin xcb").
+- Installs MagicQ if a `.deb` is in the same folder, and checks the
+  libraries with `ldd`.
+- Sets up the Openbox autostart for `chamsys`:
+  1. X starts automatically,
+  2. MagicQ opens in **fullscreen / panel mode for the Compact Wing**,
+  3. MagicQ is displayed **without window decorations**.
+- Sets **all ethernet interfaces to DHCP** (via netplan, `en*`).
+- Sets up **autologin** (`tty1` → straight to Openbox + MagicQ, without password).
+- Installs the **Plymouth splashscreen** (`splash.png`) and sets GRUB to `quiet splash`
+  with `GRUB_GFXMODE=1280x800`.
+- Sets the resolution to **1280x800** (GRUB/splash **and** X11 via
+  `/etc/X11/xorg.conf.d/11-resolution.conf` → MagicQ runs fullscreen at 1280x800).
+- Creates the required user/system files and sets the owner to `chamsys`.
+- **Shuts down the show PC automatically** as soon as MagicQ is exited (QUIT soft button);
+  allows `chamsys` passwordless `shutdown`/`systemctl poweroff` (sudoers rule).
 
-**Skript ausführen:**
+**Run the script:**
 
 ```bash
 chmod +x setup_magicq_wyse.sh
-sudo ./setup_magicq_wyse.sh                # ohne .deb -> MagicQ später manuell
-sudo ./setup_magicq_wyse.sh magicq_ubuntu_*.deb   # mit .deb im selben Ordner
+sudo ./setup_magicq_wyse.sh                            # without .deb -> MagicQ later manually
+sudo ./setup_magicq_wyse.sh magicq_ubuntu_*.deb        # with .deb in the same folder
 ```
 
 ---
 
-## 6. MagicQ installieren (falls nicht per Skript erledigt)
+## 6. Install MagicQ (if not done by the script)
 
-1. Deutsche Download-Seite: <https://www.chamsys.co.uk/mqdownload/> →
-   **Ubuntu (64 bit)** `.deb` herunterladen.
-2. Installieren:
+1. English download page: <https://www.chamsys.co.uk/mqdownload/> →
+   download the **Ubuntu (64 bit)** `.deb`.
+2. Install:
    ```bash
    sudo dpkg -i magicq_ubuntu_*.deb
-   # ggf. Abhängigkeiten nachziehen:
+   # pull in dependencies if necessary:
    sudo apt-get -f install
    ```
-3. MagicQ wird nach `/opt/magicq/` installiert. Start von Hand zum Testen:
+3. MagicQ is installed to `/opt/magicq/`. Start it manually for testing:
    ```bash
    sudo -u chamsys /opt/magicq/runmagicq.sh
    ```
-   > **LibGL-Fehler** beim Start? Dann:
+   > **LibGL error** when starting? Then:
    > ```bash
    > sudo mv /opt/magicq/lib/libstdc.so.6 /opt/magicq/lib/libstdc.so.6~
    > ```
-   > ggf. auch `QT_AUTO_SCREEN_SCALE_FACTOR=0` in `runmagicq.sh` exportieren.
+   > also possibly export `QT_AUTO_SCREEN_SCALE_FACTOR=0` in `runmagicq.sh`.
 
-### 6.1 Qt5- und Laufzeit-Abhängigkeiten
+### 6.1 Qt5 and runtime dependencies
 
-**Wichtig zu wissen:**
-- MagicQ **bündelt seine Qt5-Bibliotheken selbst** unter `/opt/magicq/lib`
-  (`bin/mqqt` nutzt sie per `LD_LIBRARY_PATH`). Für den reinen Start sind also **keine**
-  Qt5-Systempakete zwingend nötig.
-- **`sudo dpkg -i` + `apt-get -f install`** zieht nur die im Paket *deklarierten* Depends
-  nach. Nicht-Qt-Laufzeitbibliotheken (GLU, USB, PortAudio, FFmpeg, GStreamer, Alsa) sind
-  dort teils **nicht** deklariert und können beim Start trotzdem fehlen.
+**Good to know:**
+- MagicQ **bundles its own Qt5 libraries** under `/opt/magicq/lib`
+  (`bin/mqqt` uses them via `LD_LIBRARY_PATH`). For a plain start, **no**
+  Qt5 system packages are therefore strictly required.
+- **`sudo dpkg -i` + `apt-get -f install`** only pulls in the dependencies *declared*
+  in the package. Non-Qt runtime libraries (GLU, USB, PortAudio, FFmpeg, GStreamer, Alsa)
+  are sometimes **not** declared there and can still be missing at startup.
 
-Das Setup-Skript installiert daher automatisch **beide** Sicherheitsnetze:
+The setup script therefore automatically installs **both** safety nets:
 
-| Zweck | Pakete |
-|-------|--------|
-| Qt5 (Fallback + Multimedia) | `libqt5core5a libqt5gui5 libqt5widgets5 libqt5network5 libqt5opengl5 libqt5printsupport5 libqt5xml5 libqt5sql5 libqt5multimedia5 libqt5multimediawidgets5 libqt5svg5 libqt5qml5 libqt5quick5` |
+| Purpose | Packages |
+|---------|----------|
+| Qt5 (fallback + multimedia) | `libqt5core5a libqt5gui5 libqt5widgets5 libqt5network5 libqt5opengl5 libqt5printsupport5 libqt5xml5 libqt5sql5 libqt5multimedia5 libqt5multimediawidgets5 libqt5svg5 libqt5qml5 libqt5quick5` |
 | OpenGL / X11 | `libglu1-mesa libgl1 libglx-mesa0 libxext6 libxrender1` |
-| USB (Wings/DMX-Interfaces) | `libusb-1.0-0 libusb-0.1-4` |
+| USB (wings/DMX interfaces) | `libusb-1.0-0 libusb-0.1-4` |
 | Audio / Video | `libportaudio2 libasound2* ffmpeg libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good` |
 
-> **ALSA-Paketname (`libasound2*`):** Variiert je nach Ubuntu-Version!
+> **ALSA package name (`libasound2*`):** varies depending on the Ubuntu version!
 > - **Ubuntu 22.04:** `libasound2`
-> - **Ubuntu 24.04+:** `libasound2t64` (das alte `libasound2` existiert dort nicht mehr →
->   *„libasound2 has no installation candidate"*).
+> - **Ubuntu 24.04+:** `libasound2t64` (the old `libasound2` no longer exists there →
+>   *"libasound2 has no installation candidate"*).
 >
-> Das Skript wählt den korrekten Namen automatisch je nach Version. Auch `libglu1-mesa`,
-> `libgl1` etc. sind auf 24.04+ teils als `t64`-Variante benannt; das Skript versucht die
-> passende Auswahl und fängt Fehlschläge ab.
-| Archive / Basis | `libarchive13 zlib1g libglib2.0-0 libstdc++6` |
+> The script selects the correct name automatically depending on the version. Also `libglu1-mesa`,
+> `libgl1` etc. are partly named as `t64` variants on 24.04+; the script tries the
+> appropriate selection and catches failures.
+| Archive / Base | `libarchive13 zlib1g libglib2.0-0 libstdc++6` |
 
-**Fehler „could not load QT plugin xcb":**
+**Error "could not load QT plugin xcb":**
 
-Dieser Fehler tritt auf, wenn das Qt5-xcb-Plattform-Plugin seine X11-Bibliotheken nicht
-findet. Das Skript installiert deshalb zusätzlich alle nötigen `libxcb*`-Pakete:
+This error occurs when the Qt5-xcb platform plugin cannot find its X11 libraries.
+The script therefore additionally installs all required `libxcb*` packages:
 
-| Zweck | Pakete |
-|-------|--------|
-| xcb-Plugin (Qt5) | `libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-image0 libxcb-render-util0 libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-xkb1 libxcb-xinput0 libxcb-randr0 libxcb-sync1 libxcb-shm0 libxcb1` |
+| Purpose | Packages |
+|---------|----------|
+| xcb plugin (Qt5) | `libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-image0 libxcb-render-util0 libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-xkb1 libxcb-xinput0 libxcb-randr0 libxcb-sync1 libxcb-shm0 libxcb1` |
 | XKB / Fonts / EGL | `libxkbcommon-x11-0 libxkbcommon0 libfontconfig1 libfreetype6 libx11-xcb1 libegl1 libgl1 libglx-mesa0` |
 
-> **GL/Mesa-Paketnamen (`libgl1...*`):** `libgl1-mesa-glx` existiert in **Ubuntu 24.04+
-> nicht mehr** (seit 23.10 entfernt, war schon lange nur ein Übergangs-Paket). Es wird durch
-> `libgl1` **und** `libglx-mesa0` ersetzt. Das Skript nutzt daher immer `libgl1` +
-> `libglx-mesa0` — das funktioniert auf 22.04 und 24.04 gleichermaßen.
+> **GL/Mesa package names (`libgl1...*`):** `libgl1-mesa-glx` no longer exists in **Ubuntu 24.04+
+> ** (removed since 23.10, had been a transitional package for a long time). It is replaced by
+> `libgl1` **and** `libglx-mesa0`. The script therefore always uses `libgl1` +
+> `libglx-mesa0` — this works on 22.04 and 24.04 alike.
 
-Zusätzlich erzwingt das Start-Skript `/usr/local/bin/start_magicq.sh` die xcb-Plattform:
+In addition, the start script `/usr/local/bin/start_magicq.sh` forces the xcb platform:
 ```bash
 export QT_QPA_PLATFORM=xcb
 export QT_PLUGIN_PATH=/opt/magicq/plugins
 ```
 
-**Manuell prüfen / nachrüsten:**
+**Check / retrofit manually:**
 
 ```bash
 sudo apt-get install -y --no-install-recommends \
@@ -221,110 +221,110 @@ sudo apt-get install -y --no-install-recommends \
 
 ---
 
-## 7. Compact Wing & Panel-Modus – wie es funktioniert
+## 7. Compact Wing & panel mode – how it works
 
-Der Autostart startet MagicQ mit dem **Full-Panel-Modus** (imitert ein Compact-Console-Layout),
-im **Fullscreen**. Der Compact Wing schaltet MagicQ in den **Unlocked-Modus** (voller DMX-Ausgang),
-sobald er per USB verbunden ist.
+The autostart starts MagicQ with the **full panel mode** (imitating a Compact console layout)
+in **fullscreen**. The Compact Wing switches MagicQ into **unlocked mode** (full DMX output)
+as soon as it is connected via USB.
 
-- **Panel-Modus wechseln:** In MagicQ → `Setup → View Settings → Panels` → **Full Panel**.
-- **Wing prüfen:** `Setup → View Settings → Ports → MagicQ Wings & Interfaces = Yes (auto DMX)`.
-- Der Wing braucht **keinen separaten Treiber** (nur die neueren Compact-Wings).
-- Für alten PC/Extra-Wing (FTDI): `Setup → View Settings → Ports → FTDI + VCP driver`.
+- **Switch panel mode:** In MagicQ → `Setup → View Settings → Panels` → **Full Panel**.
+- **Check the wing:** `Setup → View Settings → Ports → MagicQ Wings & Interfaces = Yes (auto DMX)`.
+- The wing needs **no separate driver** (only the newer Compact Wings).
+- For an old PC/extra wing (FTDI): `Setup → View Settings → Ports → FTDI + VCP driver`.
 
-**Hinweis zur Konfiguration:** Der „Full-Panel-Modus" und „Fullscreen" werden im Skript über
-die Auto-Start-Kommandozeile und eine einmalige Konfig-Datei gesetzt. Falls MagicQ beim ersten
-Start nicht automatisch im gewünschten Modus startet, einmal die gewünschten Einstellungen
-speichern – MagicQ merkt sich den Zustand dann über Neustarts hinweg.
+**Configuration note:** "Full panel mode" and "fullscreen" are set by the script via
+the autostart command line and a one-time config file. If MagicQ does not start in the
+desired mode automatically on the first run, save the wanted settings once – MagicQ
+then remembers the state across restarts.
 
-### 7.1 Direkt im Panel „Touch Compact" starten
+### 7.1 Start directly in the "Touch Compact" panel
 
-Für eine reine **Show-Bedienung per Touchscreen** kann MagicQ direkt im Panel **„Touch Compact"**
-(oder „Touch Compact Faders") starten. **Es gibt keinen Kommandozeilen-/Skript-Parameter** dafür –
-MagicQ hat nur wenige CLI-Argumente (z. B. `wand`, Remote-IP, Playback-Mode-Shortcut), aber keine
-Panel-Wahl. Das Panel ist eine **Console-Einstellung**, die einmal in der GUI gesetzt und dann von
-MagicQ über Neustarts hinweg gemerkt wird – das reicht für den Auto-Start aus, weil unser
-`start_magicq.sh` immer dasselbe Show-Environment lädt.
+For **touchscreen-only show operation**, MagicQ can start directly in the **"Touch Compact"**
+panel (or "Touch Compact Faders"). **There is no command-line/script parameter** for this –
+MagicQ only has a few CLI arguments (e.g. `wand`, remote IP, playback-mode shortcut), but no
+panel selection. The panel is a **console setting** that is set once in the GUI and then
+remembered by MagicQ across restarts – that is sufficient for the autostart, because our
+`start_magicq.sh` always loads the same show environment.
 
-So einmalig auf dem Wyse (GUI) einrichten:
+Set it up once on the Wyse (GUI):
 
-1. MagicQ starten.
-2. `Setup → View Settings → Panels` → **Touch Compact** (bzw. „Touch Compact Faders") auswählen.
-3. Console-Einstellungen speichern: **`SAVE SHOW`** (bzw. „Save Console Settings"), damit das Panel
-   mit dem geladenen Show-Environment fest gespeichert wird.
-4. `Setup → View Settings → Windows → Start Mode` auf **None** stellen – so startet MagicQ direkt
-   ins gespeicherte Environment statt in den „Choose demo show"-Dialog.
+1. Start MagicQ.
+2. `Setup → View Settings → Panels` → select **Touch Compact** (or "Touch Compact Faders").
+3. Save console settings: **`SAVE SHOW`** (or "Save Console Settings"), so the panel
+   is safely saved together with the loaded show environment.
+4. Set `Setup → View Settings → Windows → Start Mode` to **None** – MagicQ then starts directly
+   into the saved environment instead of the "Choose demo show" dialog.
 
-Danach startet MagicQ bei jedem Autostart direkt im **Touch Compact**-Panel.
+Afterwards MagicQ starts directly in the **Touch Compact** panel on every autostart.
 
-> **Hinweis:** Da beim Laden einer *anderen* Show standardmäßig nur Show-Daten (ohne
-> Console-Einstellungen) geladen werden, bleibt das Panel solange erhalten, wie wir beim Boot
-> immer dieselbe Show laden (genau was `start_magicq.sh` tut).
+> **Note:** Since loading a *different* show by default loads only show data (without
+> console settings), the panel remains in place as long as we always load the same show
+> at boot (exactly what `start_magicq.sh` does).
 
 ---
 
-## 8. Autostart (was das Skript anlegt)
+## 8. Autostart (what the script creates)
 
-- **`~/.config/openbox/autostart`** – wird beim Openbox-Login ausgeführt und enthält:
+- **`~/.config/openbox/autostart`** – run at Openbox login and contains:
   ```bash
-  # X-Server wird per .xinitrc / xinit gestartet (falls nicht schon läuft)
+  # X server is started via .xinitrc / xinit (if not already running)
   feh --bg-scale /usr/share/backgrounds/warty-final-ubuntu.png &
-  # USB-Sticks automatisch mounten (zusätzlich zu udev-Regen)
+  # Mount USB sticks automatically (in addition to the udev rules)
   for d in /dev/sd*; do [ -b "$d" ] && udisksctl mount -b "$d" 2>/dev/null; done &
-  # MagicQ starten (Fullscreen / Panel-Modus Compact)
+  # Start MagicQ (fullscreen / Compact panel mode)
   sleep 5
   /usr/local/bin/start_magicq.sh &
   ```
-- **`/usr/local/bin/start_magicq.sh`** – startet MagicQ mit dem richtigen Config-Argument.
-- **udev-Regel** `/etc/udev/rules.d/99-magicq.rules` (optional, vom Skript angelegt) zum
-  automatischen Mounten von USB-Sticks.
+- **`/usr/local/bin/start_magicq.sh`** – starts MagicQ with the correct config argument.
+- **udev rule** `/etc/udev/rules.d/99-magicq.rules` (optional, created by the script) for
+  automatically mounting USB sticks.
 
-> **Automatisches Herunterfahren:** Sobald MagicQ beendet wird (z. B. über den **QUIT**-Softbutton),
-> fährt `start_magicq.sh` den Show-PC automatisch **herunter** (`shutdown -h now`). Das passiert
-> auch, wenn MagicQ abstürzt oder mit einem Fehlercode endet – zuverlässig für einen Show-PC, der
-> ansonsten nur per Autostart ohne Tastatur bedient wird.
+> **Automatic shutdown:** As soon as MagicQ is quit (e.g. via the **QUIT** soft button),
+> `start_magicq.sh` automatically **shuts down** the show PC (`shutdown -h now`). This also
+> happens if MagicQ crashes or exits with an error code – reliable for a show PC that
+> otherwise is only operated via autostart without a keyboard.
 
 ---
 
-## 9. Keine Fensterdekorationen für MagicQ
+## 9. No window decorations for MagicQ
 
-Damit MagicQ **ohne Titel- und Fensterrahmen** (nur der Inhalt) den kompletten Bildschirm
-füllt, konfiguriert das Skript Openbox über `~/.config/openbox/rc.xml`. Das eingefügte
-Anwendungs-Regel-Fragment sieht so aus:
+So that MagicQ fills the entire screen **without title and window frames** (only the content),
+the script configures Openbox via `~/.config/openbox/rc.xml`. The inserted
+application rule fragment looks like this:
 
 ```xml
 <applications>
   <application class="*/*MagicQ*">
-    <decor>no</decor>            <!-- keine Fensterdekoration -->
+    <decor>no</decor>            <!-- no window decorations -->
     <fullscreen>yes</fullscreen>
   </application>
 </applications>
 ```
 
-- **`<decor>no</decor>`** entfernt den Fensterrahmen (kein Schließen-/Minimieren-Button).
-- **`<fullscreen>yes</fullscreen>`** stellt sicher, dass MagicQ den ganzen Bildschirm nutzt.
+- **`<decor>no</decor>`** removes the window frame (no close/minimize button).
+- **`<fullscreen>yes</fullscreen>`** ensures MagicQ uses the whole screen.
 
-Manuell nachbearbeiten:
+Edit manually afterwards:
 
 ```bash
 nano ~/.config/openbox/rc.xml
-# Abschnitt <applications> prüfen/anpassen, speichern
+# check/adjust the <applications> section, save
 openbox --reconfigure
 ```
 
-> Hinweis: Die Fensterklassen-Bezeichnung kann je nach MagicQ-Version abweichen. Falls die
-> Regel nicht greift, im X-Terminal die Klasse prüfen:
+> Note: The window class name may differ depending on the MagicQ version. If the
+> rule does not take effect, check the class in an X terminal:
 > ```bash
-> xprop | grep WM_CLASS    # nach Fokus auf das MagicQ-Fenster
+> xprop | grep WM_CLASS    # after focusing the MagicQ window
 > ```
-> und den Wert in der `class=`-Zeile entsprechend anpassen.
+> and adjust the value in the `class=` line accordingly.
 
 ---
 
-## 10. Alle Ethernet-Interfaces auf DHCP
+## 10. All ethernet interfaces on DHCP
 
-Das Skript legt eine netplan-Datei `/etc/netplan/99-magicq-dhcp.yaml` an, die **alle**
-Ethernet-Interfaces (Pattern `en*`) auf DHCP (IPv4 **und** IPv6) setzt:
+The script creates a netplan file `/etc/netplan/99-magicq-dhcp.yaml` that sets **all**
+ethernet interfaces (pattern `en*`) to DHCP (IPv4 **and** IPv6):
 
 ```yaml
 network:
@@ -338,48 +338,47 @@ network:
       dhcp6: yes
 ```
 
-Nach Ausführung des Skripts einmalig aktivieren:
+Activate once after running the script:
 
 ```bash
 sudo netplan apply
-ip a        # prüfen: Interfaces en* haben 192.168.x.x zugewiesen
+ip a        # check: en* interfaces have 192.168.x.x assigned
 ```
 
-**Boot hängt ohne Netzwerk-Kabel:** Das Skript **maskiert** zusätzlich den Service
-`systemd-networkd-wait-online.service`. Ohne diese Maske wartet `network-online.target`
-bei fehlendem Carrier (Kabel nicht angesteckt) **unbegrenzt** → der Boot bleibt stehen.
-Mit maskiertem Waiter bootet der Wyse sofort weiter, auch ohne Kabel; sobald ein Kabel
-eingesteckt wird, bekommt er weiterhin per DHCP eine IP (Netzwerk läuft im Hintergrund).
-MagicQ braucht kein Netzwerk zum Booten.
+**Boot hangs without a network cable:** The script additionally **masks** the service
+`systemd-networkd-wait-online.service`. Without this mask, `network-online.target` waits
+**indefinitely** when there is no carrier (cable not plugged in) → boot stalls.
+With the waiter masked, the Wyse boots straight through, even without a cable; as soon as
+a cable is plugged in, it still gets an IP via DHCP (networking runs in the background).
+MagicQ does not need networking to boot.
 
 ```bash
 sudo systemctl mask systemd-networkd-wait-online.service
 ```
 
-> Der Wyse 3040 hat standardmäßig einen 1-Gbit-Ethernet-Port. Über einen USB-Ethernet-Adapter
-> (für Light-Show/Art-Net/sACN über ein zweites Netz) wird dieser ebenfalls als `en*` erkannt
-> und automatisch per DHCP konfiguriert. Falls du mehrere Netze trennen willst (Show-Netz vs.
-> Art-Net), kannst du ein Interface per `networkd`/`netplan` mit statischer IP ergänzen –
-> DHCP bleibt für die übrigen aktiv.
+> The Wyse 3040 has a 1 Gbit ethernet port by default. Via a USB-ethernet adapter
+> (for light show/Art-Net/sACN over a second network) this is likewise recognized as `en*`
+> and configured via DHCP automatically. If you want to separate multiple networks (show
+> network vs. Art-Net), you can add an interface with a static IP via `networkd`/`netplan` –
+> DHCP remains active for the rest.
 
 ---
 
-## 11. Automatisches Mounten von USB-Sticks
+## 11. Automatic USB stick mounting
 
-Das Skript wählt automatisch den passenden Weg **abhängig von der Ubuntu-Version**:
+The script automatically chooses the appropriate method **depending on the Ubuntu version**:
 
-- **Ubuntu 22.04 und älter:** installiert **`usbmount`** (einfachste Lösung), das Sticks
-  automatisch nach `/media/usb*` mountet.
+- **Ubuntu 22.04 and older:** installs **`usbmount`** (simplest solution), which mounts
+  sticks automatically to `/media/usb*`.
 
-- **Ubuntu 24.04 und neuer:** **`usbmount` existiert dort nicht mehr** – der Befehl
-  `apt-get install usbmount` würde mit *„Unable to locate package usbmount"* fehlschlagen.
-  Das Skript überspringt `usbmount` auf diesen Versionen und nutzt stattdessen **udev +
-  udisks** (siehe unten).
+- **Ubuntu 24.04 and newer:** **`usbmount` no longer exists there** – the command
+  `apt-get install usbmount` would fail with *"Unable to locate package usbmount"*.
+  The script skips `usbmount` on these versions and uses **udev + udisks** instead (see below).
 
-**udev + udisks** (Standard auf modernen Systemen bzw. Fallback):
+**udev + udisks** (standard on modern systems / fallback):
 
-Das Skript legt die Regel `/etc/udev/rules.d/99-magicq-usb.rules` an und setzt den Owner.
-Zusätzlich mountet der Openbox-Autostart bereits eingesteckte Sticks beim Start:
+The script creates the rule `/etc/udev/rules.d/99-magicq-usb.rules` and sets the owner.
+In addition, the Openbox autostart mounts sticks already plugged in at boot:
 
 ```bash
 for d in /dev/sd[b-z]*; do
@@ -389,35 +388,35 @@ done &
 
 ---
 
-## 12. Autologin (optional, für „Booten direkt zu MagicQ")
+## 12. Autologin (optional, for "boot straight to MagicQ")
 
-Das Setup-Skript richtet automatisch ein: Nach dem Einschalten wird auf `tty1` ohne
-Passwort der Benutzer eingeloggt, `startx` gestartet und Openbox + MagicQ im Fullscreen
-geöffnet – ganz ohne Interaktion.
+The setup script sets this up automatically: after power-on, the user is logged in on `tty1`
+without a password, `startx` is started and Openbox + MagicQ open in fullscreen – completely
+without interaction.
 
-**Was das Skript dafür macht:**
+**What the script does for this:**
 
-1. **systemd-Autologin** über eine Override-Datei
+1. **systemd autologin** via an override file
    `/etc/systemd/system/getty@tty1.service.d/autologin.conf`:
    ```
    [Service]
    ExecStart=
    ExecStart=-/sbin/agetty --autologin chamsys --noclear tty1 linux
    ```
-   Damit wird der Benutzer **`chamsys`** automatisch bei `tty1` eingeloggt.
-2. **`/home/chamsys/.bash_profile`** wird um einen Start-Block ergänzt, der `startx`
-   ausführt, sobald man auf `tty1` landet:
+   This logs the user **`chamsys`** in automatically on `tty1`.
+2. **`/home/chamsys/.bash_profile`** is extended with a start block that runs `startx`
+   as soon as you land on `tty1`:
    ```bash
    if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
        exec startx
    fi
    ```
-3. **`/home/chamsys/.xinitrc`** startet `openbox-session` (bereits aus Abschnitt 5), damit
-   nach `startx` Openbox mit dem MagicQ-Autostart (Fullscreen, keine Dekorationen) erscheint.
+3. **`/home/chamsys/.xinitrc`** starts `openbox-session` (from section 5), so that
+   after `startx` Openbox appears with the MagicQ autostart (fullscreen, no decorations).
 
-Alle Dateien gehören dem Benutzer `chamsys` (`chown chamsys:chamsys`).
+All files belong to the user `chamsys` (`chown chamsys:chamsys`).
 
-**Manuell nachbauen oder auf anderen Benutzer umstellen:**
+**Rebuild manually or switch to another user:**
 
 ```bash
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
@@ -430,7 +429,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable getty@tty1.service
 ```
 
-**Deaktivieren (Login-Passwort wieder verlangen):**
+**Disable (require the login password again):**
 
 ```bash
 sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf
@@ -439,46 +438,45 @@ sudo systemctl daemon-reload
 
 ---
 
-## 13. Splashscreen (Boot-Logs verdecken)
+## 13. Splashscreen (hide boot logs)
 
-Damit beim Booten **keine Kernel-/System-Logs**, sondern **dein Bild `splash.png`**
-fullscreen angezeigt werden, richtet das Skript **Plymouth** ein und setzt GRUB auf
-`quiet splash`.
+So that **no kernel/system logs**, but **your image `splash.png`** is shown fullscreen
+at boot, the script sets up **Plymouth** and sets GRUB to `quiet splash`.
 
-> ⚠️ **Wichtig:** `splash.png` muss sich im **gleichen Ordner wie
-> `setup_magicq_wyse.sh`** befinden, wenn du das Skript ausführst – es wird dort
-> automatisch gefunden und eingebunden.
+> ⚠️ **Important:** `splash.png` must be in the **same folder as
+> `setup_magicq_wyse.sh`** when you run the script – it is then found and
+> included automatically.
 
-**Wie es funktioniert (robuster Ansatz):**
+**How it works (robust approach):**
 
-Das Skript baut ein **eigenes Plymouth-Theme namens `magicq-splash`** auf Basis des
-**`script`**-Moduls. Das zeigt dein `splash.png` als Ganzbild über den gesamten Bildschirm.
+The script builds its **own Plymouth theme named `magicq-splash`** based on the
+**`script`** module. This shows your `splash.png` as a full image across the entire screen.
 
-> ⚠️ **Warum `script` und nicht `backgrounds`?**
-> Auf **Ubuntu 24.04 (noble)** gibt es das `backgrounds`-Plugin **in keinem Paket**
-> (die Dateiliste `plymouth`/`plymouth-themes` enthält nur `script.so`, `text.so`,
-> `tribar.so`, `details.so`, `fade-throbber.so`, `space-flares.so`). Ein früheres Thema
-> auf `ModuleName=backgrounds` erzeugte deshalb beim Boot die Meldung
-> *„plugin backgrounds.so is missing"*. Wir nutzen stattdessen **`script.so`**, das im
-> **`plymouth`-Basis-Paket** (main, immer vorhanden) steckt – damit ist das Modul garantiert
-> da. `label-pango.so` wird **nicht** gebraucht.
+> ⚠️ **Why `script` and not `backgrounds`?**
+> On **Ubuntu 24.04 (noble)** the `backgrounds` plugin is **not available in any package**
+> (the file list of `plymouth`/`plymouth-themes` only contains `script.so`, `text.so`,
+> `tribar.so`, `details.so`, `fade-throbber.so`, `space-flares.so`). An earlier theme
+> using `ModuleName=backgrounds` therefore produced the message
+> *"plugin backgrounds.so is missing"* at boot. We use **`script.so`** instead, which lives
+> in the **`plymouth` base package** (main, always present) – so the module is guaranteed
+> to be there. `label-pango.so` is **not** needed.
 
-Ablauf:
+Procedure:
 
-1. Installiert `plymouth`, `plymouth-themes`, `plymouth-label`, `plymouth-theme-script`,
+1. Installs `plymouth`, `plymouth-themes`, `plymouth-label`, `plymouth-theme-script`,
    `plymouth-theme-spinner`, `plymouth-theme-ubuntu-logo`, `plymouth-theme-ubuntu-text`
-   (Absicherung).
-2. Legt `/usr/share/plymouth/themes/magicq-splash/` an und kopiert
-   `splash.png` → `background.png` (Fallback: das `ubuntu-logo`-Logo).
-3. Schreibt eine `magicq-splash.plymouth`-Datei mit `ModuleName=script` **plus** eine
-   `magicq-splash.script`-Datei (der `script`-Nutzcode, der das Bild über die volle
-   Bildschirmfläche skaliert).
-4. **Aktiviert das Theme als Standard.** Auf Ubuntu 24.04 (Noble) fehlt das Binary
-   `plymouth-set-default-theme` (Ubuntu-Bug **LP `#1596220`** — `/usr/bin` enthält nur
-   `plymouth`), und `update-alternatives --set` meldet oft fälschlich Erfolg. Das Skript
-   setzt deshalb den Alternatives-Link `/etc/alternatives/default.plymouth` **direkt** auf
-   unser Theme und **verifiziert** das Ergebnis per `readlink`.
-5. Schreibt in `/etc/default/grub`:
+   (as a safety net).
+2. Creates `/usr/share/plymouth/themes/magicq-splash/` and copies
+   `splash.png` → `background.png` (fallback: the `ubuntu-logo` logo).
+3. Writes a `magicq-splash.plymouth` file with `ModuleName=script` **plus** a
+   `magicq-splash.script` file (the `script` user code that scales the image across the
+   full screen area).
+4. **Activates the theme as default.** On Ubuntu 24.04 (Noble) the binary
+   `plymouth-set-default-theme` is missing (Ubuntu bug **LP `#1596220`** — `/usr/bin` only contains
+   `plymouth`), and `update-alternatives --set` often reports success incorrectly. The script
+   therefore sets the alternatives link `/etc/alternatives/default.plymouth` **directly** to
+   our theme and **verifies** the result via `readlink`.
+5. Writes to `/etc/default/grub`:
    ```
    GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 vt.global_cursor_default=0"
    GRUB_GFXMODE=1280x800
@@ -486,133 +484,133 @@ Ablauf:
    GRUB_TERMINAL_OUTPUT=console
    GRUB_TIMEOUT=0
    ```
-   - **`quiet splash`** (Pflicht!) → aktiviert den Splash + keine Kernel-Meldungen.
-   - **`loglevel=3`** → nur Fehler/Warnungen auf Konsole (praktisch nichts).
-   - **`GRUB_GFXMODE=1280x800` / `GRUB_GFXPAYLOAD_LINUX=keep`** → Grafikkonsole + Splash
-     laufen in **1280x800**, damit der Splash fullscreen läuft (verhindert Umschalten auf Text-VGA).
-   - **`GRUB_TERMINAL_OUTPUT=console`** → verhindert, dass GRUB die Ausgabe auf einen
-     fremden Terminal zwingt.
-6. Führt `update-initramfs -u` und `update-grub` aus und **prüft danach** per
-   `lsinitramfs`, ob Theme + `script.so` in der initramfs gelandet sind. Fehlt etwas,
-   wird das Theme erneut gesetzt und neu gebaut.
+   - **`quiet splash`** (mandatory!) → enables the splash + no kernel messages.
+   - **`loglevel=3`** → only errors/warnings on the console (practically nothing).
+   - **`GRUB_GFXMODE=1280x800` / `GRUB_GFXPAYLOAD_LINUX=keep`** → graphics console + splash
+     run at **1280x800**, so the splash runs fullscreen (prevents switching to text-VGA).
+   - **`GRUB_TERMINAL_OUTPUT=console`** → prevents GRUB from forcing output onto a
+     foreign terminal.
+6. Runs `update-initramfs -u` and `update-grub` and **afterwards checks** via
+   `lsinitramfs` whether theme + `script.so` made it into the initramfs. If something is
+   missing, the theme is set again and rebuilt.
 
-**Aktivierung prüfen / nachträglich setzen (ohne `plymouth-set-default-theme`):**
+**Check activation / set afterwards (without `plymouth-set-default-theme`):**
 
 ```bash
-readlink /etc/alternatives/default.plymouth          # muss auf magicq-splash zeigen
+readlink /etc/alternatives/default.plymouth          # must point to magicq-splash
 
-# Falls noch nicht aktiv, direkt auf unser Theme zeigen lassen:
+# If not active yet, point it directly to our theme:
 sudo ln -sfn /usr/share/plymouth/themes/magicq-splash/magicq-splash.plymouth \
              /etc/alternatives/default.plymouth
 sudo update-initramfs -u
 sudo update-grub
 ```
 
-**Bild nachträglich austauschen:**
+**Replace the image later:**
 
 ```bash
-sudo cp /neuer/pfad/splash.png /usr/share/plymouth/themes/magicq-splash/background.png
+sudo cp /new/path/splash.png /usr/share/plymouth/themes/magicq-splash/background.png
 sudo update-initramfs -u
 sudo update-grub
 ```
 
-**Splash testen / prüfen:**
+**Test / check the splash:**
 
 ```bash
-# Plymouth läuft?
-sudo plymouth --ping && echo "Plymouth läuft"
+# Plymouth running?
+sudo plymouth --ping && echo "Plymouth is running"
 
-# Unser Theme eingebacken?
+# Our theme baked in?
 lsinitramfs /boot/initrd.img-$(uname -r) | grep -i magicq-splash
 
-# script-Modul (aus plymouth-Basis) vorhanden?
+# script module (from the plymouth base) present?
 ls /usr/lib/x86_64-linux-gnu/plymouth/script.so
 
-# GRUB-Parameter korrekt?
+# GRUB parameters correct?
 cat /boot/grub/grub.cfg | grep -i "quiet splash"
 ```
 
 ---
 
-### 13.1 Fehlerbehebung: „nur schwarzer Bildschirm statt Splash"
+### 13.1 Troubleshooting: "black screen instead of splash"
 
-Ein schwarzer Bildschirm statt des Splashs hat fast immer eine dieser Ursachen —
-prüfe sie in dieser Reihenfolge:
+A black screen instead of the splash almost always has one of these causes –
+check them in this order:
 
-1. **`splash` fehlt in den Kernelparametern** → ohne `splash` startet Plymouth gar nicht
-   (nur leere Konsole = schwarz).
+1. **`splash` is missing in the kernel parameters** → without `splash` Plymouth does not start at all
+   (only an empty console = black).
    ```bash
    sudo nano /etc/default/grub
-   # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash ..."  <- splash MUSS drin sein
+   # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash ..."  <- splash MUST be in there
    sudo update-grub
    ```
 
-2. **Script-Modul fehlt** → wenn ein `ModuleName=script`-Theme genutzt wird und
-   `plymouth-theme-script` nicht installiert ist, fehlt `script.so` und das Theme lädt nicht.
+2. **Script module missing** → if a `ModuleName=script` theme is used and
+   `plymouth-theme-script` is not installed, `script.so` is missing and the theme will not load.
    ```bash
    sudo apt-get install -y plymouth-theme-script
    sudo update-initramfs -u
    ```
-   *(Das Skript installiert dieses Paket jetzt automatisch.)*
+   *(The script now installs this package automatically.)*
 
-3. **label-Modul fehlt / nicht im initramfs** → *„the plugin label-pango.so is missing"*.
-   Das `label`-Modul liegt im Paket `plymouth-label` (bzw. `plymouth-themes`).
-   **Wichtig:** Es reicht nicht, das Paket nur zu installieren — die `.so`-Datei muss
-   zusätzlich in die **initramfs** eingebettet werden (das ist die häufigste Ursache dafür,
-   dass der Fehler trotz Installation weiter auftritt).
+3. **label module missing / not in the initramfs** → *"the plugin label-pango.so is missing"*.
+   The `label` module is in the `plymouth-label` package (or `plymouth-themes`).
+   **Important:** Installing the package is not enough – the `.so` file must additionally
+   be embedded into the **initramfs** (this is the most common reason the
+   error keeps occurring despite installation).
    ```bash
    sudo apt-get install -y plymouth-themes plymouth-label
-   sudo update-initramfs -u        # MUSS nach der Installation laufen
-   # Kontrolle, ob es eingebettet wurde:
+   sudo update-initramfs -u        # MUST run after the installation
+   # Check whether it was embedded:
    lsinitramfs /boot/initrd.img-$(uname -r) | grep -i "label-pango\|label.so"
    ```
-   *(Das Skript vermeidet dieses Problem von vornherein: Es nutzt ein eigenes
-   `script`-Theme, das gar kein `label`-Modul braucht.)*
+   *(The script avoids this problem from the start: it uses its own
+   `script` theme that needs no `label` module at all.)*
 
-4. **`plymouth-set-default-theme: command not found`** → auf **Ubuntu 24.04 (Noble)** fehlt
-   dieses Binary im `plymouth`-Paket bekanntermaßen (Ubuntu-Bug **LP `#1596220`**);
-   `/usr/bin` enthält dann nur `plymouth`. Das ist kein Installationsfehler. Das Default-Theme
-   setzt man in dem Fall über `update-alternatives`:
+4. **`plymouth-set-default-theme: command not found`** → on **Ubuntu 24.04 (Noble)** this
+   binary is known to be missing from the `plymouth` package (Ubuntu bug **LP `#1596220`**);
+   `/usr/bin` then only contains `plymouth`. This is not an installation error. In that case
+   set the default theme via `update-alternatives`:
    ```bash
    sudo update-alternatives --config default.plymouth
    sudo update-initramfs -u
    ```
-   *(Das Skript erkennt das und aktiviert das Theme automatisch via
-   `update-alternatives --set default.plymouth` bzw. Symlink — es verlässt sich nicht
-   mehr auf das fehlende Kommando.)*
+   *(The script detects this and activates the theme automatically via
+   `update-alternatives --set default.plymouth` or symlink – it no longer relies
+   on the missing command.)*
 
-4. **Theme fehlt in der initramfs** → `update-initramfs -u` wurde vergessen bzw. fehlgeschlagen.
+4. **Theme missing in the initramfs** → `update-initramfs -u` was forgotten or failed.
    ```bash
    sudo update-initramfs -u
    lsinitramfs /boot/initrd.img-$(uname -r) | grep -i "ubuntu-logo\|magicq"
    ```
 
-5. **Grafik-Treiber/`nomodeset`** → Wenn `nomodeset` in den Kernelparametern steht,
-   wird Plymouth oft nicht angezeigt. Entferne `nomodeset` (außer es ist aus anderen
-   Gründen zwingend nötig).
+5. **Graphics driver/`nomodeset`** → If `nomodeset` is in the kernel parameters,
+   Plymouth is often not shown. Remove `nomodeset` (unless it is strictly required
+   for other reasons).
 
-6. **Falsche Auflösung** → Das Skript setzt `GRUB_GFXMODE=1280x800` (Boot/Splash) und
-   erzwingt über `/etc/X11/xorg.conf.d/11-resolution.conf` auch in X11 1280x800. Wenn der
-   Monitor eine andere native Auflösung hat, passe beide Werte an.
+6. **Wrong resolution** → The script sets `GRUB_GFXMODE=1280x800` (boot/splash) and
+   additionally forces 1280x800 in X11 via `/etc/X11/xorg.conf.d/11-resolution.conf`. If the
+   monitor has a different native resolution, adjust both values.
 
-7. **Display-Hardware** → Am Wyse 3040 ist ein **aktiver DP→HDMI-Adapter** nötig. Ohne
-   passenden Adapter bleibt der Bildschirm u. U. schwarz.
+7. **Display hardware** → On the Wyse 3040 an **active DP→HDMI adapter** is required. Without
+   the right adapter the screen may remain black.
 
-8. **Splash flackert / wird immer wieder schwarz** → Bekannter Plymouth-`script`-Bug: Der
-   Framebuffer wird bei jedem Refresh-Zyklus geleert, und wenn der Theme-Callback das Bild
-   nicht **jedes Mal neu setzt**, ist der Screen wiederholt schwarz. Das Skript redrawet das
-   Bild jetzt in jedem Refresh (siehe `magicq-splash.script`: `draw_bg()` mit `SetPosition`
-   / `SetScale` / `SetOpacity` / `SetZ(15)` im `refresh_callback`). Nach Änderungen:
+8. **Splash flickers / repeatedly goes black** → Known Plymouth-`script` bug: the
+   framebuffer is cleared on every refresh cycle, and if the theme callback does not
+   re-set the image **every time**, the screen repeatedly goes black. The script now redraws the
+   image on every refresh (see `magicq-splash.script`: `draw_bg()` with `SetPosition`
+   / `SetScale` / `SetOpacity` / `SetZ(15)` in the `refresh_callback`). After changes:
    ```bash
    sudo update-initramfs -u && sudo reboot
    ```
-   *(Ein kurzer schwarzer Blitz **genau einmal** kurz vor dem X-Desktop ist dagegen der
-   normale Übergang Plymouth → Display-Manager und kein Fehler.)*
+   *(A short black flash **exactly once** shortly before the X desktop is, in contrast,
+   the normal Plymouth → display manager transition and not a bug.)*
 
-9. **Es erscheint ein (Ubuntu-/Hersteller-)Logo statt `splash.png`** →
-   `/etc/alternatives/default.plymouth` zeigt noch auf ein anderes Theme (z. B. `bgrt`
-   oder `ubuntu-logo`). Das Aktivieren über `update-alternatives --set` greift auf Noble
-   oft nicht. Direkt auf unser Theme zeigen lassen und neu bauen:
+9. **An (Ubuntu/vendor) logo appears instead of `splash.png`** →
+   `/etc/alternatives/default.plymouth` still points to another theme (e.g. `bgrt`
+   or `ubuntu-logo`). Activating via `update-alternatives --set` often does not take effect
+   on Noble. Point directly to our theme and rebuild:
    ```bash
    readlink /etc/alternatives/default.plymouth
    sudo ln -sfn /usr/share/plymouth/themes/magicq-splash/magicq-splash.plymouth \
@@ -621,21 +619,20 @@ prüfe sie in dieser Reihenfolge:
    sudo reboot
    ```
 
-**Boot-Logs überhaupt anzeigen (nur bei Diagnose):**
+**Show boot logs at all (only for diagnostics):**
 
-Halt beim Booten eine **`Shift`**-Taste (bzw. `Esc` in GRUB) gedrückt, um das GRUB-Menü
-zu öffnen und die `quiet splash`-Kernelparameter über `e` zu entfernen – dann erscheinen
-wieder alle Meldungen.
+Hold **`Shift`** (or `Esc` in GRUB) during boot to open the GRUB menu
+and remove the `quiet splash` kernel parameters via `e` – then all messages appear again.
 
 ---
 
-### 13.2 Fehlerbehebung: „exec: /usr/bin/X: not found"
+### 13.2 Troubleshooting: "exec: /usr/bin/X: not found"
 
-Dieser Fehler erscheint beim Autologin/`startx` aus `/etc/X11/xinit/xserverrc` und bedeutet,
-dass **der X-Server selbst nicht installiert ist**. `xinit`/`startx` brauchen `xserver-xorg`,
-das für den `/usr/bin/X`-Startpfad sorgt.
+This error appears on autologin/`startx` from `/etc/X11/xinit/xserverrc` and means
+that **the X server itself is not installed**. `xinit`/`startx` need `xserver-xorg`,
+which provides the `/usr/bin/X` start path.
 
-Behebung:
+Fix:
 
 ```bash
 sudo apt-get install -y xserver-xorg
@@ -643,73 +640,74 @@ sudo update-alternatives --install /usr/bin/X x-session-manager /usr/bin/Xorg 50
 startx
 ```
 
-Kontrolle:
+Check:
 
 ```bash
-ls -la /usr/bin/X        # muss auf /usr/bin/Xorg zeigen
+ls -la /usr/bin/X        # must point to /usr/bin/Xorg
 which Xorg
 ```
 
-*(Das Skript installiert `xserver-xorg` jetzt automatisch in Schritt 1.)*
+*(The script now installs `xserver-xorg` automatically in step 1.)*
 
 ---
 
-### 13.3 Fehlerbehebung: MagicQ „cannot create the data folder"
+### 13.3 Troubleshooting: MagicQ "cannot create the data folder"
 
-MagicQ speichert Show-Dateien und Einstellungen in `~/MagicQ` bzw. unter
-`~/.config/MagicQ` und `~/.local/share/Chamsys`. Fehlen diese oder sind sie nicht
-beschreibbar, meldet MagicQ, es könne das Datenverzeichnis nicht anlegen.
+MagicQ stores show files and settings in `~/MagicQ` or under
+`~/.config/MagicQ` and `~/.local/share/Chamsys`. If these are missing or not
+writable, MagicQ reports it cannot create the data folder.
 
-Manuelle Behebung (als root):
+Manual fix (as root):
 
 ```bash
 sudo mkdir -p /home/chamsys/MagicQ
 sudo mkdir -p /home/chamsys/.config/MagicQ
 sudo mkdir -p /home/chamsys/.local/share/Chamsys
 sudo chown -R chamsys:chamsys /home/chamsys
-ls -ld /home/chamsys/MagicQ   # muss chamsys gehören
+ls -ld /home/chamsys/MagicQ   # must belong to chamsys
 ```
 
-*(Das Skript legt das Datenverzeichnis in Schritt 5e automatisch an und erzwingt
-`$HOME` im Start-Skript, damit MagicQ den richtigen Ort findet.)*
+*(The script creates the data folder in step 5e automatically and forces
+`$HOME` in the start script, so MagicQ finds the right location.)*
 
 ---
 
-### 13.4 Maus-Cursor ausblenden
+### 13.4 Hide the mouse cursor
 
-Für den Show-PC soll kein Mauszeiger sichtbar sein (weder im Openbox-Desktop noch in
-der Qt-Anwendung MagicQ). Das Skript erzeugt ein **gültiges transparentes XCursor-Theme**
-im **XCursor-Binärformat** und legt es **systemweit** ab:
+No mouse pointer should be visible on the show PC (neither in the Openbox desktop nor in
+the Qt application MagicQ). The script generates a **valid transparent XCursor theme**
+in **XCursor binary format** and places it **system-wide**:
 
-1. Baut das Theme `Transparent` in **`/usr/share/icons/Transparent`** (immer gefunden,
-   unabhängig von `$HOME`) und spiegelt es zusätzlich nach `~/.icons/Transparent`.
-2. Setzt **`/usr/share/icons/default` → `Transparent`** (der **globale X-Default**):
-   Selbst wenn Qt/MagicQ einen Cursor-Namen anfordert, löst Xcursor ihn System-weit gegen
-   unser transparentes Theme auf — das ist der entscheidende Fix für den Zeiger **über dem
-   MagicQ-Fenster** (vorher lag das Theme nur im Home-Verzeichnis und wurde bei abweichendem
-   `$HOME`/anderem Suchpfad nicht gefunden).
-3. Trägt `XCURSOR_THEME`/`XCURSOR_SIZE` global in `/etc/environment` ein und setzt in
-   `~/.config/gtk-3.0/settings.ini` `gtk-cursor-theme-name`, damit Qt **und** GTK das Theme nutzen.
+1. Builds the theme `Transparent` in **`/usr/share/icons/Transparent`** (always found,
+   independent of `$HOME`) and mirrors it additionally into `~/.icons/Transparent`.
+2. Sets **`/usr/share/icons/default` → `Transparent`** (the **global X default**):
+   Even when Qt/MagicQ requests a cursor name, Xcursor resolves it system-wide against
+   our transparent theme – this is the decisive fix for the pointer **over the
+   MagicQ window** (previously the theme only lived in the home directory and was not
+   found when `$HOME`/the search path differed).
+3. Sets `XCURSOR_THEME`/`XCURSOR_SIZE` globally in `/etc/environment` and sets
+   `gtk-cursor-theme-name` in `~/.config/gtk-3.0/settings.ini`, so Qt **and** GTK use the theme.
 
-> ⚠️ **Warum reines Binärformat nötig ist:** Die früheste Version legte **rohe PNG-Dateien**
-> unter `cursors/` ab — Xcursor verlangt aber das **XCursor-Dateiformat** (`Xcur`-Header) und
-> ignorierte PNGs stillschweigend (Pfeil blieb sichtbar). Das Skript schreibt die `.cursor`-Datei
-> **direkt per Python** (exakt nach `XcursorXcFileSave` aus libXcursor: Magic `0x72756358`,
-> Version `0x00010000`, ein 32×32-Image-Chunk mit `type=0xfffd0002`, volltransparente ARGB-Pixel)
-> — ganz **ohne** externe Tools. `xcursorgen` (aus `x11-apps`) dient nur noch als Fallback,
-> falls `python3` fehlt. Damit sind die Dateien garantiert **>0 Byte** und von Xcursor **und** Qt ladbar.
+> ⚠️ **Why a pure binary format is needed:** The earliest version placed **raw PNG files**
+> under `cursors/` – but Xcursor requires the **XCursor file format** (`Xcur` header) and
+> silently ignored the PNGs (the arrow stayed visible). The script writes the `.cursor` file
+> **directly via Python** (exactly matching `XcursorXcFileSave` from libXcursor: magic `0x72756358`,
+> version `0x00010000`, one 32×32 image chunk with `type=0xfffd0002`, fully transparent ARGB pixels)
+> – completely **without** external tools. `xcursorgen` (from `x11-apps`) only serves as a fallback
+> if `python3` is missing. This guarantees the files are **>0 bytes** and loadable by Xcursor **and** Qt.
 
-Zusätzlich:
-- setzt das Skript `xsetroot -cursor_name none` in `~/.xinitrc` **vor** `exec openbox-session`
-  (Root-Zeiger unsichtbar) und in `/usr/local/bin/start_magicq.sh` erneut `XCURSOR_THEME`
-  / `XCURSOR_SIZE` + `xsetroot`, damit der transparente Zeiger direkt im MagicQ-Prozess greift.
+Additionally:
+- the script sets `xsetroot -cursor_name none` in `~/.xinitrc` **before** `exec openbox-session`
+  (root pointer invisible) and again `XCURSOR_THEME`
+  / `XCURSOR_SIZE` + `xsetroot` in `/usr/local/bin/start_magicq.sh`, so the transparent pointer
+  takes effect directly in the MagicQ process.
 
-`x11-apps` (liefert `xcursorgen`) liegt im universe-Repo; es wird nur als **Fallback** gebraucht —
-der Python-Writer kommt ohne es aus. Manuell prüfen:
+`x11-apps` (provides `xcursorgen`) is in the universe repo; it is only needed as a **fallback** –
+the Python writer works without it. Check manually:
 
 ```bash
-ls -l /usr/share/icons/Transparent/cursors/default   # MUSS >0 Byte sein (4160 Byte für 32×32)
-xxd /usr/share/icons/Transparent/cursors/default | head -1   # beginnt mit: 5863 7572  ("Xcur")
+ls -l /usr/share/icons/Transparent/cursors/default   # MUST be >0 bytes (4160 bytes for 32×32)
+xxd /usr/share/icons/Transparent/cursors/default | head -1   # starts with: 5863 7572  ("Xcur")
 cat /usr/share/icons/default/index.theme            # Inherits=Transparent
 cat /etc/environment                                # XCURSOR_THEME=Transparent
 ```
@@ -717,19 +715,19 @@ cat /etc/environment                                # XCURSOR_THEME=Transparent
 
 ---
 
-### 13.5 Monitor soll immer an bleiben (kein Energiesparmodus)
+### 13.5 Monitor should always stay on (no power saving)
 
-Damit der Bildschirm am Show-PC **nie** in den Standby/Sparmodus geht, deaktiviert das
-Skript im X-Start (Openbox-Autostart **und** in `start_magicq.sh`):
+To ensure the screen on the show PC **never** goes into standby/save mode, the script
+disables this in the X start (Openbox autostart **and** in `start_magicq.sh`):
 
 ```bash
-xset s off        # X-Screensaver aus
-xset -dpms        # DPMS (Standby/Suspend/Off) komplett aus
-xset dpms 0 0 0   # Timeouts auf "nie"
-setterm -blank 0 -powersave off -powerdown 0   # text-Konsole nie ausblenden
+xset s off        # X screensaver off
+xset -dpms        # DPMS (standby/suspend/off) completely off
+xset dpms 0 0 0   # timeouts to "never"
+setterm -blank 0 -powersave off -powerdown 0   # never blank the text console
 ```
 
-Manuell auf der Box (im laufenden X):
+Manually on the box (in the running X):
 
 ```bash
 xset s off
@@ -737,81 +735,81 @@ xset -dpms
 xset dpms 0 0 0
 ```
 
-> Wenn der Monitor trotzdem aus geht, prüfe zusätzlich die eigenen
-> Monitor-Einstellungen (Auto-Standby) und ob der Verstärker/DP-Adapter dies steuert.
+> If the monitor still powers off, additionally check the monitor's own
+> settings (auto standby) and whether the amplifier/DP adapter is controlling it.
 
 ---
 
-## 14. Fehlerbehebung (Kurzliste)
+## 14. Troubleshooting (short list)
 
-| Problem | Lösung |
-|---------|--------|
-| „No bootable devices found" | Abschnitt 4 (BOOTX64.EFI) befolgen |
-| Installer findet eMMC nicht | `sudo rm /dev/mmcblk0` im Live-System |
-| Installer friert ein | Neuere Ubuntu-Version meiden; Go to 24.04 LTS |
-| MagicQ LibGL-Fehler | `libstdc.so.6` umbenennen (Abschnitt 6) |
-| UI zu klein/verzerrt | `QT_AUTO_SCREEN_SCALE_FACTOR=0` in `runmagicq.sh` |
-| Wing wird nicht erkannt | `Ports → MagicQ Wings & Interfaces = Yes (auto DMX)` |
-| Kein Bild auf HDMI | Aktiven DP→HDMI-Adapter verwenden |
-| MagicQ braucht Root für USB | Skript startet MagicQ ggf. mit sudo / setzt passende udev-Regel |
-| MagicQ hat noch Fensterrahmen | `~/.config/openbox/rc.xml` prüfen + `openbox --reconfigure` (Abschnitt 9) |
-| `exec: /usr/bin/X: not found` | `sudo apt-get install xserver-xorg` (Abschnitt 13.2) |
-| MagicQ: „cannot create the data folder" | `~/.config/MagicQ`/`~/MagicQ` fehlen/nicht beschreibbar; mit `chown -R chamsys:chamsys` + `mkdir` anlegen (Abschnitt 5e) |
-| XML-Syntaxfehler in `~/.config/openbox/rc.xml` | rc.xml kaputt/leer → Skript schreibt sie jetzt vollständig neu; manuell `sudo apt-get install --reinstall openbox` oder Datei löschen, damit sie neu erzeugt wird |
-| Ethernet bekommt keine IP | `sudo netplan apply` + `ip a` prüfen (Abschnitt 10) |
-| Boot-Logs erscheinen trotz Splash | GRUB `quiet splash` prüfen (Abschnitt 13) |
-| Ubuntu-Logo statt eigenem Splash | `/etc/alternatives/default.plymouth` direkt auf `magicq-splash` verlinken + `update-initramfs` (Abschnitt 13.1 Punkt 8; oft liegt das `bgrt`-Theme zugrunde) |
-| Monitor geht in den Standby/Sparmodus | `xset -dpms`, `xset s off`, `xset dpms 0 0 0` im X-Start (Abschnitt 13.5) |
-| Mauscursor sichtbar (soll unsichtbar sein) | Skript schreibt gültiges transparentes Theme im XCursor-Binärformat direkt per Python (`Xcur`, 4 KB-Datei) systemweit + `/usr/share/icons/default`→`Transparent` (Abschnitt 13.4). Prüfe: `ls -l /usr/share/icons/Transparent/cursors/left_ptr` muss **>0 Byte** sein (4160) |
-| Schwarzer Bildschirm statt Splash | Abschnitt 13.1 (script-Modul, `splash`-Parameter, `nomodeset`, Auflösung, DP-Adapter) |
-| Missing shared library / Qt5-Fehler | `cd /opt/magicq && LD_LIBRARY_PATH=/opt/magicq/lib ldd ./bin/mqqt` + `sudo apt-get -f install` (Abschnitt 6.1) |
-| „could not load QT plugin xcb" | `libxcb-*`-Pakete installieren, `QT_QPA_PLATFORM=xcb` setzen (Abschnitt 6.1) |
-| Kein Bild / Blackscreen nach Boot | Aktiven DP→HDMI-Adapter verwenden, `QT_SCREEN_SCALE_FACTORS=1` prüfen |
+| Problem | Solution |
+|---------|----------|
+| "No bootable devices found" | Follow section 4 (BOOTX64.EFI) |
+| Installer cannot find eMMC | `sudo rm /dev/mmcblk0` in the live system |
+| Installer freezes | Avoid newer Ubuntu versions; Go to 24.04 LTS |
+| MagicQ LibGL error | Rename `libstdc.so.6` (section 6) |
+| UI too small/distorted | `QT_AUTO_SCREEN_SCALE_FACTOR=0` in `runmagicq.sh` |
+| Wing not detected | `Ports → MagicQ Wings & Interfaces = Yes (auto DMX)` |
+| No image on HDMI | Use an active DP→HDMI adapter |
+| MagicQ needs root for USB | Script starts MagicQ with sudo if needed / sets an appropriate udev rule |
+| MagicQ still has window frames | Check `~/.config/openbox/rc.xml` + `openbox --reconfigure` (section 9) |
+| `exec: /usr/bin/X: not found` | `sudo apt-get install xserver-xorg` (section 13.2) |
+| MagicQ: "cannot create the data folder" | `~/.config/MagicQ`/`~/MagicQ` missing/not writable; create with `chown -R chamsys:chamsys` + `mkdir` (section 5e) |
+| XML syntax error in `~/.config/openbox/rc.xml` | rc.xml broken/empty → the script now rewrites it completely; manually `sudo apt-get install --reinstall openbox` or delete the file so it is recreated |
+| Ethernet gets no IP | `sudo netplan apply` + check `ip a` (section 10) |
+| Boot logs appear despite splash | Check GRUB `quiet splash` (section 13) |
+| Ubuntu logo instead of our splash | Link `/etc/alternatives/default.plymouth` directly to `magicq-splash` + `update-initramfs` (section 13.1 point 8; often the `bgrt` theme is the cause) |
+| Monitor goes into standby/save mode | `xset -dpms`, `xset s off`, `xset dpms 0 0 0` in the X start (section 13.5) |
+| Mouse cursor visible (should be invisible) | Script writes a valid transparent theme in XCursor binary format directly via Python (`Xcur`, 4 KB file) system-wide + `/usr/share/icons/default`→`Transparent` (section 13.4). Check: `ls -l /usr/share/icons/Transparent/cursors/left_ptr` must be **>0 bytes** (4160) |
+| Black screen instead of splash | Section 13.1 (script module, `splash` parameter, `nomodeset`, resolution, DP adapter) |
+| Missing shared library / Qt5 error | `cd /opt/magicq && LD_LIBRARY_PATH=/opt/magicq/lib ldd ./bin/mqqt` + `sudo apt-get -f install` (section 6.1) |
+| "could not load QT plugin xcb" | Install `libxcb-*` packages, set `QT_QPA_PLATFORM=xcb` (section 6.1) |
+| No image / black screen after boot | Use an active DP→HDMI adapter, check `QT_SCREEN_SCALE_FACTORS=1` |
 
 ---
 
-## 15. Kompakte Befehlsübersicht
+## 15. Compact command overview
 
 ```bash
-# MagicQ manuell starten
+# Start MagicQ manually
 /opt/magicq/runmagicq.sh
 
-# Autostart-Datei bearbeiten
+# Edit the autostart file
 nano ~/.config/openbox/autostart
 
-# USB-Mount testen
+# Test USB mount
 udisksctl mount -b /dev/sdb1
-ls /media/                            # Mountpunkt für usbmount
+ls /media/                            # mount point for usbmount
 
-# Openbox-Konfig (Fensterdekorationen) neu laden
+# Reload Openbox config (window decorations)
 openbox --reconfigure
 nano ~/.config/openbox/rc.xml
 
-# DHCP aller Ethernet-Interfaces aktivieren
+# Enable DHCP for all ethernet interfaces
 sudo netplan apply
 ip a
 
-# Autologin deaktivieren (wieder Passwort verlangen)
+# Disable autologin (ask for password again)
 sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf
 sudo systemctl daemon-reload
 
-# Splashscreen-Theme neu einspielen / GRUB aktualisieren
-# (auf Ubuntu 24.04 gibt es kein plymouth-set-default-theme; Link direkt setzen)
+# Re-apply splashscreen theme / update GRUB
+# (on Ubuntu 24.04 there is no plymouth-set-default-theme; set the link directly)
 sudo ln -sfn /usr/share/plymouth/themes/magicq-splash/magicq-splash.plymouth \
              /etc/alternatives/default.plymouth
 sudo update-initramfs -u
 sudo update-grub
 
-# Maus-Cursor unsichtbar machen (paketloser Fallback; Theme wird vom Skript im Home erzeugt)
+# Make the mouse cursor invisible (no-package fallback; theme is created by the script in the home dir)
 sudo mkdir -p /usr/share/icons/default
 sudo sh -c 'echo -e "[Icon Theme]\nInherits=Transparent" > /usr/share/icons/default/index.theme'
 echo 'xsetroot -cursor_name none' >> ~/.xinitrc
 
-# Monitor soll nie in den Sparmodus/Standby gehen (im X-Server)
+# Monitor should never go into save mode/standby (in the X server)
 xset s off
 xset -dpms
 xset dpms 0 0 0
 
-# Neustart
+# Restart
 sudo reboot
 ```
