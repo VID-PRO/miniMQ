@@ -13,6 +13,23 @@
 // Editor. Danach wieder auf 0 setzen.
 #define HID_SELFTEST 0
 
+// Matrix-Polarität: 0 = active-high (Zeilentreiber HIGH beim Scannen, Spalten
+// mit INPUT_PULLDOWN, Taste = HIGH), 1 = active-low (Zeilentreiber LOW, Spalten
+// mit INPUT_PULLUP, Taste = LOW). Gut fuer getauschte Diodenrichtung.
+#define MATRIX_POL 0
+
+#if MATRIX_POL == 0
+#define MATRIX_ACTIVE    HIGH
+#define MATRIX_IDLE      LOW
+#define MATRIX_PULL      INPUT_PULLDOWN
+#define MATRIX_PRESSED(v) ((v) == HIGH)
+#else
+#define MATRIX_ACTIVE    LOW
+#define MATRIX_IDLE      HIGH
+#define MATRIX_PULL      INPUT_PULLUP
+#define MATRIX_PRESSED(v) ((v) == LOW)
+#endif
+
 #include <Arduino.h>
 #include <Keyboard.h>
 
@@ -152,17 +169,17 @@ void debugKey(const char *event, unsigned char key) {
 void dumpMatrixText() {
     typeText("M");
     for (uint8_t r = 0; r < 3; r++) {
-        digitalWrite(ROW_PINS[r], HIGH);
+        digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
         delayMicroseconds(10);
         for (uint8_t c = 0; c < 13; c++) {
             if (KEYMAP[r][c].type == KT_NONE) continue;
-            if (digitalRead(COL_PINS[c]) == HIGH) {
+            if (MATRIX_PRESSED(digitalRead(COL_PINS[c]))) {
                 char buf[8];
                 snprintf(buf, sizeof(buf), " R%dC%d", r, c);
                 typeText(buf);
             }
         }
-        digitalWrite(ROW_PINS[r], LOW);
+        digitalWrite(ROW_PINS[r], MATRIX_IDLE);
     }
     typeText("\n");
 }
@@ -277,26 +294,26 @@ void setup() {
 #endif
 #endif
 
-    // Matrix rows (outputs, inactive = LOW)
-    for (uint8_t p : ROW_PINS) { pinMode(p, OUTPUT); digitalWrite(p, LOW); }
-    // Matrix cols (inputs, pull-down) - Active-High-Erkennung,
-    // passt zur Diode mit Kathode Richtung Column (Anode Richtung Row/Switch)
-    for (uint8_t p : COL_PINS) { pinMode(p, INPUT_PULLDOWN); }
+    // Matrix rows (outputs, inactive = MATRIX_IDLE)
+    for (uint8_t p : ROW_PINS) { pinMode(p, OUTPUT); digitalWrite(p, MATRIX_IDLE); }
+    // Matrix cols (inputs) - Aktivpegel laut MATRIX_POL, passt zur jeweiligen
+    // Diodenrichtung (active-high: Kathode Richtung Column, active-low: umgekehrt)
+    for (uint8_t p : COL_PINS) { pinMode(p, MATRIX_PULL); }
 
     // Matrix-Selbsttest beim Boot: zeigt pro Reihe den Rohzustand aller Spalten.
-    // HIGH = gedrückt/kurzgeschlossen, LOW = offen (normal ohne Tastendruck)
+    // Aktiv = gedrückt/kurzgeschlossen, sonst offen (normal ohne Tastendruck)
     for (uint8_t r = 0; r < 3; r++) {
-        digitalWrite(ROW_PINS[r], HIGH);
+        digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
         delayMicroseconds(10);
         Serial.print("row ");
         Serial.print(r);
         Serial.print(" cols: ");
         for (uint8_t c = 0; c < 13; c++) {
-            // 1 = aktiv/HIGH, 0 = offen/LOW
-            Serial.print(digitalRead(COL_PINS[c]) == HIGH ? "1" : "0");
+            // 1 = aktiv, 0 = offen
+            Serial.print(MATRIX_PRESSED(digitalRead(COL_PINS[c])) ? "1" : "0");
         }
         Serial.println();
-        digitalWrite(ROW_PINS[r], LOW);
+        digitalWrite(ROW_PINS[r], MATRIX_IDLE);
     }
 
     // Start USB HID
@@ -318,7 +335,7 @@ void processKey(uint8_t r, uint8_t c) {
     const KeyCell cell = KEYMAP[r][c];
     if (cell.type == KT_NONE) return;
 
-    bool pressed = (digitalRead(COL_PINS[c]) == HIGH);
+    bool pressed = MATRIX_PRESSED(digitalRead(COL_PINS[c]));
 
     // Prellen: Zustand muss 25 ms stabil sein, bevor er als Ereignis gilt.
     if (pressed != keyRaw[r][c]) {
@@ -372,14 +389,14 @@ void processKey(uint8_t r, uint8_t c) {
 void loop() {
     uint32_t now = millis();
 
-    // ---- 1. Key matrix scan (active-high) ----
+    // ---- 1. Key matrix scan (active level laut MATRIX_POL) ----
     for (uint8_t r = 0; r < 3; r++) {
-        digitalWrite(ROW_PINS[r], HIGH);         // row active
-        delayMicroseconds(10);                   // allow lines to settle
+        digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);   // row active
+        delayMicroseconds(10);                      // allow lines to settle
         for (uint8_t c = 0; c < 13; c++) {
             processKey(r, c);
         }
-        digitalWrite(ROW_PINS[r], LOW);          // row inactive
+        digitalWrite(ROW_PINS[r], MATRIX_IDLE);     // row inactive
     }
 
     // ---- S + GO = PAUSE (Phase) ----
