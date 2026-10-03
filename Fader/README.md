@@ -1,8 +1,23 @@
-# DIY MagicQ Compact Mini Connect Wing (Project Handbook)
+# MagicQ miniQ Wing
 
 This handbook describes building your own lighting console modeled after the modern **MagicQ Compact Mini Connect layout**. The console controls the MagicQ software via **keyboard commands (HID emulation)** using the software's built-in playback shortcuts function.
 
 > **Note:** The firmware uses a **3×13 button grid**. This handbook documents the keymap according to the **verified** state (checked via the firmware's diagnostic dump). The labeling of the individual keys can follow your own needs – what matters is the cell → key code mapping in the table below.
+
+## Table of contents
+
+- [1. The layout (physical arrangement)](#1-the-layout-physical-arrangement)
+  - [1.1 Firmware keymap (verified)](#11-firmware-keymap-verified)
+  - [1.2 Fader calibration (no re-flashing needed)](#12-fader-calibration-no-re-flashing-needed)
+- [2. Required hardware & shopping list](#2-required-hardware-shopping-list)
+- [3. Hardware wiring](#3-hardware-wiring)
+  - [3.1 The faders (via the 74HC4067 multiplexer)](#31-the-faders-via-the-74hc4067-multiplexer)
+  - [3.2 The key matrix (3x13 matrix) & diode wiring plan](#32-the-key-matrix-3x13-matrix-diode-wiring-plan)
+- [4. Installation & flashing the bootloader](#4-installation-flashing-the-bootloader)
+  - [Variant A: CircuitPython (`firmware/code.py`)](#variant-a-circuitpython-firmwarecodepy)
+  - [Variant B: PlatformIO / C++ (`platformio.ini` in the project root)](#variant-b-platformio-c-platformioini-in-the-project-root)
+- [5. Setup in MagicQ](#5-setup-in-magicq)
+- [Project structure](#project-structure)
 
 ## 1. The layout (physical arrangement)
 

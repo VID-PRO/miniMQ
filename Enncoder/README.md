@@ -1,43 +1,54 @@
-# ChamSys MagicQ Custom Controller (Raspberry Pi Pico)
+# MagicQ miniQ Encoders
 
-A custom hardware controller for controlling the virtual encoders and windows in **ChamSys MagicQ**, based on a **Raspberry Pi Pico** (RP2040).
+A custom hardware controller for the virtual encoders and windows of **ChamSys MagicQ**, built from a **Raspberry Pi Pico** (RP2040).
 
-The Pico emulates a native **keyboard + absolute mouse + relative mouse** (HID composite) over USB, so no additional drivers need to be installed.
+The Pico emulates a native **keyboard + absolute mouse + relative mouse** (composite HID) over USB, so no additional drivers need to be installed. Every physical knob first moves the mouse cursor onto its matching **on-screen encoder** in MagicQ and then scrolls or clicks exactly there — no key codes are typed and no manual cursor positioning is needed.
 
----
+> **Note:** The firmware works in **any** MagicQ keyboard mode, including **Playback shortcuts** (which the Fader wing needs). No CAPS LOCK / mode toggling is used.
 
 ## Table of contents
 
-- [How it works](#how-it-works)
-- [MagicQ software setup](#magicq-software-setup)
-- [Pin assignments](#pin-assignments)
-- [Connection diagrams (ASCII)](#connection-diagrams-ascii)
-  - [Rotary encoder (CLK / DT)](#rotary-encoder-clk--dt)
-  - [MCP23017 I/O expander for all keys](#mcp23017-io-expander-for-all-keys)
+- [1. The layout (physical arrangement)](#1-the-layout-physical-arrangement)
+  - [1.1 Control mapping (verified)](#11-control-mapping-verified)
+  - [1.2 Cursor position calibration (no re-flashing needed)](#12-cursor-position-calibration-no-re-flashing-needed)
+- [2. Required hardware & shopping list](#2-required-hardware-shopping-list)
+- [3. Hardware wiring](#3-hardware-wiring)
+  - [3.1 Encoder direct connection (Pico GPIO)](#31-encoder-direct-connection-pico-gpio)
+  - [3.2 Direct keys on the Pico (GPIO, against GND)](#32-direct-keys-on-the-pico-gpio-against-gnd)
+  - [3.3 Keys on the MCP23017 (I/O expander, address `0x20`)](#33-keys-on-the-mcp23017-io-expander-address-0x20)
+  - [3.4 Connection diagrams (ASCII)](#34-connection-diagrams-ascii)
+- [4. Build & upload (PlatformIO)](#4-build-upload-platformio)
+- [5. Setup in MagicQ](#5-setup-in-magicq)
+- [Notes & limitations](#notes-limitations)
 - [Project structure](#project-structure)
-- [Build & upload (PlatformIO)](#build--upload-platformio)
-- [Bill of materials (BOM)](#bill-of-materials-bom)
-- [Notes & limitations](#notes--limitations)
 
----
+## 1. The layout (physical arrangement)
 
-## How it works
+The console has **8 rotary encoders with click** plus **7 direct keys** below them:
 
-The project implements **8 rotary encoders** with click function as well as **7 additional keys**.
-The 8 rotary encoders (CLK/DT) and the **F keys, Shift, Group and FX** are connected **directly to the GPIOs
-of the Pico**. Only the **8 encoder SW** buttons sit on an **MCP23017 I/O expander** (I²C). Each action of a
-physical knob first moves the mouse cursor with an **absolute mouse** (composite HID keyboard+absolute
-mouse) onto its matching **on-screen encoder** in MagicQ, then scrolls/clicks there; the attribute/window
-keys stay keyboard.
+```
+                                      [ MINI Q ENCODERS ]
+====================================================================================================
+   (Enc 1)  (Enc 2)  (Enc 3)  (Enc 4)  (Enc 5)  (Enc 6)  (Enc 7)  (Enc 8)
+      ◯         ◯         ◯         ◯         ◯         ◉         ◯         ◉
+      +-------------------------------------------------------------+
+      |  INT      POS      COL      BEAM        ( ◉ 6 = on-screen encoders )
+      +-------------------------------------------------------------+
+   F5/INT  F6/POS  F7/COL  F8/BEAM        SHIFT   GROUP   FX
+```
 
-All buttons and switches switch directly against **GND** (pull-up resistors are enabled).
+* **Enc 1–8** are incremental rotary encoders (CLK/DT) with a push button (SW) on top of the shaft.
+* The **F5–F8, Shift, Group and FX** keys switch directly against **GND** on Pico GPIOs.
+* Only the **8 encoder SW** sit on the **MCP23017** I/O expander (I²C) — that is what keeps the 8 clicks plus the direct keys within the Pico's GPIO budget.
+
+### 1.1 Control mapping (verified)
 
 | Control | Action | HID output |
 |---|---|---|
 | Encoder **right** | Cursor to on-screen encoder + wheel up (value +) | abs. mouse + wheel `+1` |
 | Encoder **left** | Cursor to on-screen encoder + wheel down (value –) | abs. mouse + wheel `-1` |
 | Encoder **click** (SW) | Cursor to on-screen encoder + click | abs. mouse + left click |
-| **Shift** (method A) | Ultra fine adjustment (0.1% steps) | `KEY_LEFT_SHIFT` (held) |
+| **Shift** (method A) | Ultra fine adjustment (0.1 % steps) | `KEY_LEFT_SHIFT` (held) |
 | **Intensity (F5)** | Open INT window | `Ctrl+I` |
 | **Position (F6)** | Open POS window | `Ctrl+P` |
 | **Colour (F7)** | Open COL window | `Ctrl+K` |
@@ -45,74 +56,75 @@ All buttons and switches switch directly against **GND** (pull-up resistors are 
 | **Group** | Open Group window | `Ctrl+G` |
 | **FX** | Open FX window | `Ctrl+F` |
 
+All buttons and switches switch directly against **GND** (pull-ups enabled).
+
 > **How the encoders work:** MagicQ on PC/Mac shows its **on-screen encoders** in the console
-> layout (full screen / maximized). The 8 physical rotary knobs first move the **mouse cursor**
-> to the matching on-screen encoder (absolute positioning, see `ENC_TARGET_X/Y`) and then send
-> a **mouse wheel** scroll or left click exactly there. No keyboard characters like `1+`/`1-`
-> are typed, no manual cursor positioning needed.
+> layout (full screen / maximized). The 8 physical knobs first move the **mouse cursor** to the
+> matching on-screen encoder (absolute positioning, see `encCal.x/y`) and then send a **mouse
+> wheel** scroll or left click exactly there.
 >
-> **Important:** This works in **any** MagicQ keyboard mode – including **Playback
-> shortcuts** (which the Fader wing needs). No CAPS LOCK toggling is used anymore.
+> **Important:** The attribute keys (F5–F8), Group and FX send **Ctrl combinations**
+> (`Ctrl+I`, `Ctrl+P`, `Ctrl+K`, `Ctrl+J`, `Ctrl+G`, `Ctrl+F`) and thus open the corresponding
+> MagicQ windows directly. The **Shift key** holds `KEY_LEFT_SHIFT` as a modifier for ultra fine
+> adjustment.
+
+### 1.2 Cursor position calibration (no re-flashing needed)
+
+Each of the 8 on-screen encoders has its **own** target position (no interpolation), so even an
+uneven MagicQ layout is hit exactly. The values live in `encCal.x[8]` / `encCal.y[8]` (`src/main.cpp`)
+and are stored permanently in the Pico's LittleFS flash as **`/ecal.bin`**.
+
+**Restart the Pico while holding down encoder 1** (its switch) → the calibration UI starts automatically.
+The mouse cursor follows the selected encoder, so you can see what you are moving.
+
+| Action | Function |
+|--------|----------|
+| **Click encoder *i*** | select encoder *i*, cursor jumps to its stored position |
+| **Turn encoder 1 / 2** | selected encoder: **X** coarse / fine (±500 / ±50) |
+| **Turn encoder 3 / 4** | selected encoder: **Y** coarse / fine (±500 / ±50) |
+| **Click encoder *i* again** | **save** that encoder's position — the LED blinks the number of encoders saved so far |
+| **all 8 saved** | `/ecal.bin` is written and the Pico **restarts automatically** — this is the only way out of calibration |
+
+Turn clockwise = plus (right / down). Encoders 1–4 act purely as adjustment knobs while calibrating; the
+target positions always come from the encoder SW clicks. `[CAL] …` on the serial console reports every
+selection, adjustment and save.
+
+> **Note:** The calibration values are stored in LittleFS, which requires the **64 KB filesystem
+> partition** (`board_build.filesystem_size = 64` in `platformio.ini`). Without it
+> `LittleFS.begin()` fails, nothing is saved and the firmware prints a warning. Values are read back
+> on every boot (`[CAL] /ecal.bin geladen: …`, otherwise the compiled-in defaults).
 >
-> The attribute keys (F5–F8), Group and FX send **Ctrl combinations** (`Ctrl+I`,
-> `Ctrl+P`, `Ctrl+K`, `Ctrl+J`, `Ctrl+G`, `Ctrl+F`) and thus open the corresponding
-> MagicQ windows directly. The **Shift key** holds `KEY_LEFT_SHIFT` as a modifier for ultra fine adjustment.
+> For reference the old blink-through mode still exists: set `#define ENC_CALIBRATE 1` in
+> `src/main.cpp` to walk through all 8 target points (4 s each); the values are printed on the
+> serial console and can then be entered as defaults.
 
----
+## 2. Required hardware & shopping list
 
-## MagicQ software setup
+| Qty | Component | Note |
+|---|---|---|
+| 1 | Raspberry Pi Pico (RP2040) | with Micro-USB |
+| 1 | MCP23017 I/O expander (DIP-28) | only for the 8 encoder SW |
+| 8 | Mech. rotary encoders with push button (e.g. EC11) | 20 detents, 3-pin variant |
+| 4 | Buttons (momentary) | F5–F8 (directly on the Pico) |
+| 1 | Button or toggle switch | Shift (directly on the Pico, GP22) |
+| 2 | Buttons (momentary) | Group, FX (directly on the Pico) |
+| 2 | Resistors 2.2 kΩ (optional) | pull-up for SDA/SCL |
+| 1 | Resistor 10 kΩ (recommended) | pull-up for the MCP23017 RESET |
+| - | hook-up wires / stranded wire | for wiring |
+| - | optional: pin headers / breadboards | |
 
-The absolute-mouse encoder control works in **any** MagicQ keyboard mode, no mode switch is required.
-The F5–F8 / Group / FX window shortcuts work best in **Programming shortcuts** or
-`CTRL + Keys for Windows` mode:
+> **Pico pin usage (25 of 27 GPIOs):**
+> - **GP0–GP15** = 8 encoders (CLK/DT)
+> - **GP16/GP17** = I²C for the MCP23017
+> - **GP18–GP21** = F5–F8
+> - **GP22** = Shift
+> - **GP26** = Group, **GP27** = FX
+>
+> The **MCP23017** only takes the **8 encoder SW**. **GP28** remains as a free reserve.
 
-1. Navigate to: **Setup > View Settings > Keypad Encoders**.
-2. Set the option **MagicQ PC Keyboard Mode** to **Programming shortcuts**
-   (or `CTRL + Keys for Windows`).
+## 3. Hardware wiring
 
-Then open MagicQ in **full screen / maximized** so the on-screen encoders of the console layout
-appear at fixed screen positions. Every turn/click of a Pico knob now moves the cursor to the
-matching on-screen encoder and changes that attribute. If you prefer to keep MagicQ in
-**Playback shortcuts** (e.g. for the Fader wing), the encoders still work — only the
-attribute window keys (F5–F8/Group/FX) need the mode above.
-
-### Calibrating the cursor target positions
-
-The 8 on-screen encoders sit in a **2 columns × 4 rows** grid, so only **four** values
-have to be adjusted: `xA` (column A = encoders 1–4), `xB` (column B = encoders 5–8),
-`yTop` (encoder 1) and `yBot` (encoder 4). The remaining positions are interpolated.
-
-**Calibrate without reflashing** — hold down **encoder 1** (its switch) while
-plugging the Pico in:
-
-| Action | Result |
-| --- | --- |
-| Encoder switch 1 / 2 | selected value −500 / −50 |
-| Encoder switch 3 / 4 | selected value +50 / +500 |
-| Encoder switch 5–8 | select value 1–4 (LED blinks 1–4 times) |
-| F5–F8 (GP18–21) | same as encoder switches 5–8 |
-| **Group** (GP26) | save to LittleFS and return |
-
-The mouse cursor follows the value being adjusted. Values are stored in
-`/ecal.bin` (LittleFS) and are reloaded on every boot; the compile-time defaults in
-`ENC_CAL_DEFAULT` are used until the first save.
-
-> Requires the 64 KB LittleFS partition (`board_build.filesystem_size = 64` in
-> `platformio.ini`). Without it `LittleFS.begin()` fails and nothing is saved —
-> the firmware then prints a warning on the serial console.
-
-The old blink-through mode still exists for reference: set `#define ENC_CALIBRATE 1`
-in `src/main.cpp` to walk through all 8 target points (4 s each) and correct the
-interpolated values printed on the serial console.
-
----
-
-## Pin assignments
-
-The **8 rotary encoders (CLK/DT)** and the **F keys, Shift, Group and FX** are connected directly to the
-GPIOs of the Pico. The **MCP23017** (I²C, SDA = GP16, SCL = GP17) only handles the **encoder SW**.
-
-### Encoder direct connection (Pico GPIO)
+### 3.1 Encoder direct connection (Pico GPIO)
 
 | Component | CLK / DT |
 |---|---|
@@ -125,7 +137,7 @@ GPIOs of the Pico. The **MCP23017** (I²C, SDA = GP16, SCL = GP17) only handles 
 | **Encoder 7** | GP12 / GP13 |
 | **Encoder 8** | GP14 / GP15 |
 
-### Direct keys on the Pico (GPIO, against GND)
+### 3.2 Direct keys on the Pico (GPIO, against GND)
 
 | Function | Pico pin | Shortcut |
 |---|---|---|
@@ -137,10 +149,10 @@ GPIOs of the Pico. The **MCP23017** (I²C, SDA = GP16, SCL = GP17) only handles 
 | **Group** | GP26 | `Ctrl+G` |
 | **FX** | GP27 | `Ctrl+F` |
 
-### Keys on the MCP23017 (I/O expander, address `0x20`)
+### 3.3 Keys on the MCP23017 (I/O expander, address `0x20`)
 
 The MCP23017 is connected to the Pico via I²C (address `0x20`). It only takes the
-**encoder SW** (8 of 16 pins); all switch against GND (pull-up in the MCP enabled).
+**encoder SW** (8 of 16 pins); all switches go against GND (pull-up in the MCP enabled).
 
 | Expander pin | Function | HID output |
 |---|---|---|
@@ -156,14 +168,10 @@ The MCP23017 is connected to the Pico via I²C (address `0x20`). It only takes t
 
 > The MCP23017 is configured with pull-ups; each key switches an expander pin against **GND**.
 
----
+### 3.4 Connection diagrams (ASCII)
 
-## Connection diagrams (ASCII)
-
-### Rotary encoder (CLK / DT)
-
-Incremental rotary encoder with integrated push button (SW). **CLK/DT** go directly to the Pico,
-**SW** (common) to the MCP23017:
+Rotary encoder (CLK / DT): incremental rotary encoder with integrated push button (SW).
+**CLK/DT** go directly to the Pico, **SW** (common) to the MCP23017:
 
 ```
         Rotary encoder (e.g. EC11)
@@ -190,9 +198,7 @@ Incremental rotary encoder with integrated push button (SW). **CLK/DT** go direc
 > For encoders with a common connection (C), connect **C to GND**; A/B (CLK/DT) to the Pico GPIOs,
 > the push button (SW) is internally switched against C and goes to the MCP23017.
 
-### MCP23017 I/O expander (encoder SW only)
-
-Connection Pico ↔ MCP23017 (I²C, address 0x20):
+MCP23017 I/O expander (encoder SW only), Pico ↔ MCP23017 via I²C:
 
 ```
   Raspberry Pi Pico                MCP23017 (DIP-28)
@@ -218,10 +224,8 @@ Connection Pico ↔ MCP23017 (I²C, address 0x20):
                             Pin = LOW  → pressed
 ```
 
-### Direct keys on the Pico (F5–F8, Shift, Group, FX)
-
-Applies to all keys connected directly to the Pico – all switch against GND:
-(F5=GP18, F6=GP19, F7=GP20, F8=GP21, Shift=GP22, Group=GP26, FX=GP27)
+Direct keys on the Pico (F5–F8, Shift, Group, FX) — all switch against GND
+(F5=GP18, F6=GP19, F7=GP20, F8=GP21, Shift=GP22, Group=GP26, FX=GP27):
 
 ```
          Button (momentary, normally open)
@@ -238,28 +242,13 @@ Applies to all keys connected directly to the Pico – all switch against GND:
    GPIO = HIGH → key released
 ```
 
----
-
-## Project structure
-
-```
-chamsys-encoder/
-├── chamsys-encoder.pdf   # Original documentation (source code + pin info)
-├── platformio.ini        # PlatformIO configuration
-├── README.md             # This file
-└── src/
-    └── main.cpp          # Firmware for the Raspberry Pi Pico
-```
-
----
-
-## Build & upload (PlatformIO)
+## 4. Build & upload (PlatformIO)
 
 Prerequisite: [PlatformIO Core](https://platformio.org/) installed.
 
 ```bash
 # Switch to the project directory
-cd chamsys-encoder
+cd Enncoder
 
 # Compile the firmware
 pio run
@@ -275,37 +264,30 @@ pio device monitor
 into bootloader mode via **BOOTSEL** (hold, plug in USB, release) the first time.
 Later uploads work directly over USB.
 
-**Note on libraries:** The USB keyboard (`Keyboard`) comes from the earlephilhower core itself.
-The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core library
-`tusb-hid` is built automatically. **No** external TinyUSB package is needed.
-
----
-
-## Bill of materials (BOM)
-
-| Qty | Component | Note |
-|---|---|---|
-| 1 | Raspberry Pi Pico (RP2040) | with Micro-USB |
-| 1 | MCP23017 I/O expander (DIP-28) | only for the 8 encoder SW |
-| 8 | Mech. rotary encoders with push button (e.g. EC11) | 20 detents, 3-pin variant |
-| 4 | Buttons (momentary) | F5–F8 (directly on the Pico) |
-| 1 | Button or toggle switch | Shift (directly on the Pico, GP22) |
-| 2 | Buttons (momentary) | Group, FX (directly on the Pico) |
-| 2 | Resistors 2.2kΩ (optional) | pull-up for SDA/SCL |
-| 1 | Resistor 10kΩ (recommended) | pull-up for the MCP23017 RESET |
-| - | hook-up wires / stranded wire | for wiring |
-| - | optional: pin headers / breadboards | |
-
-> **Pico pin usage (25 of 27 GPIOs):**
-> - **GP0–GP15** = 8 encoders (CLK/DT)
-> - **GP16/GP17** = I²C for the MCP23017
-> - **GP18–GP21** = F5–F8
-> - **GP22** = Shift
-> - **GP26** = Group, **GP27** = FX
+> **Note on libraries:** The USB keyboard (`Keyboard`) comes from the earlephilhower core itself.
+> The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core library
+> `tusb-hid` is built automatically. **No** external TinyUSB package is needed.
 >
-> The **MCP23017** only takes the **8 encoder SW**. **GP28** remains as a free reserve.
+> `board_build.filesystem_size = 64` reserves the 64 KB **LittleFS** partition that the encoder
+> position calibration needs (section 1.2).
 
----
+## 5. Setup in MagicQ
+
+The absolute-mouse encoder control works in **any** MagicQ keyboard mode, no mode switch is
+required. The F5–F8 / Group / FX window shortcuts work best in **Programming shortcuts** or
+`CTRL + Keys for Windows` mode:
+
+1. Navigate to: **Setup > View Settings > Keypad Encoders**.
+2. Set the option **MagicQ PC Keyboard Mode** to **Programming shortcuts**
+   (or `CTRL + Keys for Windows`).
+3. Start MagicQ **full screen / maximized** so the on-screen encoders of the console layout
+   appear at fixed screen positions.
+4. If MagicQ runs maximized on another resolution or window size, run the position calibration
+   once (section 1.2) — the firmware then works with the layout actually in use.
+
+Then every turn/click of a Pico knob moves the cursor to the matching on-screen encoder and
+changes that attribute. If you prefer to keep MagicQ in **Playback shortcuts** (e.g. for the Fader
+wing), the encoders still work — only the attribute window keys (F5–F8/Group/FX) need the mode above.
 
 ## Notes & limitations
 
@@ -318,25 +300,37 @@ The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core l
   GP28 or to the free MCP23017 pins (GPB0–GPB7) and added in the code.
 - **Absolute-mouse encoders:** The 8 knobs work as an **absolute mouse** (positioning + wheel) plus a
   **relative mouse** for the click (composite HID keyboard+absolute+relative mouse). Turning/clicking a
-  knob first positions the cursor on the matching on-screen encoder (`ENC_TARGET_X/Y`) and then
-  scrolls/clicks there. Positioning and the wheel go through the absolute report (registered as the
-  **first** HID report, `ordering 9`, before the keyboard reports); the click uses the relative mouse,
-  because macOS does not treat the digitizer-style absolute buttons as a left click. Works in every
-  keyboard mode and needs no CAPS LOCK / mode toggling. Positions are calibrated via `ENC_CALIBRATE`
-  (see setup section).
+  knob first positions the cursor on the matching on-screen encoder (`encCal.x/y`) and then
+  scrolls/clicks there. Positioning and the wheel go through the absolute report; the click uses the
+  relative mouse, because macOS does not treat the digitizer-style absolute buttons as a left click.
+  Works in every keyboard mode and needs no CAPS LOCK / mode toggling. Positions are calibrated at
+  runtime and stored in `/ecal.bin` (see section 1.2).
 - **Ctrl combinations:** F5–F8 (INT/POS/COL/BEAM), Group and FX send `Ctrl+<key>` and thus open
   the respective MagicQ windows directly (needs `Programming shortcuts` or `CTRL + Keys for
   Windows` keyboard mode).
 - **USB-HID:** The Pico appears to the PC as a **keyboard + absolute mouse + relative mouse**
-  (composite HID). The absolute mouse is registered as the **first** HID report (`ordering 9`,
-  before the keyboard reports) — macOS otherwise ignores pointing devices in a composite. The
-  relative mouse only handles the click button. Key presses / cursor moves / clicks are only
-  sent after the USB-HID device has been mounted.
+  (composite HID). The absolute mouse is registered **before the keyboard reports** — macOS
+  otherwise ignores pointing devices in a composite. The relative mouse only handles the click
+  button. Key presses / cursor moves / clicks are only sent after the USB-HID device has been mounted.
 - **Shift keep-alive:** While the Shift key is held, the firmware re-sends the Shift-down
   report every 60 ms (`SHIFT_KEEPALIVE_MS`). macOS/MagicQ would otherwise treat a single
   down event as a "tap" and drop the modifier.
 - **MCP23017 guard:** If the expander is missing or unreadable at boot, the firmware logs
   `[WARN] MCP23017 nicht erkannt` and disables only the encoder clicks (`mcpOK=false`) –
   rotation and all direct keys keep working instead of crashing on a missing I²C device.
+  For the same reason the position calibration requires the expander and is skipped without it.
 - **I²C address:** The MCP23017 is set to address `0x20` with A0/A1/A2 = GND (standard).
 - The **serial output (115200)** is only for debugging and is not required for operation.
+
+## Project structure
+
+```
+Enncoder/
+├── README.md             # This handbook
+├── README.pdf            # PDF export of this handbook
+├── platformio.ini        # PlatformIO configuration
+├── pcb/                  # Gerbers, BOM and pick&place for the encoder PCB
+├── pcb 2/                # earlier PCB revision
+└── src/
+    └── main.cpp          # Firmware for the Raspberry Pi Pico
+```

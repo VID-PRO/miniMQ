@@ -1,15 +1,34 @@
-# MagicQ Show Computer on Dell Wyse 3040
+# MagicQ miniQ on Dell Wyse 3040
 
-Ubuntu + Openbox + ChamSys MagicQ as a dedicated show PC for the **Compact Wing**, with
-automatic USB stick mounting.
+Ubuntu + Openbox + ChamSys MagicQ as a dedicated show PC for the **Compact Wing**, with automatic USB stick mounting.
 
-> **Important hardware note:** In many configurations the Wyse 3040 has only **2 GB RAM**
-> and **8 GB eMMC**. MagicQ is relatively resource-hungry and the Compact Wing is required
-> for "unlocked" operation. With 2 GB RAM everything runs tight but works. It is
-> recommended to run **only a lightweight system** (server install + Openbox) and
-> nothing else.
+> **Note:** In many configurations the Wyse 3040 has only **2 GB RAM** and **8 GB eMMC**. MagicQ is relatively resource-hungry and the Compact Wing is required for "unlocked" operation. With 2 GB RAM everything runs tight but works. It is recommended to run **only a lightweight system** (server install + Openbox) and nothing else.
 
----
+## Table of contents
+
+- [1. Requirements / Hardware](#1-requirements-hardware)
+- [2. Prepare the BIOS](#2-prepare-the-bios)
+- [3. Install Ubuntu (recommended: 24.04 LTS Server)](#3-install-ubuntu-recommended-2404-lts-server)
+- [4. Repair the boot path (BOOTX64.EFI) – absolutely required!](#4-repair-the-boot-path-bootx64efi-absolutely-required)
+- [5. Run the setup script](#5-run-the-setup-script)
+- [6. Install MagicQ (if not done by the script)](#6-install-magicq-if-not-done-by-the-script)
+  - [6.1 Qt5 and runtime dependencies](#61-qt5-and-runtime-dependencies)
+- [7. Compact Wing & panel mode – how it works](#7-compact-wing-panel-mode-how-it-works)
+  - [7.1 Start directly in the "Touch Compact" panel](#71-start-directly-in-the-touch-compact-panel)
+- [8. Autostart (what the script creates)](#8-autostart-what-the-script-creates)
+- [9. No window decorations for MagicQ](#9-no-window-decorations-for-magicq)
+- [10. All ethernet interfaces on DHCP](#10-all-ethernet-interfaces-on-dhcp)
+- [11. Automatic USB stick mounting](#11-automatic-usb-stick-mounting)
+- [12. Autologin (optional, for "boot straight to MagicQ")](#12-autologin-optional-for-boot-straight-to-magicq)
+- [13. Splashscreen (hide boot logs)](#13-splashscreen-hide-boot-logs)
+  - [13.1 Troubleshooting: "black screen instead of splash"](#131-troubleshooting-black-screen-instead-of-splash)
+  - [13.2 Troubleshooting: "exec: /usr/bin/X: not found"](#132-troubleshooting-exec-usrbinx-not-found)
+  - [13.3 Troubleshooting: MagicQ "cannot create the data folder"](#133-troubleshooting-magicq-cannot-create-the-data-folder)
+  - [13.4 Hide the mouse cursor](#134-hide-the-mouse-cursor)
+  - [13.5 Monitor should always stay on (no power saving)](#135-monitor-should-always-stay-on-no-power-saving)
+- [14. Troubleshooting (short list)](#14-troubleshooting-short-list)
+- [15. Compact command overview](#15-compact-command-overview)
+- [Project structure](#project-structure)
 
 ## 1. Requirements / Hardware
 
@@ -177,6 +196,7 @@ The setup script therefore automatically installs **both** safety nets:
 | OpenGL / X11 | `libglu1-mesa libgl1 libglx-mesa0 libxext6 libxrender1` |
 | USB (wings/DMX interfaces) | `libusb-1.0-0 libusb-0.1-4` |
 | Audio / Video | `libportaudio2 libasound2* ffmpeg libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good` |
+| Archive / Base | `libarchive13 zlib1g libglib2.0-0 libstdc++6` |
 
 > **ALSA package name (`libasound2*`):** varies depending on the Ubuntu version!
 > - **Ubuntu 22.04:** `libasound2`
@@ -186,7 +206,6 @@ The setup script therefore automatically installs **both** safety nets:
 > The script selects the correct name automatically depending on the version. Also `libglu1-mesa`,
 > `libgl1` etc. are partly named as `t64` variants on 24.04+; the script tries the
 > appropriate selection and catches failures.
-| Archive / Base | `libarchive13 zlib1g libglib2.0-0 libstdc++6` |
 
 **Error "could not load QT plugin xcb":**
 
@@ -198,8 +217,8 @@ The script therefore additionally installs all required `libxcb*` packages:
 | xcb plugin (Qt5) | `libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-image0 libxcb-render-util0 libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-xkb1 libxcb-xinput0 libxcb-randr0 libxcb-sync1 libxcb-shm0 libxcb1` |
 | XKB / Fonts / EGL | `libxkbcommon-x11-0 libxkbcommon0 libfontconfig1 libfreetype6 libx11-xcb1 libegl1 libgl1 libglx-mesa0` |
 
-> **GL/Mesa package names (`libgl1...*`):** `libgl1-mesa-glx` no longer exists in **Ubuntu 24.04+
-> ** (removed since 23.10, had been a transitional package for a long time). It is replaced by
+> **GL/Mesa package names (`libgl1...*`):** `libgl1-mesa-glx` no longer exists in **Ubuntu 24.04+**
+> (removed since 23.10, had been a transitional package for a long time). It is replaced by
 > `libgl1` **and** `libglx-mesa0`. The script therefore always uses `libgl1` +
 > `libglx-mesa0` — this works on 22.04 and 24.04 alike.
 
@@ -388,6 +407,7 @@ done &
 
 ---
 
+
 ## 12. Autologin (optional, for "boot straight to MagicQ")
 
 The setup script sets this up automatically: after power-on, the user is logged in on `tty1`
@@ -420,7 +440,7 @@ All files belong to the user `chamsys` (`chown chamsys:chamsys`).
 
 ```bash
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null <<EOF
+sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null <<'EOF'
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin chamsys --noclear tty1 linux
@@ -530,8 +550,6 @@ ls /usr/lib/x86_64-linux-gnu/plymouth/script.so
 cat /boot/grub/grub.cfg | grep -i "quiet splash"
 ```
 
----
-
 ### 13.1 Troubleshooting: "black screen instead of splash"
 
 A black screen instead of the splash almost always has one of these causes –
@@ -579,24 +597,24 @@ check them in this order:
    `update-alternatives --set default.plymouth` or symlink – it no longer relies
    on the missing command.)*
 
-4. **Theme missing in the initramfs** → `update-initramfs -u` was forgotten or failed.
+5. **Theme missing in the initramfs** → `update-initramfs -u` was forgotten or failed.
    ```bash
    sudo update-initramfs -u
    lsinitramfs /boot/initrd.img-$(uname -r) | grep -i "ubuntu-logo\|magicq"
    ```
 
-5. **Graphics driver/`nomodeset`** → If `nomodeset` is in the kernel parameters,
+6. **Graphics driver/`nomodeset`** → If `nomodeset` is in the kernel parameters,
    Plymouth is often not shown. Remove `nomodeset` (unless it is strictly required
    for other reasons).
 
-6. **Wrong resolution** → The script sets `GRUB_GFXMODE=1280x800` (boot/splash) and
+7. **Wrong resolution** → The script sets `GRUB_GFXMODE=1280x800` (boot/splash) and
    additionally forces 1280x800 in X11 via `/etc/X11/xorg.conf.d/11-resolution.conf`. If the
    monitor has a different native resolution, adjust both values.
 
-7. **Display hardware** → On the Wyse 3040 an **active DP→HDMI adapter** is required. Without
+8. **Display hardware** → On the Wyse 3040 an **active DP→HDMI adapter** is required. Without
    the right adapter the screen may remain black.
 
-8. **Splash flickers / repeatedly goes black** → Known Plymouth-`script` bug: the
+9. **Splash flickers / repeatedly goes black** → Known Plymouth-`script` bug: the
    framebuffer is cleared on every refresh cycle, and if the theme callback does not
    re-set the image **every time**, the screen repeatedly goes black. The script now redraws the
    image on every refresh (see `magicq-splash.script`: `draw_bg()` with `SetPosition`
@@ -607,24 +625,22 @@ check them in this order:
    *(A short black flash **exactly once** shortly before the X desktop is, in contrast,
    the normal Plymouth → display manager transition and not a bug.)*
 
-9. **An (Ubuntu/vendor) logo appears instead of `splash.png`** →
-   `/etc/alternatives/default.plymouth` still points to another theme (e.g. `bgrt`
-   or `ubuntu-logo`). Activating via `update-alternatives --set` often does not take effect
-   on Noble. Point directly to our theme and rebuild:
-   ```bash
-   readlink /etc/alternatives/default.plymouth
-   sudo ln -sfn /usr/share/plymouth/themes/magicq-splash/magicq-splash.plymouth \
-                /etc/alternatives/default.plymouth
-   sudo update-initramfs -u && sudo update-grub
-   sudo reboot
-   ```
+10. **An (Ubuntu/vendor) logo appears instead of `splash.png`** →
+    `/etc/alternatives/default.plymouth` still points to another theme (e.g. `bgrt`
+    or `ubuntu-logo`). Activating via `update-alternatives --set` often does not take effect
+    on Noble. Point directly to our theme and rebuild:
+    ```bash
+    readlink /etc/alternatives/default.plymouth
+    sudo ln -sfn /usr/share/plymouth/themes/magicq-splash/magicq-splash.plymouth \
+                 /etc/alternatives/default.plymouth
+    sudo update-initramfs -u && sudo update-grub
+    sudo reboot
+    ```
 
 **Show boot logs at all (only for diagnostics):**
 
 Hold **`Shift`** (or `Esc` in GRUB) during boot to open the GRUB menu
 and remove the `quiet splash` kernel parameters via `e` – then all messages appear again.
-
----
 
 ### 13.2 Troubleshooting: "exec: /usr/bin/X: not found"
 
@@ -649,8 +665,6 @@ which Xorg
 
 *(The script now installs `xserver-xorg` automatically in step 1.)*
 
----
-
 ### 13.3 Troubleshooting: MagicQ "cannot create the data folder"
 
 MagicQ stores show files and settings in `~/MagicQ` or under
@@ -669,8 +683,6 @@ ls -ld /home/chamsys/MagicQ   # must belong to chamsys
 
 *(The script creates the data folder in step 5e automatically and forces
 `$HOME` in the start script, so MagicQ finds the right location.)*
-
----
 
 ### 13.4 Hide the mouse cursor
 
@@ -711,9 +723,6 @@ xxd /usr/share/icons/Transparent/cursors/default | head -1   # starts with: 5863
 cat /usr/share/icons/default/index.theme            # Inherits=Transparent
 cat /etc/environment                                # XCURSOR_THEME=Transparent
 ```
-```
-
----
 
 ### 13.5 Monitor should always stay on (no power saving)
 
@@ -812,4 +821,13 @@ xset dpms 0 0 0
 
 # Restart
 sudo reboot
+```
+
+## Project structure
+
+```
+Linux-Installer/
+├── README.md            # This handbook
+├── setup_magicq_wyse.sh  # Setup script
+└── splash.png            # Plymouth splash screen
 ```
