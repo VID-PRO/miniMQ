@@ -2,7 +2,7 @@
 
 A custom hardware controller for controlling the virtual encoders and windows in **ChamSys MagicQ**, based on a **Raspberry Pi Pico** (RP2040).
 
-The Pico emulates a native keyboard (HID) over USB, so no additional drivers need to be installed.
+The Pico emulates a native **keyboard + absolute mouse + relative mouse** (HID composite) over USB, so no additional drivers need to be installed.
 
 ---
 
@@ -25,15 +25,18 @@ The Pico emulates a native keyboard (HID) over USB, so no additional drivers nee
 
 The project implements **8 rotary encoders** with click function as well as **7 additional keys**.
 The 8 rotary encoders (CLK/DT) and the **F keys, Shift, Group and FX** are connected **directly to the GPIOs
-of the Pico**. Only the **8 encoder SW** buttons sit on an **MCP23017 I/O expander** (I²C).
+of the Pico**. Only the **8 encoder SW** buttons sit on an **MCP23017 I/O expander** (I²C). Each action of a
+physical knob first moves the mouse cursor with an **absolute mouse** (composite HID keyboard+absolute
+mouse) onto its matching **on-screen encoder** in MagicQ, then scrolls/clicks there; the attribute/window
+keys stay keyboard.
 
 All buttons and switches switch directly against **GND** (pull-up resistors are enabled).
 
-| Control | Action | Keyboard character sent |
+| Control | Action | HID output |
 |---|---|---|
-| Encoder **right** | Value + | `<nr>+` (e.g. `1+`) |
-| Encoder **left** | Value – | `<nr>-` (e.g. `1-`) |
-| Encoder **click** (SW) | Soft button | `<nr>` (e.g. `1`) |
+| Encoder **right** | Cursor to on-screen encoder + wheel up (value +) | abs. mouse + wheel `+1` |
+| Encoder **left** | Cursor to on-screen encoder + wheel down (value –) | abs. mouse + wheel `-1` |
+| Encoder **click** (SW) | Cursor to on-screen encoder + click | abs. mouse + left click |
 | **Shift** (method A) | Ultra fine adjustment (0.1% steps) | `KEY_LEFT_SHIFT` (held) |
 | **Intensity (F5)** | Open INT window | `Ctrl+I` |
 | **Position (F6)** | Open POS window | `Ctrl+P` |
@@ -42,7 +45,16 @@ All buttons and switches switch directly against **GND** (pull-up resistors are 
 | **Group** | Open Group window | `Ctrl+G` |
 | **FX** | Open FX window | `Ctrl+F` |
 
-> **Note:** The attribute keys (F5–F8), Group and FX send **Ctrl combinations** (`Ctrl+I`,
+> **How the encoders work:** MagicQ on PC/Mac shows its **on-screen encoders** in the console
+> layout (full screen / maximized). The 8 physical rotary knobs first move the **mouse cursor**
+> to the matching on-screen encoder (absolute positioning, see `ENC_TARGET_X/Y`) and then send
+> a **mouse wheel** scroll or left click exactly there. No keyboard characters like `1+`/`1-`
+> are typed, no manual cursor positioning needed.
+>
+> **Important:** This works in **any** MagicQ keyboard mode – including **Playback
+> shortcuts** (which the Fader wing needs). No CAPS LOCK toggling is used anymore.
+>
+> The attribute keys (F5–F8), Group and FX send **Ctrl combinations** (`Ctrl+I`,
 > `Ctrl+P`, `Ctrl+K`, `Ctrl+J`, `Ctrl+G`, `Ctrl+F`) and thus open the corresponding
 > MagicQ windows directly. The **Shift key** holds `KEY_LEFT_SHIFT` as a modifier for ultra fine adjustment.
 
@@ -50,12 +62,29 @@ All buttons and switches switch directly against **GND** (pull-up resistors are 
 
 ## MagicQ software setup
 
-So that the Pico passes the keyboard commands to the software correctly, MagicQ must be put into the right mode:
+The absolute-mouse encoder control works in **any** MagicQ keyboard mode, no mode switch is required.
+The F5–F8 / Group / FX window shortcuts work best in **Programming shortcuts** or
+`CTRL + Keys for Windows` mode:
 
 1. Navigate to: **Setup > View Settings > Keypad Encoders**.
-2. Set the option **MagicQ PC Keyboard Mode** to **Programming Shortcuts**.
+2. Set the option **MagicQ PC Keyboard Mode** to **Programming shortcuts**
+   (or `CTRL + Keys for Windows`).
 
-Afterwards the encoder numbers (`1`–`8`) can be assigned directly to the desired windows or soft buttons.
+Then open MagicQ in **full screen / maximized** so the on-screen encoders of the console layout
+appear at fixed screen positions. Every turn/click of a Pico knob now moves the cursor to the
+matching on-screen encoder and changes that attribute. If you prefer to keep MagicQ in
+**Playback shortcuts** (e.g. for the Fader wing), the encoders still work — only the
+attribute window keys (F5–F8/Group/FX) need the mode above.
+
+### Calibrating the cursor target positions
+
+The on-screen-encoder positions differ per screen. The firmware ships with a **calibration mode**:
+
+1. Set `#define ENC_CALIBRATE 1` in `src/main.cpp` and flash the Pico.
+2. The cursor now walks through all 8 target points (4 s each, LED blinks the number 1–8).
+3. Note where each flash number lands on the screen and correct the matching entry of
+   `ENC_TARGET_X[]` / `ENC_TARGET_Y[]` (0..32767, `X` = left→right, `Y` = top→bottom).
+4. Set `ENC_CALIBRATE` back to `0`, rebuild and flash again.
 
 ---
 
@@ -94,16 +123,16 @@ GPIOs of the Pico. The **MCP23017** (I²C, SDA = GP16, SCL = GP17) only handles 
 The MCP23017 is connected to the Pico via I²C (address `0x20`). It only takes the
 **encoder SW** (8 of 16 pins); all switch against GND (pull-up in the MCP enabled).
 
-| Expander pin | Function | Shortcut |
+| Expander pin | Function | HID output |
 |---|---|---|
-| **GPA0** (pin 21) | Encoder 1 SW | `1` |
-| **GPA1** (pin 22) | Encoder 2 SW | `2` |
-| **GPA2** (pin 23) | Encoder 3 SW | `3` |
-| **GPA3** (pin 24) | Encoder 4 SW | `4` |
-| **GPA4** (pin 25) | Encoder 5 SW | `5` |
-| **GPA5** (pin 26) | Encoder 6 SW | `6` |
-| **GPA6** (pin 27) | Encoder 7 SW | `7` |
-| **GPA7** (pin 28) | Encoder 8 SW | `8` |
+| **GPA0** (pin 21) | Encoder 1 SW | left click |
+| **GPA1** (pin 22) | Encoder 2 SW | left click |
+| **GPA2** (pin 23) | Encoder 3 SW | left click |
+| **GPA3** (pin 24) | Encoder 4 SW | left click |
+| **GPA4** (pin 25) | Encoder 5 SW | left click |
+| **GPA5** (pin 26) | Encoder 6 SW | left click |
+| **GPA6** (pin 27) | Encoder 7 SW | left click |
+| **GPA7** (pin 28) | Encoder 8 SW | left click |
 | GPB0–GPB7 | free | – |
 
 > The MCP23017 is configured with pull-ups; each key switches an expander pin against **GND**.
@@ -268,10 +297,22 @@ The `lib_ldf_mode = chain+` in `platformio.ini` ensures that the required core l
   could be connected there.
 - **Layout keys (Lay 1–3):** These were removed. If desired, they can easily be connected to
   GP28 or to the free MCP23017 pins (GPB0–GPB7) and added in the code.
+- **Absolute-mouse encoders:** The 8 knobs work as an **absolute mouse** (positioning + wheel) plus a
+  **relative mouse** for the click (composite HID keyboard+absolute+relative mouse). Turning/clicking a
+  knob first positions the cursor on the matching on-screen encoder (`ENC_TARGET_X/Y`) and then
+  scrolls/clicks there. Positioning and the wheel go through the absolute report (registered as the
+  **first** HID report, `ordering 9`, before the keyboard reports); the click uses the relative mouse,
+  because macOS does not treat the digitizer-style absolute buttons as a left click. Works in every
+  keyboard mode and needs no CAPS LOCK / mode toggling. Positions are calibrated via `ENC_CALIBRATE`
+  (see setup section).
 - **Ctrl combinations:** F5–F8 (INT/POS/COL/BEAM), Group and FX send `Ctrl+<key>` and thus open
-  the respective MagicQ windows directly.
-- **USB-HID:** The Pico appears to the PC as a keyboard. Key presses are only sent
-  after the USB-HID device has been mounted.
+  the respective MagicQ windows directly (needs `Programming shortcuts` or `CTRL + Keys for
+  Windows` keyboard mode).
+- **USB-HID:** The Pico appears to the PC as a **keyboard + absolute mouse + relative mouse**
+  (composite HID). The absolute mouse is registered as the **first** HID report (`ordering 9`,
+  before the keyboard reports) — macOS otherwise ignores pointing devices in a composite. The
+  relative mouse only handles the click button. Key presses / cursor moves / clicks are only
+  sent after the USB-HID device has been mounted.
 - **Shift keep-alive:** While the Shift key is held, the firmware re-sends the Shift-down
   report every 60 ms (`SHIFT_KEEPALIVE_MS`). macOS/MagicQ would otherwise treat a single
   down event as a "tap" and drop the modifier.

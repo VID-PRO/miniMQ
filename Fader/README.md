@@ -23,7 +23,7 @@ The console has **3 rows of 13 buttons** and the fader section below them. At th
 
 ### 1.1 Firmware keymap (verified)
 
-The mapping is defined in `src/main.cpp` as `MATRIX[3][13]` and checked via the diagnostic combination S10+GO10 (which types the cell table into the editor):
+The mapping is defined in `src/main.cpp` as `KEYMAP[3][13]` and checked via the diagnostic combination S10+GO10 (which types the cell table into the editor):
 
 | Cell | Key(s) | Key code | Function in MagicQ "Playback shortcuts" |
 |------|--------|----------|-----------------------------------------|
@@ -47,20 +47,43 @@ The mapping is defined in `src/main.cpp` as `MATRIX[3][13]` and checked via the 
 * **ALT:** held like a modifier (`Ctrl+Alt+0`) until the key is released.
 * **MASTER GO / MASTER PAUSE:** in this layout they sit top right (GO) or bottom right (PAUSE) instead of being stacked vertically.
 
-**Fader handling (deadzone & smoothing):**
+**Fader handling (direct drag on the on-screen faders):**
 
-* Each fader is read 8× per scan and **averaged** to reject ADC noise (`FADER_SAMPLES`).
-* A **deadzone** (`FADER_DEADZONE`, default 2%) suppresses command spam: a new `pbX @ Y` is only typed when the fader moved more than 2% away from the **last sent** value. A resting fader no longer re-sends its level on jitter.
-* Both ends **snap** to exactly 0/100 within `FADER_ENDSTOP` (1%) – many pots never reach the true rail.
-* The typed command is coalesced: a `FADER_QUIET_MS` (150 ms) settle window skips intermediate levels while you drag, then types the final value once.
-* Fader commands also appear on the USB serial as `FADER <n> -> <pct>`.
+* The wing runs entirely in MagicQ **Playback shortcuts** keyboard mode (see section 5). The faders no longer send binary Test-key triggers. Instead they **grab and drag** the on-screen faders of the MagicQ **Full Panel** with the same absolute pointer mechanism as the sibling encoder wing:
+  * A second HID device is registered — an **absolute mouse** (digitizer-style, `ordering 8`, so it precedes the keyboard reports; the pointer maps the whole screen to X=0..32767 / Y=0..32767).
+  * Per fader the firmware jumps the cursor onto the fader track (button down), follows the physical fader, and releases again. Index 0 = **Grand Master**, 1..10 = **PB1..PB10**.
+  * Output modes via `FADER_OUT_MODE`: **2 = DRAG** (current default), 1 = SET (keyboard entry of the value), 0 = WHEEL (calibrated wheel nudges).
+* **Ghosting filter (Richtungs-Persistenz):** a read value is only accepted proportionally after the next scan either continues in the same direction or holds near the candidate target; genuine A→B→A flicker is discarded, so nothing is sent while real faders are idle. Large single-scan jumps (`FADER_MAX_DELTA_PCT`, 90) and a deadband (`FADER_DEADBAND`, 0) protect against artifacts.
+* **Idle/Locked faders:** unwired multiplexer inputs float (settle-dependent readings: 30 µs → ~1 %, 3000 µs → mid, plus a ~2 s charge-up and drift). `FADER_IDLE_GUARD` marks a channel abnormal at boot when short-settle ≠ long-settle reading (`FADER_IDLE_SPREAD`), and `FADER_FORCE_LOCK` deterministically locks the unwired channels (currently f03–f07) — locked channels keep their reference but never emit anything.
+* Faders are read with `FADER_SETTLE_US` = 1500 µs and averaged (`FADER_SAMPLES` = 12, every 5th scan skipped); both ends snap to exactly 0/100 within `FADER_ENDSTOP` (1 %).
 * On boot a **fader ADC scan** prints every mux channel (`ch<no> raw=<adc> <pct>%`) to verify the 74HC4067 wiring.
-* All knobs are tunable at the top of `src/main.cpp`.
+* All knobs (mode, drag gain, sampling, locks) are tunable at the top of `src/main.cpp`.
+
+### 1.2 Fader calibration (no re-flashing needed)
+
+**Restart the Pico while holding the DBO button** → calibration mode starts automatically (4 LED blinks). The cursor is steered with the wing buttons, and **NEXT Page saves** the values permanently in the Pico's LittleFS flash (`/fcal.bin`).
+
+| Key | Function |
+|-----|----------|
+| S1 | X position of PB1 |
+| S2 | X position of PB10 |
+| S3 | Y of the PB track at 100 % (top) |
+| S4 | Y of the PB track at 0 % (bottom) |
+| S5 | X position of the Grand Master |
+| S6 | Y of the GM track at 100 % |
+| S7 | Y of the GM track at 0 % |
+| F1 / F2 | −500 / −50 (coarse / fine) |
+| F3 / F4 | +50 / +500 |
+| NEXT Page | save to flash and return to normal operation |
+
+PB2–PB9 are interpolated automatically between X(PB1) and X(PB10). Values are read back on every boot (`[CAL] flash …`, or `[CAL] default …` if no file exists yet). The compiled-in defaults of the current MagicQ Full Panel are: GM X = 400 (left of the Sub Master), PB X = 2800…25300 in steps of 2500, PB Y = 26800/29300, GM Y = 26850/29400.
+
+> **Wheel fallback (`FADER_OUT_MODE = 0`):** one wheel report = 0.40 % travel, globally paced to one report per 25 ms because MagicQ evaluates at most ~40 reports/s. Kept as a backup for setups without a Full Panel.
 
 **Diagnostics combos:**
 
 * **S10 + GO10** (keep both held): types the currently pressed matrix cells as `M R2C3 R0C1` into the focused editor.
-* **S1 + GO1**: types the **fader levels** as `F GM=42 PB1=99 ...` (uses the last sent values).
+* **S1 + GO1**: types the current fader levels as `F GM=42% PB1=87% ...`.
 
 ## 2. Required hardware & shopping list
 
@@ -183,8 +206,9 @@ The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag &
 1. Start MagicQ, select **Setup** -> **View Settings**.
 2. Switch to the **Keypad Encoders** tab.
 3. Find the **MagicQ PC Keyboard Mode** line and change it to **Playback shortcuts**.
-4. Ideally set your PC's operating system to the **US keyboard layout** for the DIY keyboard, so that special characters like `@` are typed correctly by the Pico.
-5. **macOS tip**: If the Mac's physical Shift key occasionally drops out while the Pico is connected as an additional USB keyboard — that is known macOS behavior with multiple HID keyboards (the Pico injects Shift for characters like `#` and `@`). The firmware therefore sends lowercase letters (MagicQ evaluates key codes case-insensitively). If you don't want that at all, unplug the Pico when typing only on the Mac keyboard.
+4. Ideally set your PC's operating system to the **US keyboard layout** for the DIY keyboard, so that special characters (`#`, `` ` ``, `\`, `,`) used by the wing are typed correctly by the Pico.
+5. **Faders:** open the **Full Panel** window so that all 10 playback faders and the Grand Master are visible — the wing drags them there. If MagicQ shows a different window, open the Full Panel once before using the faders (the coordinates are calibrated for that layout).
+5. **macOS tip**: If the Mac's physical Shift key occasionally drops out while the Pico is connected as an additional USB keyboard — that is known macOS behavior with multiple HID keyboards (the Pico injects Shift for characters like `#`). The firmware therefore sends lowercase letters (MagicQ evaluates key codes case-insensitively). If you don't want that at all, unplug the Pico when typing only on the Mac keyboard.
 6. **Linux/Windows note**: The flash keys (F1–F10) work on the Mac, **not** on the PC (MagicQ-PC has no F-key binding in "Playback shortcuts"). The firmware therefore uses the **Test keys** (`\ z x c v b n m , .`) instead, which work on every system and toggle (100% playback on/off). The firmware automatically compensates the toggling into **momentary flash**.
 
 ## Project structure

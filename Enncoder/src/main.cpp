@@ -2,6 +2,10 @@
 #include <Keyboard.h>
 #include <Rotary.h>
 #include <Adafruit_MCP23X17.h>
+#include <USB.h>
+#include <tusb.h>
+#include <tusb-hid.h>
+#include "class/hid/hid_device.h"
 
 // ==========================================
 // 1. PIN-DEFINITIONEN (Raspberry Pi Pico)
@@ -45,61 +49,153 @@ const int ledPin = 25;
 #define PIN_FINDER 0
 
 // ==========================================
+// ABSOLUTE MOUSE (CURSOR-POSITIONIERUNG)
+// ==========================================
+// Die 8 Drehencoder sollen den Mauszeiger zuerst auf den korrespondierenden
+// On-Screen-Encoder in MagicQ setzen und DORT scrollen/klicken. Dazu wird ein
+// zweites HID-Device registriert: eine absolute Maus (digitizer-style), die
+// den ganzen Bildschirm in X=0..32767 / Y=0..32767 abbildet.
+//
+// Eigene Routine statt MouseAbsolute: dessen click()/press() rufen move(0,0,0)
+// auf, was bei absoluter Maus den Cursor in die Ecke (0,0) springen lässt.
+
+static const uint8_t desc_abs_mouse[] = { TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(1)) };
+static uint8_t absMouseLocalID = 0;
+static bool absMouseRunning = false;
+
+// Eigene relative Maus (nur für Klicks), registriert als ALLERERSTER
+// HID-Report. Die HID_Mouse-Bibliothek nutzt intern ordering 20 (hinter dem
+// Keyboard 10/11) - macOS ignoriert Pointer-Buttons dann vollständig.
+static const uint8_t desc_rel_mouse[] = { TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(1)) };
+static uint8_t relMouseLocalID = 0;
+static bool relMouseRunning = false;
+
+// ====== DEBUG ======
+// 1 = ausführliche Serial-Ausgabe, 0 = normal.
+#define DEBUG_VERBOSE 1
+#define DEBUG_VERSION "ENC-DEBUG-v7-CLICKFIX"
+#define DEBUG_MSG(...) do { if (DEBUG_VERBOSE) { Serial.printf(__VA_ARGS__); } } while (0)
+
+void relMouseReport(int16_t x, int16_t y, int8_t wheel, uint8_t buttons) {
+  if (!relMouseRunning) {
+    DEBUG_MSG("[RELMOUSE] skip: not running\n");
+    return;
+  }
+  // Debug VOR der Mutex-Sperre: Serial läuft über USB-CDC und darf nicht
+  // unter dem USB-Mutex blockieren, sonst geht der Druck verloren.
+  DEBUG_MSG("[RELMOUSE] attempt rid=%u buttons=%u x=%d y=%d wheel=%d mounted?%d\n",
+            USB.findHIDReportID(relMouseLocalID), buttons, x, y, wheel, (int)tud_mounted());
+  CoreMutex m(&USB.mutex);
+  tud_task();
+  if (tud_hid_ready()) {
+    tud_hid_mouse_report(USB.findHIDReportID(relMouseLocalID), buttons, x, y, wheel, 0);
+  }
+  tud_task();
+}
+
+void relMouseClick(uint8_t button) {
+  DEBUG_MSG("[CLICK] down\n");
+  relMouseReport(0, 0, 0, button);
+  delay(15);
+  DEBUG_MSG("[CLICK] up\n");
+  relMouseReport(0, 0, 0, 0);
+  delay(15);
+}
+
+void absMouseBegin() {
+  if (absMouseRunning) {
+    return;
+  }
+  // WICHTIG (macOS): Die Maus muss als ERSTER HID-Report registriert werden.
+  // macOS akzeptiert Pointing-Devices in einem Composite nur, wenn der Maus-Report
+  // vor den Keyboard-Reports steht (sonst wird der Cursor nie bewegt).
+  USB.disconnect();
+  relMouseLocalID = USB.registerHIDDevice(desc_rel_mouse, sizeof(desc_rel_mouse), 8, 0x0002);
+  absMouseLocalID = USB.registerHIDDevice(desc_abs_mouse, sizeof(desc_abs_mouse), 9, 0x0002);
+  USB.connect();
+  absMouseRunning = true;
+  relMouseRunning = true;
+  // USB.connect() bewirkt Re-Enumeration -> der Mac verliert kurz die
+  // USB-Verbindung. Diese Prints gehen VERLOREN, deshalb erfolgt jetzt KEINE
+  // Ausgabe hier; der Status wird in loop() beim / nach dem Mount ausgegeben.
+}
+
+// Sendet Position+x-Achsen-Wheel+Buttons in EINEM HID-Report (absolut).
+// x,y = 0..32767 (Bildschirm links/oben nach rechts/unten).
+void absMouseReport(int16_t x, int16_t y, int8_t wheel, uint8_t buttons) {
+  if (!absMouseRunning) {
+    DEBUG_MSG("[ABSMOUSE] skip: not running\n");
+    return;
+  }
+  // Debug VOR der Mutex-Sperre ausgeben, s. relMouseReport().
+  DEBUG_MSG("[ABSMOUSE] attempt rid=%u buttons=%u x=%d y=%d wheel=%d mounted?%d\n",
+            USB.findHIDReportID(absMouseLocalID), buttons, x, y, wheel, (int)tud_mounted());
+  CoreMutex m(&USB.mutex);
+  tud_task();
+  if (tud_hid_ready()) {
+    tud_hid_abs_mouse_report(USB.findHIDReportID(absMouseLocalID), buttons, x, y, wheel, 0);
+  }
+  tud_task();
+}
+
+// Cursor auf Punkt setzen, ohne zu klicken.
+void absMouseMove(int16_t x, int16_t y) {
+  absMouseReport(x, y, 0, 0);
+}
+
+// Linksklick GENAU an der übergebenen Position über die ABSOLUTE Maus.
+// macOS wertet einen Button im selben Report noch an der ALTEN Cursorposition
+// aus, bevor die neue absolute Position wirkt. Deshalb zuerst eine reine
+// Positionsmeldung (buttons=0), kurz warten, dann Button down/up mit
+// denselben Koordinaten.
+void absMouseClickAt(int16_t x, int16_t y) {
+  DEBUG_MSG("[CLICKHANDLE] pos(%d,%d)\n", x, y);
+  absMouseReport(x, y, 0, 0x00); // erst Cursor positionieren
+  delay(40);
+  absMouseReport(x, y, 0, 0x01); // MOUSE_LEFT drücken
+  delay(20);
+  absMouseReport(x, y, 0, 0x00); // loslassen
+  delay(10);
+}
+
+// ==========================================
+// ON-SCREEN-ENCODER-ZIELPOSITIONEN (KALIBRIERUNG)
+// ==========================================
+// MagicQ im Vollbild/Maximiert: Die 8 On-Screen-Encoder des Konsolen-Layouts
+// liegen an festen Bildschirmpositionen. Hier die Zielkoordinaten (absolut in
+// 0..32767, X=links-nach-rechts, Y=oben-nach-unten).
+//
+// KALIBRIEREN: ENC_CALIBRATE=1 setzen und flashen. Der Cursor wandert dann
+// nacheinander auf alle 8 Zielpunkte (blinkt jeweils Startnummer 1..8, alle
+// 4 s weiter). Sobald jede LED-Nummer sicher über dem richtigen On-Screen-
+// Encoder landet, die Koordinaten unten eintragen und ENC_CALIBRATE=0 setzen.
+const int16_t ENC_TARGET_X[] = { 9000, 9000, 9000, 9000, 26000, 26000, 26000, 26000 };
+const int16_t ENC_TARGET_Y[] = { 4000, 13000, 20000, 27000, 7000, 13000, 20000, 27000 };
+#define ENC_CALIBRATE 0
+
+// ==========================================
 // 2. ZEIT-/VERHALTENS-KONFIGURATION
 // ==========================================
 const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit aller Tasten
 const unsigned long SHIFT_KEEPALIVE_MS = 60; // Nachsendung Shift DOWN, solange gehalten
 
-// ==========================================
-// MagicQ-Modus-Toggle per CAPS LOCK
-// ==========================================
-// MagicQ (Playback shortcuts) wechselt per CAPS LOCK den Keyboard-Modus:
-//   Caps AUS = Playback shortcuts (Busking)
-//   Caps AN  = Standard/Programming (Encoder-Kommandos wie "1+"/"2-")
-// Während eines Encoder-Bursts (Drehen/Klick) wird kurz CAPS aktiviert,
-// damit die Kommandos als Programming-Shortcuts ankommen; nach einer Ruhezeit
-// wird automatisch zurückgeschaltet (endEncoderBurst -> Playback shortcuts).
-#define MAGICQ_CAPS_TOGGLE 1
-
-const unsigned long BURST_TIMEOUT_MS = 250;   // Ruhezeit bis zum Rück-Toggle
-
-bool capsLockOn = false;          // echter Caps-Zustand (Host-LED-Report)
-bool burstActive = false;
-unsigned long lastBurstMs = 0;
-
-// Der Host meldet den Caps-Lock-Zustand über das HID-LED-Report -> resync.
-void onCapsLed(bool numlock, bool capslock, bool scrolllock,
-               bool compose, bool kana, void *d) {
-  capsLockOn = capslock;
-}
-
-// Wechselt den MagicQ-Keyboard-Modus über einen CAPS-Tap (nur bei Bedarf).
-void setMagicQMode(bool programming) {
-  if (capsLockOn == programming) return;   // schon im Zielmodus
-  Keyboard.press(KEY_CAPS_LOCK);
-  Keyboard.release(KEY_CAPS_LOCK);
-  capsLockOn = programming;                // optimistisch; bestätigt der LED-Report
-  delay(10);                               // Host/MagicQ den Umschalt verarbeiten lassen
-}
-
-// Eine Taste im "Programming-Burst" senden (Caps an, Burst-Timer frisch).
-void sendEncoderKey(char c) {
-#if MAGICQ_CAPS_TOGGLE
-  setMagicQMode(true);        // sicherstellen: Standard/Programming-Modus
-  lastBurstMs = millis();
-  burstActive = true;
-#endif
-  Keyboard.write(c);
-}
-
-// Nach Ruhezeit automatisch zurück in Playback shortcuts (Caps aus).
-void endEncoderBurst() {
-#if MAGICQ_CAPS_TOGGLE
-  if (!burstActive) return;
-  burstActive = false;
-  setMagicQMode(false);       // Caps aus -> Playback shortcuts
-#endif
-}
+// ============================================================
+// Encoder-Steuerung per absoluter Maus (Buttons-only Busking)
+// ============================================================
+// MagicQ am PC/Mac zeigt im Konsolen-Layout (Vollbild/maximiert) 8 virtuelle
+// Drehencoder um den Touch-Screen-Bereich. Jede Aktion an einem physischen Rad
+// positioniert den Mauszeiger zuerst per ABSOLUTER Maus genau auf den passenden
+// On-Screen-Encoder (siehe ENC_TARGET_X/Y oben) und sendet dort dann das
+// Mausrad-Scrolling bzw. den Linksklick.
+//
+// WICHTIG: Es wird KEIN Keyboard-Mode-Toggle (CAPS LOCK etc.) mehr verwendet.
+// Das Mausrad-Scrolling über den On-Screen-Encodern funktioniert in jedem
+// MagicQ Keyboard-Mode, auch in "Playback shortcuts" (den der Fader-Wing
+// braucht).
+//
+// MagicQ-Syntax am PC: nicht "1+" / "1-" tippen. Encoder-Inkrement gibt es am
+// PC nur über die On-Screen-Encoder (Maus) oder MIDI/OSC (im Demo-Modus gesperrt).
+constexpr signed char MOUSE_WHEEL_STEP = 1;   // Rasten pro MagicQ-Encoder-Schritt
 
 // Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose).
 // Nicht-blockierend: setzt die LED an und lässt serviceLed() den Blink
@@ -139,7 +235,6 @@ bool shiftStable = HIGH;
 
 // Attribute in MagicQ via Strg-Kombination: INT/POS/COL/BEAM
 const char fKeyMapping[] = {'I', 'P', 'K', 'J'};
-const char encChars[] = {'1', '2', '3', '4', '5', '6', '7', '8'};
 
 // Ctrl+Kombinationen: Group = Strg+g, FX = Strg+f
 const char customKeyMapping[] = {'g', 'f'};
@@ -170,6 +265,10 @@ bool customKeyStable[] = {HIGH, HIGH};
 void setup() {
   Serial.begin(115200);
 
+  // Warte kurz, bis der Serial-Monitor sicher verbunden ist, damit die
+  // Boot-Ausgabe nicht verloren geht.
+  delay(1500);
+
   // Onboard-LED als Boot-/Diagnose-Anzeige (3x Blinken)
   pinMode(ledPin, OUTPUT);
   for (int i = 0; i < 3; i++) {
@@ -179,11 +278,14 @@ void setup() {
     delay(100);
   }
 
-  // USB-HID-Tastatur starten (eingebaut im Arduino-Pico-Core)
+  DEBUG_MSG("========== %s ==========\n", DEBUG_VERSION);
+
+  // USB-HID starten (Keyboard + Absolute-Mouse + relative Mouse als Composite).
+  // Die relative Maus wird als erster HID-Report registriert (ordering 8),
+  // die Absolut-Maus folgt (9), das Keyboard zuletzt (10/11) - macOS verlangt
+  // Maus-Reports VOR den Keyboard-Reports im Composite.
   Keyboard.begin();
-#if MAGICQ_CAPS_TOGGLE
-  Keyboard.onLED(onCapsLed);   // Caps-Zustand vom Host verfolgen
-#endif
+  absMouseBegin();
 
   Serial.println("[BOOT] ready: encoders=F5-F8=shift=GP18-22, group=GP26, fx=GP27");
 
@@ -232,6 +334,48 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
+
+  // Status einmalig und nach jedem (Re-)Mount ausgeben. Die Boot-Prints nach
+  // Keyboard.begin()/absMouseBegin() gehen sonst beim USB-Re-Enum verloren.
+  static bool mountedWas = false;
+  static unsigned long lastStatusPrint = 0;
+  bool mountedNow = (tud_mounted() != 0);
+  if (mountedNow && (!mountedWas || (currentMillis - lastStatusPrint > 2000))) {
+    lastStatusPrint = currentMillis;
+
+    // Live-Ping an den MCP23017 (Adresse 0x20): antwortet er beim I²C-Scan?
+    Wire.beginTransmission(0x20);
+    int ack = Wire.endTransmission();
+
+    Serial.printf("[STATUS] mounted=1 mcpOK=%d ack0x20=%d relLocalID=%u absLocalID=%u relRID=%u absRID=%u\n",
+                  mcpOK ? 1 : 0, ack,
+                  relMouseLocalID, absMouseLocalID,
+                  USB.findHIDReportID(relMouseLocalID), USB.findHIDReportID(absMouseLocalID));
+    if (!mcpOK) {
+      Serial.println("[WARN] MCP23017 NICHT erkannt -> Encoder-Klicks deaktiviert!");
+    }
+    if (ack != 0) {
+      Serial.println("[WARN] I2C 0x20 antwortet nicht (ack != 0). Verdrahtung/Pullups/Adresse pruefen.");
+    } else if (!mcpOK) {
+      Serial.println("[INFO] MCP antwortet jetzt auf 0x20 -> ggf. Neustart, wird dann erkannt.");
+    }
+
+    // Vollständiger Adress-Scan, um den MCP bei abweichender Adresse zu finden.
+    Serial.print("[I2CSCAN] ");
+    bool any = false;
+    for (uint8_t addr = 0x03; addr < 0x78; addr++) {
+      Wire.beginTransmission(addr);
+      if (Wire.endTransmission() == 0) {
+        Serial.printf("0x%02X ", addr);
+        any = true;
+      }
+    }
+    if (!any) {
+      Serial.print("kein Geraet gefunden!");
+    }
+    Serial.println();
+  }
+  mountedWas = mountedNow;
 
 #if PIN_FINDER
   const int findPins[] = {20, 21, 22, 23, 24, 26, 27, 28};
@@ -293,19 +437,49 @@ void loop() {
   // TEIL 2: ENCODER DREHUNG & KLICK (8 Stück)
   // ------------------------------------------
 
+#if ENC_CALIBRATE
+  // Kalibrier-Modus: Cursor wandert nacheinander auf jeden der 8 Zielpunkte.
+  for (int i = 0; i < 8; i++) {
+    absMouseMove(ENC_TARGET_X[i], ENC_TARGET_Y[i]);
+    Serial.printf("CALIB target %d: x=%d y=%d\n", i + 1, ENC_TARGET_X[i], ENC_TARGET_Y[i]);
+    for (int b = 0; b <= i; b++) {
+      digitalWrite(ledPin, HIGH);
+      delay(150);
+      digitalWrite(ledPin, LOW);
+      delay(150);
+    }
+    delay(4000);
+  }
+  return;
+#else
+
   // Encoder-Klick-Status: ein I²C-Read für alle 8 SW statt 8 Einzelreads.
   // GPA0..GPA7 (Encoder-SW 1..8) = Bits 0..7 des GPIOAB-Registers (aktiv-Low).
   uint16_t encSw = mcpOK ? mcp.readGPIOAB() : 0xFFFF;
 
+  // Raw-Änderungen am MCP ausgeben (aktiv-Low: Bit=0 => Taste gedrückt).
+  static uint16_t lastEncSwRaw = 0xFFFF;
+  if (DEBUG_VERBOSE && mcpOK && encSw != lastEncSwRaw) {
+    Serial.printf("[ENCRAW] GPIOAB=0x%04X (gedrückt: ", encSw);
+    for (int b = 0; b < 8; b++) {
+      if (!(encSw & (1 << b))) {
+        Serial.printf("ENC%d ", b + 1);
+      }
+    }
+    Serial.println(")");
+    lastEncSwRaw = encSw;
+  }
+
   for (int i = 0; i < 8; i++) {
     // Drehung: process() liefert DIR_CW, DIR_CCW oder DIR_NONE
     unsigned char dir = encoders[i]->process();
-    if (dir == DIR_CW) {
-      sendEncoderKey(encChars[i]);
-      sendEncoderKey('+');
-    } else if (dir == DIR_CCW) {
-      sendEncoderKey(encChars[i]);
-      sendEncoderKey('-');
+    if (dir == DIR_CW || dir == DIR_CCW) {
+      signed char step = (dir == DIR_CW) ? -MOUSE_WHEEL_STEP : MOUSE_WHEEL_STEP;
+      // Cursor zuerst auf den On-Screen-Encoder positionieren, dann scrollen.
+      absMouseReport(ENC_TARGET_X[i], ENC_TARGET_Y[i], step, 0);
+      Serial.printf("ENC %d -> pos(%d,%d) wheel %+d\n", i + 1,
+                    ENC_TARGET_X[i], ENC_TARGET_Y[i], step);
+      ledFlash();
     }
 
     // Encoder-Klick: nur auswerten, wenn der Expander vorhanden ist.
@@ -322,12 +496,15 @@ void loop() {
         encBtnStable[i] = readingEnc;
         if (readingEnc == LOW) {
           ledFlash();
-          sendEncoderKey(encChars[i]);
+          absMouseClickAt(ENC_TARGET_X[i], ENC_TARGET_Y[i]);
+          Serial.printf("ENC %d -> click at (%d,%d)\n", i + 1,
+                        ENC_TARGET_X[i], ENC_TARGET_Y[i]);
         }
       }
     }
     lastEncBtnState[i] = readingEnc;
   }
+#endif
 
   // ------------------------------------------
   // TEIL 3: ATTRIBUT-TASTEN (F5 bis F8)
@@ -377,11 +554,6 @@ void loop() {
       }
     }
     lastCustomKeyState[i] = readingCustomKey;
-  }
-
-  // Burst beenden (-> Playback shortcuts), wenn lange keine Encoder-Aktion kam
-  if (burstActive && (millis() - lastBurstMs > BURST_TIMEOUT_MS)) {
-    endEncoderBurst();
   }
 
   serviceLed();
