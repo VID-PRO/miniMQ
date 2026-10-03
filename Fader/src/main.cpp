@@ -194,6 +194,16 @@ constexpr int FADER_DRAG_MAXSTEP = 800;
 // ohne Bewegung (Finger steht) oder sicherheitshalber nach HOLD_MAX_MS.
 constexpr unsigned long FADER_DRAG_HOLD_IDLE_MS = 90;
 constexpr unsigned long FADER_DRAG_HOLD_MAX_MS  = 1200;
+// Mehrere Fader gleichzeitig: JEDER Fader hat seinen eigenen Zugtakt
+// (STEP_MS je Bahn) - dadurch laufen z.B. 3 Fader mit je einem Schritt pro
+// STEP_MS statt dass sich alle 3 einen globalen Takt teilen muessen. Der
+// MIN_GAP ist die Untergrenze fuer den Abstand ZWEIER beliebiger Maus-Reports
+// (global, damit die USB-Strecke bei11 Fadern nicht ueberlaufen kann).
+constexpr unsigned long FADER_DRAG_STEP_MS  = 15;
+constexpr unsigned long FADER_DRAG_MIN_GAP  = 4;
+// Max. Maus-Reports pro Aufruf (Durchlauf = Prime + Greifen + Ziehen +
+// Loslassen). Begrenzt die Rechenzeit, wenn viele Fader gleichzeitig laufen.
+constexpr int FADER_DRAG_MAX_REPORTS = 6;
 // Debug: jede Drag-Aktion protokollieren (zum Kalibrieren/Justieren).
 #define FADER_DRAG_DEBUG 1
 
@@ -735,7 +745,13 @@ void ensureNumlock(void) {
 // Wegs laeuft in den Folgedraws weiter, bis der Cursor auf der Zielhoehe steht.
 static int16_t  dragCurY[NUM_FADERS];   // aktuelle Cursor-Hoehe auf der Faderbahn
 static bool     dragPrimed[NUM_FADERS]; // Cursor steht auf der Bahn (X korrekt)
-static uint32_t dragLast = 0;           // letzter Drag-Schritt (Zeit)
+static bool     dragHeld[NUM_FADERS];   // Maustaste auf dieser Bahn gedrueckt
+static uint32_t dragLast[NUM_FADERS];   // letzter Zug-Schritt DIESER Bahn (Zeit)
+static uint32_t dragHoldSince[NUM_FADERS];
+static uint32_t dragHoldMoveAt[NUM_FADERS];   // letzter Cursor-Schritt im Griff
+static uint8_t  heldFader = 0xFF;       // welche Bahn den Griff haelt (Maus hat
+                                        // nur einen Zeiger -> nur ein Griff)
+static uint32_t dragLastAny = 0;        // letzter Maus-Report (globaler Takt)
 
 // Soll-Hoehe fuer Fader f bei Ziel-Prozent pct (0..100). Fader 0 = GM mit
 // eigener Bahn.
@@ -752,55 +768,78 @@ void updateDragOutput(void) {
 #if FADER_OUT_MODE != 2
     return;
 #endif
-    static uint8_t rr = 0;
-    static uint8_t heldFader = 0xFF;    // welcher Fader gerade "gegriffen" ist
-    static uint32_t heldSince = 0;
-    static uint32_t heldMoveAt = 0;     // letzter Cursor-Schritt waehrend des Griffs
+    uint32_t now = millis();
+    int reports = 0;   // Maus-Reports in diesem Durchlauf
 
-    // 1) Loslassen, wenn nichts mehr bewegt wird (Finger steht) oder der
-    //    Griff zu lange haelt (Sicherheit, falls MagicQ den Griff verliert).
-    if (heldFader != 0xFF) {
-        uint8_t h = heldFader;
-        int wantH = dragTargetY(h, faderTarget[h]);
-        bool atTarget = (dragCurY[h] == wantH);
-        uint32_t idle = millis() - heldMoveAt;
-        bool timeout = (millis() - heldSince) > FADER_DRAG_HOLD_MAX_MS;
-        if ((atTarget && idle >= FADER_DRAG_HOLD_IDLE_MS) || timeout) {
-            absMouseReport(fcal.x[h], dragCurY[h], 0, 0);   // loslassen
+    // 1) Loslassen: Fader steht am Ziel (Finger steht) oder Griff zu lange.
+    //    Jede Bahn wird einzeln freigegeben -> mehrere Fader koennen nacheinander
+    //    gezogen werden, ohne dass ein fremder Griff die Bahn blockiert.
+    for (uint8_t f = 0; f < NUM_FADERS; f++) {
+        if (!dragHeld[f]) continue;
+        int wantF = dragTargetY(f, faderTarget[f]);
+        bool atTarget = (dragCurY[f] == wantF);
+        bool timeout = (now - dragHoldSince[f]) > FADER_DRAG_HOLD_MAX_MS;
+        if ((atTarget && (now - dragHoldMoveAt[f]) >= FADER_DRAG_HOLD_IDLE_MS) || timeout) {
+            if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) continue;
+            absMouseReport(fcal.x[f], dragCurY[f], 0, 0);   // loslassen
 #if FADER_DRAG_DEBUG
-            Serial.printf("DRAG-release f%02d y=%d (%s)\n", h, dragCurY[h],
+            Serial.printf("DRAG-release f%02d y=%d (%s)\n", f, dragCurY[f],
                           timeout ? "timeout" : "idle");
 #endif
-            heldFader = 0xFF;
+            now = dragLastAny = millis();
+            reports++;
+            dragHeld[f] = false;
+            if (heldFader == f) heldFader = 0xFF;
         }
     }
 
-    for (uint8_t n = 0; n < NUM_FADERS; n++) {
-        uint8_t f = (rr + n) % NUM_FADERS;      // Index 0 = Grand Master ist dabei
+    // 2a) Neue Bahn auf den Zeiger holen - nur wenn der Zeiger frei ist (ein
+    //     gedrueckter Zeiger wuerde beim Sprung sonst den alten Fader ziehen).
+    for (uint8_t f = 0; f < NUM_FADERS && reports < FADER_DRAG_MAX_REPORTS; f++) {
 #if FADER_IDLE_GUARD
         if (faderLocked[f]) { dragPrimed[f] = false; continue; }
 #endif
-        int want = dragTargetY(f, faderTarget[f]);
-
-        // Anderer Fader braucht den Griff? Dann erst den aktuellen loslassen.
-        if (heldFader != 0xFF && heldFader != f && dragCurY[heldFader] != want) {
-            continue;
-        }
-        if (!dragPrimed[f]) {
-            // Auf die Bahn bringen (Cursor auf die Fadenmitte).
-            int mid = ((f == 0) ? (int)fcal.gmTop + (int)fcal.gmBot
-                                : (int)fcal.yTop + (int)fcal.yBot) / 2;
-            absMouseReport(fcal.x[f], mid, 0, 0);
-            dragCurY[f] = want;
-            dragPrimed[f] = true;
+        if (dragPrimed[f]) continue;
+        if (heldFader != 0xFF) break;                     // Zeiger belegt
+        if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) return;
+        int pWant = dragTargetY(f, faderTarget[f]);
+        int pMid = ((f == 0) ? (int)fcal.gmTop + (int)fcal.gmBot
+                             : (int)fcal.yTop + (int)fcal.yBot) / 2;
+        absMouseReport(fcal.x[f], pMid, 0, 0);
+        now = dragLastAny = millis();
+        reports++;
+        dragCurY[f] = pWant;
+        dragPrimed[f] = true;
 #if FADER_DRAG_DEBUG
-            Serial.printf("DRAG-prime f%02d tgt=%d%% y=%d\n", f, faderTarget[f], want);
+        Serial.printf("DRAG-prime f%02d tgt=%d%% y=%d\n", f, faderTarget[f], pWant);
 #endif
-            rr = (f + 1) % NUM_FADERS;
-            return;
-        }
-        if (dragCurY[f] == want) continue;                 // steht schon richtig
-        if ((uint32_t)(millis() - dragLast) < 15) return;  // Draw-Tempo
+    }
+
+    // 2b) Ziehen. Jeder Fader hat einen EIGENEN Zugtakt (FADER_DRAG_STEP_MS),
+    //     global bleibt FADER_DRAG_MIN_GAP als Untergrenze. Unter mehreren
+    //     gleichzeitig bewegten Fadern gewinnt der mit der GROESSTEN
+    //     Reststrecke: dadurch zieht ein Fader seinen Weg weitgehend zu Ende,
+    //     bevor der Zeiger wechselt (kein Dauer-Handoff, weniger Reports) und
+    //     alle Fader kommen trotzdem binnen ihrer Reststrecke an.
+    uint8_t best = 0xFF;
+    int bestRem = 0;
+    for (uint8_t f = 0; f < NUM_FADERS; f++) {
+#if FADER_IDLE_GUARD
+        if (faderLocked[f]) continue;
+#endif
+        if (!dragPrimed[f]) continue;
+        int rem = dragTargetY(f, faderTarget[f]) - dragCurY[f];
+        if (rem < 0) rem = -rem;
+        if (rem == 0) continue;                                   // steht richtig
+        if ((now - dragLast[f]) < FADER_DRAG_STEP_MS) continue;   // eigener Zugtakt
+        if (rem > bestRem) { bestRem = rem; best = f; }
+    }
+    if (best == 0xFF || reports >= FADER_DRAG_MAX_REPORTS) return;
+    if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) return;          // globaler Takt
+
+    {
+        uint8_t f = best;
+        int want = dragTargetY(f, faderTarget[f]);
 
         // Ziehweg: Restweg, gespraengelt geschaerft (Gain) und begrenzt.
         int deltaY = want - dragCurY[f];
@@ -812,31 +851,46 @@ void updateDragOutput(void) {
         int16_t fromY = dragCurY[f];
         int16_t toY = (int16_t)(dragCurY[f] + step);
         dragCurY[f] = toY;
-        dragLast = millis();
-        heldMoveAt = dragLast;
 
         if (heldFader != f) {
-            // Erst greifen: Cursor auf die aktuelle (modellierte) Hoehe setzen
-            // und die linke Maustaste druecken. Ab hier bleibt der Griff
+            // Fremden Griff zuerst loesen, damit der Maussprung nicht als
+            // Rueckwaertsbewegung des alten Faders gelesen wird - dann greifen.
+            if (heldFader != 0xFF) {
+                uint8_t o = heldFader;
+                absMouseReport(fcal.x[o], dragCurY[o], 0, 0);
+                now = dragLastAny = millis();
+                reports++;
+                dragHeld[o] = false;
+                heldFader = 0xFF;
+#if FADER_DRAG_DEBUG
+                Serial.printf("DRAG-release f%02d y=%d (Zeiger fuer f%02d frei)\n",
+                              o, dragCurY[o], f);
+#endif
+                if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) return;
+            }
+            // Greifen: Cursor auf die aktuelle (modellierte) Hoehe setzen und
+            // die linke Maustaste druecken. Ab hier bleibt der Griff
             // durchgehend gedrueckt -> Faderhoehe = Cursorhoehe, kein
             // Click-Jump mehr bei jedem Schritt.
             absMouseReport(fcal.x[f], fromY, 0, MOUSE_LEFT);
             delay(6);
+            now = dragLastAny = millis();
+            reports++;
+            dragHeld[f] = true;
             heldFader = f;
-            heldSince = millis();
-            heldMoveAt = millis();
+            dragHoldSince[f] = dragHoldMoveAt[f] = now;
 #if FADER_DRAG_DEBUG
             Serial.printf("DRAG-grab f%02d at y=%d (tgt %d%% want %d)\n", f, fromY,
                           faderTarget[f], want);
 #endif
         }
         absMouseReport(fcal.x[f], toY, 0, MOUSE_LEFT);   // ziehen
+        dragLast[f] = dragHoldMoveAt[f] = dragLastAny = now = millis();
+        reports++;
 #if FADER_DRAG_DEBUG
         Serial.printf("DRAG f%02d tgt=%d%% %d->%d (want %d)\n", f, faderTarget[f],
                       fromY, toY, want);
 #endif
-        rr = (f + 1) % NUM_FADERS;
-        return;
     }
 }
 
