@@ -14,8 +14,6 @@ This handbook describes building your own lighting console modeled after the mod
   - [3.1 The faders (via the 74HC4067 multiplexer)](#31-the-faders-via-the-74hc4067-multiplexer)
   - [3.2 The key matrix (3x13 matrix) & diode wiring plan](#32-the-key-matrix-3x13-matrix-diode-wiring-plan)
 - [4. Installation & flashing the bootloader](#4-installation-flashing-the-bootloader)
-  - [Variant A: CircuitPython (`firmware/code.py`)](#variant-a-circuitpython-firmwarecodepy)
-  - [Variant B: PlatformIO / C++ (`platformio.ini` in the project root)](#variant-b-platformio-c-platformioini-in-the-project-root)
 - [5. Setup in MagicQ](#5-setup-in-magicq)
 - [Project structure](#project-structure)
 
@@ -197,7 +195,7 @@ Column line (column to Pico input, e.g. GP6)
 
 Current path when pressing a key: **Row** (HIGH) -> **Switch** -> **Anode** -> **Cathode** -> **Column** (pull-down, LOW). The diode conducts current from the high row to the column and pulls the column HIGH.
 
-**Caution with existing wiring:** If the diodes are already soldered and point toward the **Column** (original handbook), you do **not** need to re-solder them — the **C++ firmware (`src/main.cpp`) already scans Active-High** and works with that. The CircuitPython variant (`firmware/code.py`) scans Active-Low and requires diodes pointing toward the row.
+**Caution with existing wiring:** If the diodes are already soldered and point toward the **Column** (original handbook), you do **not** need to re-solder them — the firmware (`src/main.cpp`) scans **Active-High** and works with that. The variant described above (cathode toward row) is what a fresh board expects.
 
 **Pin assignment on the Pico for the matrix:**
 * **Rows (outputs)**: Row 0 (S row) = **GP4**, Row 1 (GO row) = **GP2**, Row 2 (Flash row) = **GP3**
@@ -205,21 +203,11 @@ Current path when pressing a key: **Row** (HIGH) -> **Switch** -> **Anode** -> *
 
 ## 4. Installation & flashing the bootloader
 
-### Variant A: CircuitPython (`firmware/code.py`)
-
-1. Download the current stable `.uf2` file for the Raspberry Pi Pico from **circuitpython.org/downloads**.
-2. Hold the **BOOTSEL** button on the Pico and plug it into the PC via USB.
-3. Release the button. A drive named `RPI-RP2` opens.
-4. Drag the downloaded `.uf2` file onto the drive. The Pico restarts and is now called **`CIRCUITPY`**.
-5. Copy the source code from `firmware/code.py` directly onto the `CIRCUITPY` drive.
-
-### Variant B: PlatformIO / C++ (`platformio.ini` in the project root)
-
-The C++ version is the **latency-optimized** variant (compiled to native ARM code) and uses the built-in USB-HID keyboard of the **earlephilhower Arduino core** — the same approach as the sister project `chamsys-encoder`.
+The firmware is **latency-optimized** C++ (compiled to native ARM code) and uses the built-in USB-HID keyboard of the **earlephilhower Arduino core** — the same approach as the sister project `Enncoder`. It is built with **PlatformIO** (`platformio.ini` in the project root).
 
 ```bash
 # Open and build the project:
-cd Documents/Arduino/chamsys-wing
+cd Wing
 pio run           # builds firmware.uf2
 
 # Flash to the Pico (BOOTSEL hold-state required):
@@ -241,11 +229,10 @@ The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag &
 ## Project structure
 
 ```
-chamsys-wing/
+Wing/
 ├── README.md            # This handbook
 ├── platformio.ini       # PlatformIO configuration (earlephilhower core)
-├── src/
-│   └── main.cpp         # C++ source (latency-optimized, USB-HID)
-└── firmware/
-    └── code.py          # CircuitPython source (alternative variant)
+├── pcb/                 # Gerbers, BOM and pick&place for the wing PCBs
+└── src/
+    └── main.cpp         # C++ source (latency-optimized, USB-HID)
 ```

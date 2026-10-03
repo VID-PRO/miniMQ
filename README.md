@@ -23,7 +23,7 @@ and a dedicated show PC.
 The suite consists of three Pico firmwares, one show-PC image and two design folders:
 
 ```
-  [ Enncoder ]        [ Fader ]            [ ArtNet-USB ]        [ Linux-Installer ]
+  [ Enncoder ]        [ Wing ]             [ ArtNet-USB ]        [ Linux-Installer ]
    8 encoders         11 faders            4x DMX ports          Wyse 3040
    + 7 keys           + 3x13 key grid      Art-Net over USB      Ubuntu + MagicQ
       |                   |                     |                    (boot-to-MagicQ)
@@ -38,7 +38,7 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 |--------|--------------|
 | [ArtNet-USB/](ArtNet-USB/) | Raspberry Pi Pico 4-port **Art-Net ↔ DMX512** bridge over USB. The Pico enumerates as a USB Ethernet (CDC-NCM) adapter on the PC, answers ArtPoll, and drives four DMX ports (GPIO 2–5), each configurable as input or output, with RDM gateway and a config web page (http://10.0.0.10/). PlatformIO / Arduino-Pico. |
 | [Enncoder/](Enncoder/) | **ChamSys MagicQ encoder controller**: 8 rotary encoders with push switches plus F5–F8, Shift, Group and FX keys, emulated as a USB HID keyboard. Encoder clicks handled via an MCP23017 I²C expander. PlatformIO / Arduino-Pico. |
-| [Fader/](Fader/) | **DIY MagicQ Compact Mini Connect Wing**: 11 linear faders (10 playback + grand master) read through a 74HC4067 multiplexer and a 3×13 button matrix (38 keys), all over USB HID. Includes both a latency-optimized C++ firmware and a CircuitPython variant. |
+| [Wing/](Wing/) | **DIY MagicQ Compact Mini Connect Wing**: 11 linear faders (10 playback + grand master) read through a 74HC4067 multiplexer and a 3×13 button matrix (38 keys), all over USB HID — latency-optimized C++ firmware (PlatformIO / Arduino-Pico). |
 | [Linux-Installer/](Linux-Installer/) | **Show-PC setup for a Dell Wyse 3040**: Ubuntu + Openbox + MagicQ as a dedicated, boot-to-MagicQ lighting console. One script installs all dependencies, autostart, autologin, boot splashscreen, transparent cursor, USB auto-mount and auto-shutdown. |
 | [3D/](3D/) | 3D-printable enclosure (`.3mf`) for a MagicQ control wing. |
 | [easyEDA/](easyEDA/) | EasyEDA schematic / PCB design documents for the hardware. |
@@ -47,7 +47,7 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 
 | Goal | Project |
 |------|---------|
-| Faders on MagicQ's Full Panel + flash/GO keys | [Fader/](Fader/) |
+| Faders on MagicQ's Full Panel + flash/GO keys | [Wing/](Wing/) |
 | Turn / click the MagicQ on-screen encoders | [Enncoder/](Enncoder/) |
 | Feed DMX512 fixtures from the PC over USB | [ArtNet-USB/](ArtNet-USB/) |
 | Boot a small PC straight into MagicQ | [Linux-Installer/](Linux-Installer/) |
@@ -57,8 +57,8 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 
 | Peripheral | Used by | Connected to |
 |------------|---------|--------------|
-| 74HC4067 16-channel analog multiplexer | Fader | GP27 (COM) + GP17–GP20 (S0–S3), fader wipers on C0–C10 |
-| 3×13 key matrix (dioded) | Fader | rows GP2–GP4, columns GP6–GP16, GP21, GP22 |
+| 74HC4067 16-channel analog multiplexer | Wing | GP27 (COM) + GP17–GP20 (S0–S3), fader wipers on C0–C10 |
+| 3×13 key matrix (dioded) | Wing | rows GP2–GP4, columns GP6–GP16, GP21, GP22 |
 | MCP23017 I/O expander (I²C) | Enncoder | GP16 (SDA) / GP17 (SCL), carries the 8 encoder switches |
 | MAX485 / MAX3485 transceivers | ArtNet-USB | DMX ports on GPIO 2–5 via PIO |
 | Dell Wyse 3040 (eMMC) | Linux-Installer | — (runs MagicQ as show computer) |
@@ -69,7 +69,7 @@ Prerequisite: [PlatformIO Core](https://platformio.org/) installed.
 
 ```bash
 # Switch to the project you want to build
-cd Fader          # or Enncoder / ArtNet-USB
+cd Wing           # or Enncoder / ArtNet-USB
 
 # Compile the firmware
 pio run
@@ -86,7 +86,7 @@ into bootloader mode via **BOOTSEL** (hold, plug in USB, release) the first time
 work directly over USB. The resulting file is at `.pio/build/pico/firmware.uf2` and can also be
 dragged onto the `RPI-RP2` drive.
 
-> **Note:** `Fader` and `Enncoder` set `board_build.filesystem_size = 64`. That 64 KB **LittleFS**
+> **Note:** `Wing` and `Enncoder` set `board_build.filesystem_size = 64`. That 64 KB **LittleFS**
 > partition is what their runtime calibrations write to (`/fcal.bin`, `/ecal.bin`) — without it
 > `LittleFS.begin()` fails and nothing is saved. `ArtNet-USB` needs no filesystem.
 
@@ -100,7 +100,7 @@ miniMQ/
 ├── platformio.ini        # Workspace-level PlatformIO config
 ├── ArtNet-USB/           # Art-Net over USB -> 4x DMX512 (Pico firmware)
 ├── Enncoder/             # 8 encoders + 7 keys -> MagicQ (Pico firmware)
-├── Fader/                # 11 faders + 3x13 keys -> MagicQ (Pico firmware + CircuitPython)
+├── Wing/                # 11 faders + 3x13 keys -> MagicQ (Pico firmware)
 ├── Linux-Installer/      # Dell Wyse 3040 show-PC image setup
 ├── 3D/                   # 3D-printable enclosure
 ├── easyEDA/              # EasyEDA schematic / PCB documents

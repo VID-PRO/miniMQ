@@ -6,7 +6,7 @@
 # Targets:
 #   make                     -> help
 #   make build               -> build all projects
-#   make build-<proj>        -> build one project (artnet | encoder | fader)
+#   make build-<proj>        -> build one project (artnet | encoder | wing)
 #   make upload              -> upload all projects
 #   make upload-<proj>       -> upload one project
 #   make monitor-<proj>      -> open the serial monitor of one project
@@ -17,14 +17,14 @@
 PIO ?= pio
 
 # short name -> project directory
-PROJECTS := artnet encoder fader
+PROJECTS := artnet encoder wing
 
 define PROJECT_DEF
 PROJECT_DIR_$(1) := $(2)
 endef
 $(eval $(call PROJECT_DEF,artnet,ArtNet-USB))
 $(eval $(call PROJECT_DEF,encoder,Enncoder))
-$(eval $(call PROJECT_DEF,fader,Fader))
+$(eval $(call PROJECT_DEF,wing,Wing))
 
 PROJECT_GROUPS := build upload clean monitor
 
@@ -66,7 +66,7 @@ clean-%:
 help:
 	@echo "miniMQ global PlatformIO targets:"
 	@echo ""
-	@echo "  Projects: artnet, encoder, fader"
+	@echo "  Projects: artnet, encoder, wing"
 	@echo ""
 	@echo "  make build              build all projects"
 	@echo "  make build-<proj>       build one project"
@@ -76,4 +76,4 @@ help:
 	@echo "  make clean              clean all projects"
 	@echo "  make clean-<proj>       clean one project"
 	@echo ""
-	@echo "  example: make build-fader"
+	@echo "  example: make build-wing"

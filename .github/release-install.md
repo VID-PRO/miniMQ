@@ -2,7 +2,7 @@
 
 All three controllers communicate with your PC over USB with **no drivers to install**:
 
-- **miniMQ Fader** and **miniMQ Encoder** present themselves as a USB keyboard (HID).
+- **miniMQ Wing** and **miniMQ Encoder** present themselves as a USB keyboard (HID).
 - **miniMQ ArtNet-USB** presents itself as a USB Ethernet adapter (NCM) and drives up to four Art-Net ↔ DMX universes.
 
 ### Flashing a Raspberry Pi Pico (any variant, first time)
@@ -16,7 +16,7 @@ If you ever need to recover the factory state, hold BOOTSEL again and re-flash t
 
 ---
 
-### 1. Fader — `miniMQ-fader.uf2`
+### 1. Wing — `miniMQ-fader.uf2`
 
 DIY fader wing compatible with the MagicQ Compact layouts: 10 faders + grand master (+ 3×13 key grid in the full Mini Connect layout).
 
@@ -29,7 +29,7 @@ Notes:
 
 - Flash keys (F1–F10) send MagicQ **Test keys** so they work on Windows/Linux/Mac as momentary flashes.
 - macOS: if the Mac's physical Shift key occasionally drops out while the Pico is connected, unplug the Pico while typing only on the Mac keyboard (known macOS multi-HID behavior).
-- A CircuitPython variant of the wing firmware is not included in this repository — use the compiled `.uf2`.
+- The wing ships as a compiled `.uf2` only (PlatformIO / Arduino-Pico); there is no interpreter variant.
 
 ### 2. Encoder — `miniMQ-encoder.uf2`
 
@@ -55,4 +55,4 @@ Defaults: all four ports output, universes `0/0/0`–`0/0/3` (net/sub/universe) 
 
 ---
 
-Verify the download integrity with `SHA256SUMS`. A combined archive of all firmwares is in `miniMQ-all-firmwares.zip`. Wiring, setup details and MagicQ mapping tables are in each project's README (`Fader/`, `Enncoder/`, `ArtNet-USB/`).
+Verify the download integrity with `SHA256SUMS`. A combined archive of all firmwares is in `miniMQ-all-firmwares.zip`. Wiring, setup details and MagicQ mapping tables are in each project's README (`Wing/`, `Enncoder/`, `ArtNet-USB/`).

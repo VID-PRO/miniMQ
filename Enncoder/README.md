@@ -4,7 +4,7 @@ A custom hardware controller for the virtual encoders and windows of **ChamSys M
 
 The Pico emulates a native **keyboard + absolute mouse + relative mouse** (composite HID) over USB, so no additional drivers need to be installed. Every physical knob first moves the mouse cursor onto its matching **on-screen encoder** in MagicQ and then scrolls or clicks exactly there — no key codes are typed and no manual cursor positioning is needed.
 
-> **Note:** The firmware works in **any** MagicQ keyboard mode, including **Playback shortcuts** (which the Fader wing needs). No CAPS LOCK / mode toggling is used.
+> **Note:** The firmware works in **any** MagicQ keyboard mode, including **Playback shortcuts** (which the fader wing needs). No CAPS LOCK / mode toggling is used.
 
 ## Table of contents
 
@@ -286,7 +286,7 @@ required. The F5–F8 / Group / FX window shortcuts work best in **Programming s
    once (section 1.2) — the firmware then works with the layout actually in use.
 
 Then every turn/click of a Pico knob moves the cursor to the matching on-screen encoder and
-changes that attribute. If you prefer to keep MagicQ in **Playback shortcuts** (e.g. for the Fader
+changes that attribute. If you prefer to keep MagicQ in **Playback shortcuts** (e.g. for the fader
 wing), the encoders still work — only the attribute window keys (F5–F8/Group/FX) need the mode above.
 
 ## Notes & limitations

@@ -2,7 +2,7 @@
   "folders": [
     { "path": "ArtNet-USB" },
     { "path": "Enncoder" },
-    { "path": "Fader" }
+    { "path": "Wing" }
   ],
   "settings": {}
 }

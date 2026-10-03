@@ -4,7 +4,7 @@ import os
 
 
 PROJECT_BY_ENV = {
-    "fader": "Fader",
+    "wing": "Wing",
     "encoder": "Enncoder",
     "artnet": "ArtNet-USB",
 }
