@@ -67,16 +67,28 @@ The mapping is defined in `src/main.cpp` as `KEYMAP[3][13]` and checked via the 
 |-----|----------|
 | S1 | X position of PB1 |
 | S2 | X position of PB10 |
-| S3 | Y of the PB track at 100 % (top) |
-| S4 | Y of the PB track at 0 % (bottom) |
+| S3 | Y of the PB track at 100 % (top) — cursor **on the knob** |
+| S4 | Y of the PB track at 0 % (bottom) — cursor **on the knob** |
 | S5 | X position of the Grand Master |
-| S6 | Y of the GM track at 100 % |
-| S7 | Y of the GM track at 0 % |
+| S6 | Y of the GM track at 100 % — cursor **on the knob** |
+| S7 | Y of the GM track at 0 % — cursor **on the knob** |
 | F1 / F2 | −500 / −50 (coarse / fine) |
 | F3 / F4 | +50 / +500 |
 | NEXT Page | save to flash and return to normal operation |
 
 PB2–PB9 are interpolated automatically between X(PB1) and X(PB10). Values are read back on every boot (`[CAL] flash …`, or `[CAL] default …` if no file exists yet). The compiled-in defaults of the current MagicQ Full Panel are: GM X = 400 (left of the Sub Master), PB X = 2800…25300 in steps of 2500, PB Y = 26800/29300, GM Y = 26850/29400.
+
+**Fader endstops (0 % / 100 %):** A 10 k slide pot only covers part of the ADC range (tolerance, end caps, wiper end position), so without correction the top end stays below 100 % and the on-screen fader never reaches 100 %. Press **S8** to switch to the endstop mode:
+
+| Key | Function |
+|-----|----------|
+| S8 | toggle between geometry mode and endstop mode |
+| DBO / GO1…GO10 | select the fader (DBO = Grand Master, GO1…GO10 = PB1…PB10) |
+| S9 / S10 | edit the lower (LO) or upper (HI) raw value of the selected fader |
+| MASTER GO | take over the fader's currently measured raw value — push the fader fully down, press it for LO, fully up, press it again for HI |
+| F1…F4 | adjust the raw value manually (±500 / ±50) |
+
+`[RAW] … ist=… → …%` shows the live raw reading and the resulting percentage; a wrong endstop is immediately visible. Raw values are stored alongside the coordinates in `/fcal.bin`.
 
 > **Wheel fallback (`FADER_OUT_MODE = 0`):** one wheel report = 0.40 % travel, globally paced to one report per 25 ms because MagicQ evaluates at most ~40 reports/s. Kept as a backup for setups without a Full Panel.
 

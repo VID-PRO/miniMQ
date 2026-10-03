@@ -188,19 +188,52 @@ constexpr int FADER_DRAG_GM_Y_BOTTOM = 29400;
 // Mausbewegung pro Fader-Weg, damit MagicQ mitkommt (Drag-Verarbeitung ist
 // verlangsamt). Siehe FADER_DRAG_DEBUG zum Nachjustieren.
 constexpr float FADER_DRAG_GAIN = 8.0f;
-// Ziehweg pro bestaetigte Bewegung begrenzen (Cursor-Stufen).
-constexpr int FADER_DRAG_MAXSTEP = 800;
+// Ziehweg pro bestaetigte Bewegung begrenzen (Cursor-Stufen). MagicQ laesst den
+// Griffknopf dem Cursor nur verzoegert folgen; zu grosse Einzelschritte
+// laesst die Maus den Knopf hinterherlaufen (vor allem beim Runterziehen, weil
+// der Knopf dort am langsamsten nachzieht). 300 Stufen = ~12 % des Faderwegs
+// pro Schritt -> der Knopf kommt mit.
+constexpr int FADER_DRAG_MAXSTEP = 220;
 // Wann der gehaltene Griff wieder losgelassen wird: nach FADER_DRAG_HOLD_IDLE_MS
 // ohne Bewegung (Finger steht) oder sicherheitshalber nach HOLD_MAX_MS.
-constexpr unsigned long FADER_DRAG_HOLD_IDLE_MS = 90;
+// Nach erreichtem Ziel noch so lange halten, bis MagicQ den Knopf nachgezogen
+// hat - sonst bleibt der On-Screen-Fader beim Loslassen kurz unter dem Ziel.
+constexpr unsigned long FADER_DRAG_HOLD_IDLE_MS = 420;
 constexpr unsigned long FADER_DRAG_HOLD_MAX_MS  = 1200;
 // Mehrere Fader gleichzeitig: JEDER Fader hat seinen eigenen Zugtakt
 // (STEP_MS je Bahn) - dadurch laufen z.B. 3 Fader mit je einem Schritt pro
 // STEP_MS statt dass sich alle 3 einen globalen Takt teilen muessen. Der
 // MIN_GAP ist die Untergrenze fuer den Abstand ZWEIER beliebiger Maus-Reports
 // (global, damit die USB-Strecke bei11 Fadern nicht ueberlaufen kann).
-constexpr unsigned long FADER_DRAG_STEP_MS  = 15;
+constexpr unsigned long FADER_DRAG_STEP_MS  = 20;
 constexpr unsigned long FADER_DRAG_MIN_GAP  = 4;
+// Nach dem Loslassen vor dem naechsten Greifen derselben Bahn warten, damit der
+// Griffknopf in MagicQ wieder auf der Modellhoehe sitzt (sonst Press daneben).
+constexpr unsigned long FADER_DRAG_SETTLE_MS = 45;
+// Pause zwischen Press und erstem Ziehen (MagicQ braucht den Button gedrueckt,
+// bevor ein Movement-Report greift).
+constexpr unsigned long FADER_DRAG_PRESS_MS  = 8;
+// Weicht das Modell beim erneuten Greifen staerker als diese Cursor-Stufen vom
+// physischen Ist-Wert ab, wird es vor dem Press auf den Ist-Wert zurueckgesetzt
+// - der Press landet dann wieder auf dem Griffknopf statt darueber/darunter.
+constexpr int FADER_DRAG_REANCHOR = 40;
+// MagicQ rechnet den Griffknopf in Pixeln: Schritte unterhalb eines Pixels
+// (~27 Cursorstufen bei 2500 Stufen Bahn) werden ignoriert. Ein Modell, das
+// sich mit 1-2 Stunden weiterbewegt, laeuft dem Knopf deshalb davon und der
+// Fader bleibt sichtbar zurueck. Deshalb: unterhalb dieser Schwelle wird der
+// Restweg direkt uebernommen (Restfehler << 1 Pixel) und der Knopf anschliessend
+// mit Micro-Nachlaeufen (SETTLE) auf die Endhoehe gezogen.
+constexpr int FADER_DRAG_SNAPSTEP = 30;
+// MagicQ zieht den Griffknopf mit einer begrenzten Geschwindigkeit nach. Nach
+// erreichtem Ziel muss die Taste deshalb noch eine Weile gedrueckt bleiben,
+// damit der Knopf auf die Endhoehe aufholen kann (Wert = HOLD_IDLE_MS).
+// Rand-Abstand der Faderspur: der Cursor muss INNERHALB des greifbaren
+// Bereichs bleiben - verlässt er die Spur (oberhalb der Knopf-Oberkante bei
+// 100 %, unterhalb der Unterkante bei 0 %), friert MagicQ den Wert ein und
+// der Fader kommt nicht mehr durch. Die kalibrierten Y-Werte liegen auf den
+// Spurkanten, deshalb wird der nutzbare Weg um diesen Abstand eingezogen.
+constexpr int FADER_DRAG_INSET_TOP = 0;    // bei 100 % (0 = kein Abzug)
+constexpr int FADER_DRAG_INSET_BOT = 0;    // bei   0 %
 // Max. Maus-Reports pro Aufruf (Durchlauf = Prime + Greifen + Ziehen +
 // Loslassen). Begrenzt die Rechenzeit, wenn viele Fader gleichzeitig laufen.
 constexpr int FADER_DRAG_MAX_REPORTS = 6;
@@ -227,18 +260,26 @@ struct FaderCal {
     uint16_t yBot;     // Y bei   0 % (PB)
     uint16_t gmTop;    // Y bei 100 % (GM)
     uint16_t gmBot;    // Y bei   0 % (GM)
+    uint16_t rawLo[11];// ADC-Rohwert bei Unterkante des Potis (unten)
+    uint16_t rawHi[11];// ADC-Rohwert bei Oberkante des Potis (oben)
 };
 
 static const FaderCal FADER_CAL_DEFAULT = {
     { 400, 2800, 5300, 7800, 10300, 12800, 15300, 17800, 20300, 22800, 25300 },
-    26800, 29300, 26850, 29400
+    26800, 29300, 26850, 29400,
+    { 64756, 65220, 65220, 65204, 65220, 65220, 64772, 65220, 65172, 65220, 65204 },
+    { 348, 396, 348, 380, 396, 380, 380, 380, 364, 380, 396 }
 };
 static FaderCal fcal = FADER_CAL_DEFAULT;
 
 #define FADER_CAL_FILE "/fcal.bin"
 
 bool loadFaderCal(void) {
-    if (!LittleFS.begin()) return false;
+    if (!LittleFS.begin()) {
+      static bool warned = false;
+      if (!warned) { warned = true; Serial.println("[CAL] WARN LittleFS nicht verfuegbar - Werte werden NICHT gespeichert"); }
+      return false;
+    }
     File f = LittleFS.open(FADER_CAL_FILE, "r");
     if (!f || f.size() != (int)sizeof(FaderCal)) {
         if (f) f.close();
@@ -255,7 +296,11 @@ bool loadFaderCal(void) {
 }
 
 bool saveFaderCal(void) {
-    if (!LittleFS.begin()) return false;
+    if (!LittleFS.begin()) {
+      static bool warned = false;
+      if (!warned) { warned = true; Serial.println("[CAL] WARN LittleFS nicht verfuegbar - Werte werden NICHT gespeichert"); }
+      return false;
+    }
     File f = LittleFS.open(FADER_CAL_FILE, "w");
     if (!f) { LittleFS.end(); return false; }
     size_t put = f.write((const uint8_t *)&fcal, sizeof(fcal));
@@ -269,6 +314,11 @@ void printFaderCal(const char *tag) {
     for (uint8_t i = 0; i < 11; i++) Serial.printf(" %d", (int)fcal.x[i]);
     Serial.printf("  YTOP=%d YBOT=%d GMTOP=%d GMBOT=%d\n",
                   (int)fcal.yTop, (int)fcal.yBot, (int)fcal.gmTop, (int)fcal.gmBot);
+    Serial.print("[CAL]     RAW-LO:");
+    for (uint8_t i = 0; i < 11; i++) Serial.printf(" %d", (int)fcal.rawLo[i]);
+    Serial.print("\n[CAL]     RAW-HI:");
+    for (uint8_t i = 0; i < 11; i++) Serial.printf(" %d", (int)fcal.rawHi[i]);
+    Serial.println();
 }
 
 // ============================================================
@@ -342,6 +392,14 @@ constexpr uint8_t NUM_FADERS = 11;   // 0 = Grand Master, 1-10 = Playbacks
 // Fader-Kanalreihenfolge: 0 = Fader f an Mux-Kanal f (0=GM, 1..10=PB1..10).
 // 1 = gespiegelt an der Mux-Halfte (0=GM an ch10, 1=PB1 an ch9, ... 10=PB10 an ch0).
 #define FADER_CH_REVERSE 1
+
+// Endanschlag-Kalibrierung der Poti-Widerstaende: ein 10k-Slide-Poti belegt
+// den ADC-Bereich NICHT vollstaendig (Fabrik-Toleranz, Anschlagkappen,
+// Wiper-Endlage). Ohne Korrektur bleibt der oberste Anschlag unter 100 % und
+// der On-Screen-Fader erreicht 100 % nicht, weil der Zielwert nie 100 wird.
+// Die Werte liegen in fcal.rawLo/rawHi (Index 0 = GM, 1..10 = PB1..PB10) und
+// werden im Kalibrier-Modus (Pico mit gedrueckter DBO starten) gemessen und
+// nach NEXT Page dauerhaft gespeichert. Ohne Messung gilt der Vollbereich.
 
 // ============================================================
 // Timing-Konstanten (hier zentral einstellbar)
@@ -517,7 +575,7 @@ void dumpFaderText() {
 // verdrahteten Poti-Kanaele; Newtonschaetzung war 3000 us.
 constexpr uint16_t FADER_SETTLE_US = 1500;
 constexpr uint8_t FADER_SKIP_READS = 5;  // erst so viele ADC-Reads verwerfen (Settling)
-int readFaderPct(uint8_t f) {
+int32_t readFaderRaw(uint8_t f) {
 #if FADER_CH_REVERSE
     uint8_t ch = (uint8_t)(NUM_FADERS - 1 - f);
 #else
@@ -540,15 +598,39 @@ int readFaderPct(uint8_t f) {
         delayMicroseconds(10);                      // Abstand zwischen Reads
     }
     if (n == 0) n = 1;
-    int pct = (int)((sum * 100L) / ((uint32_t)n * 65535L));
+    return (int32_t)(sum / (uint32_t)n);
+}
+
+// Rohwert eines Fad -> Prozent. Mit kalibrierten Endwerten (fcal.rawLo/rawHi)
+// wird der tatsaechliche Poti-Weg auf 0..100 gestreckt, sonst der volle
+// ADC-Bereich mit FADER_INVERT. Ohne diese Korrektur erreicht der Fader die
+// 100 % nicht, weil der Poti den ADC-Bereich nicht vollstaendig belegt.
+int faderPctFromRaw(uint8_t f, int32_t raw) {
+    int32_t lo = fcal.rawLo[f], hi = fcal.rawHi[f];
+    int pct;
+    if (hi == lo) {                       // unkalibriert (Default)
+        pct = (int)((raw * 100L) / 65535L);
 #if FADER_INVERT
-    pct = 100 - pct;
+        pct = 100 - pct;
 #endif
+    } else {
+        // rawLo = Rohwert bei 0 % (unten), rawHi = Rohwert bei 100 % (oben).
+        // Bei invertierten Potis ist hi < lo - die Spanne ist dann negativ,
+        // das Vorzeichen steckt automatisch in der Division.
+        int32_t span = hi - lo;
+        pct = (int)(((raw - lo) * 100L) / span);
+        if (pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+    }
 
     // Potis erreichen selten exakt 0/100: nahe den Enden sauber einklemmen.
     if (pct <= FADER_ENDSTOP)        pct = 0;
     else if (pct >= 100 - FADER_ENDSTOP) pct = 100;
     return pct;
+}
+
+int readFaderPct(uint8_t f) {
+    return faderPctFromRaw(f, readFaderRaw(f));
 }
 
 // Messung mit nur 30 us Settle und Mittelung über 3 Reads. Reines Diagnose-
@@ -749,18 +831,26 @@ static bool     dragHeld[NUM_FADERS];   // Maustaste auf dieser Bahn gedrueckt
 static uint32_t dragLast[NUM_FADERS];   // letzter Zug-Schritt DIESER Bahn (Zeit)
 static uint32_t dragHoldSince[NUM_FADERS];
 static uint32_t dragHoldMoveAt[NUM_FADERS];   // letzter Cursor-Schritt im Griff
+static uint32_t dragReleaseAt[NUM_FADERS];   // wann zuletzt losgelassen wurde
 static uint8_t  heldFader = 0xFF;       // welche Bahn den Griff haelt (Maus hat
                                         // nur einen Zeiger -> nur ein Griff)
 static uint32_t dragLastAny = 0;        // letzter Maus-Report (globaler Takt)
 
-// Soll-Hoehe fuer Fader f bei Ziel-Prozent pct (0..100). Fader 0 = GM mit
-// eigener Bahn.
+// Nutzbare Bahngrenzen (kalibrierter Wert minus Rand-Abzug, damit der Cursor
+// auf der Spur bleibt). Fader 0 = GM mit eigener Bahn.
+int32_t dragLaneTop(uint8_t f) {
+    return ((f == 0) ? (int32_t)fcal.gmTop : (int32_t)fcal.yTop) + FADER_DRAG_INSET_TOP;
+}
+int32_t dragLaneBot(uint8_t f) {
+    return ((f == 0) ? (int32_t)fcal.gmBot : (int32_t)fcal.yBot) - FADER_DRAG_INSET_BOT;
+}
+
+// Soll-Hoehe fuer Fader f bei Ziel-Prozent pct (0..100).
 int16_t dragTargetY(uint8_t f, int pct) {
     if (pct < 0) pct = 0;
     if (pct > 100) pct = 100;
-    int32_t top = (f == 0) ? (int32_t)fcal.gmTop : (int32_t)fcal.yTop;
-    int32_t bot = (f == 0) ? (int32_t)fcal.gmBot : (int32_t)fcal.yBot;
-    int32_t span = bot - top;
+    int32_t top = dragLaneTop(f);
+    int32_t span = dragLaneBot(f) - top;
     return (int16_t)(top + span * (100 - pct) / 100);
 }
 
@@ -771,15 +861,32 @@ void updateDragOutput(void) {
     uint32_t now = millis();
     int reports = 0;   // Maus-Reports in diesem Durchlauf
 
-    // 1) Loslassen: Fader steht am Ziel (Finger steht) oder Griff zu lange.
-    //    Jede Bahn wird einzeln freigegeben -> mehrere Fader koennen nacheinander
-    //    gezogen werden, ohne dass ein fremder Griff die Bahn blockiert.
+    // 1) Nachlauf + Loslassen. Ist das Ziel erreicht, laeuft der Nachlauf: die
+    //    Taste bleibt gedrueckt und es werden winzige Auslenkungen um die
+    //    Zielhoehe gesendet, damit MagicQ den Griffknopf wirklich bis auf die
+    //    Endhoehe zieht (die Glaettung von MagicQ laesst ihn sonst zurueck).
+    //    Erst danach wird losgelassen.
     for (uint8_t f = 0; f < NUM_FADERS; f++) {
         if (!dragHeld[f]) continue;
         int wantF = dragTargetY(f, faderTarget[f]);
         bool atTarget = (dragCurY[f] == wantF);
         bool timeout = (now - dragHoldSince[f]) > FADER_DRAG_HOLD_MAX_MS;
-        if ((atTarget && (now - dragHoldMoveAt[f]) >= FADER_DRAG_HOLD_IDLE_MS) || timeout) {
+
+        if (atTarget && (now - dragHoldMoveAt[f]) >= FADER_DRAG_HOLD_IDLE_MS) {
+            // Ziel erreicht und MagicQ hatte Zeit, den Knopf nachziehen zu
+            // lassen (FADER_DRAG_HOLD_IDLE_MS) -> loslassen. Kein Ruckeln:
+            // Micro-Offsets sind kleiner als ein Pixel und werden von MagicQ
+            // verworfen - sie wuerden nur zappeln.
+            if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) continue;
+            absMouseReport(fcal.x[f], dragCurY[f], 0, 0);   // loslassen
+            reports++;
+            dragHeld[f] = false;
+            dragReleaseAt[f] = now;
+            if (heldFader == f) heldFader = 0xFF;
+            continue;
+        }
+
+        if (timeout) {
             if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) continue;
             absMouseReport(fcal.x[f], dragCurY[f], 0, 0);   // loslassen
 #if FADER_DRAG_DEBUG
@@ -789,6 +896,7 @@ void updateDragOutput(void) {
             now = dragLastAny = millis();
             reports++;
             dragHeld[f] = false;
+            dragReleaseAt[f] = now;   // vor dem naechsten Greifen kurz Settle
             if (heldFader == f) heldFader = 0xFF;
         }
     }
@@ -802,16 +910,24 @@ void updateDragOutput(void) {
         if (dragPrimed[f]) continue;
         if (heldFader != 0xFF) break;                     // Zeiger belegt
         if ((now - dragLastAny) < FADER_DRAG_MIN_GAP) return;
-        int pWant = dragTargetY(f, faderTarget[f]);
-        int pMid = ((f == 0) ? (int)fcal.gmTop + (int)fcal.gmBot
-                             : (int)fcal.yTop + (int)fcal.yBot) / 2;
+        // WICHTIG: das Modell auf die IST-Position verankern, nicht auf das Ziel.
+        // MagicQ zeigt den Griffknopf bei genau dem Ist-Wert (der Fader selbst
+        // ist ja gerade nicht bewegt worden). Legt man dragCurY auf das Ziel,
+        // zeigt der naechste Press daneben - der Knopf wird verfehlt und der
+        // Fader bewegt sich gar nicht.
+        int pCur = faderLastPct[f];
+        if (pCur < 0) pCur = 0;
+        if (pCur > 100) pCur = 100;
+        int pY = dragTargetY(f, pCur);
+        int pMid = (int)((dragLaneTop(f) + dragLaneBot(f)) / 2);
         absMouseReport(fcal.x[f], pMid, 0, 0);
         now = dragLastAny = millis();
         reports++;
-        dragCurY[f] = pWant;
+        dragCurY[f] = pY;
         dragPrimed[f] = true;
 #if FADER_DRAG_DEBUG
-        Serial.printf("DRAG-prime f%02d tgt=%d%% y=%d\n", f, faderTarget[f], pWant);
+        Serial.printf("DRAG-prime f%02d ist=%d%% y=%d (tgt %d%%)\n", f, pCur, pY,
+                      faderTarget[f]);
 #endif
     }
 
@@ -823,7 +939,18 @@ void updateDragOutput(void) {
     //     alle Fader kommen trotzdem binnen ihrer Reststrecke an.
     uint8_t best = 0xFF;
     int bestRem = 0;
-    for (uint8_t f = 0; f < NUM_FADERS; f++) {
+    // Der gehaltene Fader zieht seinen Weg ZU ENDE: ein Zeigerwechsel mitten
+    // im Weg fuehrt zu einem Press, der den Griffknopf verfehlt (MagicQ ist
+    // der Verarbeitung einen Moment hinterher). Erst wenn er steht, wechselt
+    // der Zeiger zum naechsten Fader.
+    if (heldFader != 0xFF) {
+        int rem = dragTargetY(heldFader, faderTarget[heldFader]) - dragCurY[heldFader];
+        if (rem < 0) rem = -rem;
+        if (rem != 0 && (now - dragLast[heldFader]) >= FADER_DRAG_STEP_MS) {
+            best = heldFader;
+        }
+    }
+    for (uint8_t f = 0; f < NUM_FADERS && best == 0xFF; f++) {
 #if FADER_IDLE_GUARD
         if (faderLocked[f]) continue;
 #endif
@@ -841,18 +968,50 @@ void updateDragOutput(void) {
         uint8_t f = best;
         int want = dragTargetY(f, faderTarget[f]);
 
+        if (heldFader != f) {
+            // Re-Anker vor dem Greifen: weicht das Modell (z.B. weil MagicQ
+            // einen Press verfehlt und zurueckgefallen ist) zu weit vom
+            // physischen Ist-Wert ab, auf den Ist-Wert setzen - sonst greift
+            // der Press neben den Griffknopf (Cursor liegt dann ueber/unter
+            // ihm) und der Fader bewegt sich nicht.
+            int cur = faderLastPct[f];
+            if (cur < 0) cur = 0;
+            if (cur > 100) cur = 100;
+            int yPhys = dragTargetY(f, cur);
+            int dev = yPhys - dragCurY[f];
+            if (dev < 0) dev = -dev;
+            if (dev > FADER_DRAG_REANCHOR) {
+#if FADER_DRAG_DEBUG
+                Serial.printf("DRAG-reanchor f%02d %d -> %d (ist %d%%)\n",
+                              f, (int)dragCurY[f], yPhys, cur);
+#endif
+                dragCurY[f] = yPhys;
+            }
+        }
+
         // Ziehweg: Restweg, gespraengelt geschaerft (Gain) und begrenzt.
         int deltaY = want - dragCurY[f];
-        int step = (int)(deltaY / FADER_DRAG_GAIN);
-        if (step == 0) step = (deltaY > 0) ? 1 : -1;
-        if (step > FADER_DRAG_MAXSTEP) step = FADER_DRAG_MAXSTEP;
-        if (step < -FADER_DRAG_MAXSTEP) step = -FADER_DRAG_MAXSTEP;
+        int step;
+        if (deltaY > -FADER_DRAG_SNAPSTEP && deltaY < FADER_DRAG_SNAPSTEP) {
+            // Unterhalb eines Pixels: Rest direkt uebernehmen. Winzige Schritte
+            // wuerde MagicQ als Sub-Pixel verwerfen, das Modell laeuft dem
+            // Knopf sonst davon und der Fader bliebe sichtbar zurueck.
+            step = deltaY;
+        } else {
+            step = (int)(deltaY / FADER_DRAG_GAIN);
+            if (step == 0) step = (deltaY > 0) ? 1 : -1;
+            if (step > FADER_DRAG_MAXSTEP) step = FADER_DRAG_MAXSTEP;
+            if (step < -FADER_DRAG_MAXSTEP) step = -FADER_DRAG_MAXSTEP;
+        }
 
         int16_t fromY = dragCurY[f];
         int16_t toY = (int16_t)(dragCurY[f] + step);
         dragCurY[f] = toY;
 
         if (heldFader != f) {
+            // Nach dem Loslassen braucht MagicQ kurz, bis der Griffknopf wieder
+            // auf der Modellhoehe steht - sonst trifft der Press daneben.
+            if ((now - dragReleaseAt[f]) < FADER_DRAG_SETTLE_MS) return;
             // Fremden Griff zuerst loesen, damit der Maussprung nicht als
             // Rueckwaertsbewegung des alten Faders gelesen wird - dann greifen.
             if (heldFader != 0xFF) {
@@ -861,6 +1020,7 @@ void updateDragOutput(void) {
                 now = dragLastAny = millis();
                 reports++;
                 dragHeld[o] = false;
+                dragReleaseAt[o] = now;
                 heldFader = 0xFF;
 #if FADER_DRAG_DEBUG
                 Serial.printf("DRAG-release f%02d y=%d (Zeiger fuer f%02d frei)\n",
@@ -873,7 +1033,7 @@ void updateDragOutput(void) {
             // durchgehend gedrueckt -> Faderhoehe = Cursorhoehe, kein
             // Click-Jump mehr bei jedem Schritt.
             absMouseReport(fcal.x[f], fromY, 0, MOUSE_LEFT);
-            delay(6);
+            delay(FADER_DRAG_PRESS_MS);
             now = dragLastAny = millis();
             reports++;
             dragHeld[f] = true;
@@ -1034,15 +1194,24 @@ static const char *CAL_ITEM[7] = {
 
 void faderCalUi(bool allowSave) {
     Serial.println("[CAL] S1=X(PB1) S2=X(PB10) S3=Y(PB,100%) S4=Y(PB,0%) S5=X(GM) S6=Y(GM,100%) S7=Y(GM,0%)");
+    Serial.println("[CAL] S8=Endwerte  S9=LO  S10=HI   (Fader waehlen: DBO=GM, GO1..GO10)");
     Serial.println("[CAL] F1 -500  F2 -50  F3 +50  F4 +500");
-    if (allowSave) Serial.println("[CAL] NEXT Page = speichern");
+    if (allowSave) Serial.println("[CAL] NEXT Page = speichern, MASTER GO = Ist-Rohwert uebernehmen");
     printFaderCal(" start");
 
     int calX1 = fcal.x[1], calX10 = fcal.x[10];
     int calYTop = fcal.yTop, calYBot = fcal.yBot;
     int calXGm = fcal.x[0];
     int calYGmTop = fcal.gmTop, calYGmBot = fcal.gmBot;
-    int calSel = 0;
+    int calRawLo[NUM_FADERS], calRawHi[NUM_FADERS];
+    for (uint8_t i = 0; i < NUM_FADERS; i++) {
+        calRawLo[i] = fcal.rawLo[i];
+        calRawHi[i] = fcal.rawHi[i];
+    }
+    int calSel = 0;          // 0..6 = Geometrie-Parameter
+    int calRawF = 0;         // Fader fuer die Endwerte (0 = GM)
+    int calRawEnd = 0;       // 0 = LO (unten), 1 = HI (oben)
+    bool calRawMode = false; // S8 schaltet in den Endwert-Modus
     bool calPrev[3][13];
     memset(calPrev, 0, sizeof(calPrev));
     uint32_t calLastPrint = 0;
@@ -1065,29 +1234,82 @@ void faderCalUi(bool allowSave) {
                     for (uint8_t i = 2; i <= 9; i++) {
                         fcal.x[i] = (uint16_t)(calX1 + ((int32_t)calX10 - calX1) * (i - 1) / 9);
                     }
+                    for (uint8_t i = 0; i < NUM_FADERS; i++) {
+                        fcal.rawLo[i] = calRawLo[i];
+                        fcal.rawHi[i] = calRawHi[i];
+                    }
                     printFaderCal(" saved");
                     Serial.println(saveFaderCal() ? "[CAL] -> LittleFS ok"
                                                  : "[CAL] -> LittleFS FEHLER");
                     return;
                 }
-                if (r == 0 && c >= 2 && c <= 8) {           // S1..S7 = Auswahl
+                if (r == 0 && c == 9) {                     // S8 = Endwert-Modus
+                    calRawMode = !calRawMode;
+                    blinkLed();
+                    Serial.println(calRawMode ? "[CAL] -> Endwerte (GO waehlt Fader)"
+                                              : "[CAL] -> Geometrie");
+                } else if (calRawMode && r == 0 && c == 10) {   // S9 = LO
+                    calRawEnd = 0;
+                    blinkLed();
+                } else if (calRawMode && r == 0 && c == 11) {   // S10 = HI
+                    calRawEnd = 1;
+                    blinkLed();
+                } else if (r == 0 && c >= 2 && c <= 8) {        // S1..S7 = Geometrie
+                    calRawMode = false;
                     calSel = c - 2;
                     blinkLed();
                     Serial.printf("[CAL] %s\n", CAL_ITEM[calSel]);
-                } else if (r == 2 && c >= 2 && c <= 5) {    // F1..F4 = verschieben
+                } else if (calRawMode && r == 1 && (c == 0 || (c >= 2 && c <= 11))) {
+                    calRawF = (c == 0) ? 0 : (c - 1);             // DBO = GM, GO1..GO10
+                    blinkLed();
+                } else if (calRawMode && r == 0 && c == 12) {    // MASTER GO = Istwert
+                    int32_t cur = readFaderRaw((uint8_t)calRawF);
+                    if (calRawEnd == 0) calRawLo[calRawF] = (int)cur;
+                    else                calRawHi[calRawF] = (int)cur;
+                    blinkLed();
+                    Serial.printf("[CAL] f%02d %s = %ld (Ist)\n", calRawF,
+                                  calRawEnd ? "HI" : "LO", (long)cur);
+                } else if (r == 2 && c >= 2 && c <= 5) {         // F1..F4 = verschieben
                     int amt = (c == 2) ? -500 : (c == 3) ? -50 : (c == 4) ? 50 : 500;
-                    int *slot = (calSel == 0) ? &calX1 : (calSel == 1) ? &calX10 :
-                                (calSel == 2) ? &calYTop : (calSel == 3) ? &calYBot :
-                                (calSel == 4) ? &calXGm : (calSel == 5) ? &calYGmTop :
-                                &calYGmBot;
-                    *slot += amt;
-                    if (*slot < 0) *slot = 0;
-                    if (*slot > 32767) *slot = 32767;
+                    if (calRawMode) {
+                        int *raw = calRawEnd ? &calRawHi[calRawF] : &calRawLo[calRawF];
+                        *raw += amt;
+                        if (*raw < 0) *raw = 0;
+                        if (*raw > 65535) *raw = 65535;
+                    } else {
+                        int *slot = (calSel == 0) ? &calX1 : (calSel == 1) ? &calX10 :
+                                    (calSel == 2) ? &calYTop : (calSel == 3) ? &calYBot :
+                                    (calSel == 4) ? &calXGm : (calSel == 5) ? &calYGmTop :
+                                    &calYGmBot;
+                        *slot += amt;
+                        if (*slot < 0) *slot = 0;
+                        if (*slot > 32767) *slot = 32767;
+                    }
                     blinkLed();
                 }
             }
             digitalWrite(ROW_PINS[r], MATRIX_IDLE);
         }
+
+        if (calRawMode) {
+            // Endwert-Modus: Cursor bleibt stehen, nur der Rohwert wird gezeigt.
+            // Ein Tastendruck auf einen Fader misst live (Tastatur liest Matrix).
+            static uint32_t rawLast = 0;
+            if ((uint32_t)(millis() - rawLast) > 300) {
+                rawLast = millis();
+                int32_t cur = readFaderRaw((uint8_t)calRawF);
+                fcal.rawLo[calRawF] = calRawLo[calRawF];
+                fcal.rawHi[calRawF] = calRawHi[calRawF];
+                Serial.printf("[RAW] %-5s f%02d  ist=%5ld -> %3d%%   LO=%5d HI=%5d  (%s)\n",
+                              (calRawF == 0) ? "GM" : "PB", calRawF, (long)cur,
+                              faderPctFromRaw((uint8_t)calRawF, cur),
+                              calRawLo[calRawF], calRawHi[calRawF],
+                              calRawEnd ? "HI" : "LO");
+            }
+            delay(5);
+            continue;
+        }
+
         int cx = (calSel == 1) ? calX10 : (calSel == 4) ? calXGm : calX1;
         int cy = (calSel == 0) ? calYTop : (calSel == 1) ? calYBot :
                  (calSel == 2) ? calYTop : (calSel == 3) ? calYBot :

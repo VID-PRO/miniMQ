@@ -78,13 +78,32 @@ attribute window keys (F5–F8/Group/FX) need the mode above.
 
 ### Calibrating the cursor target positions
 
-The on-screen-encoder positions differ per screen. The firmware ships with a **calibration mode**:
+The 8 on-screen encoders sit in a **2 columns × 4 rows** grid, so only **four** values
+have to be adjusted: `xA` (column A = encoders 1–4), `xB` (column B = encoders 5–8),
+`yTop` (encoder 1) and `yBot` (encoder 4). The remaining positions are interpolated.
 
-1. Set `#define ENC_CALIBRATE 1` in `src/main.cpp` and flash the Pico.
-2. The cursor now walks through all 8 target points (4 s each, LED blinks the number 1–8).
-3. Note where each flash number lands on the screen and correct the matching entry of
-   `ENC_TARGET_X[]` / `ENC_TARGET_Y[]` (0..32767, `X` = left→right, `Y` = top→bottom).
-4. Set `ENC_CALIBRATE` back to `0`, rebuild and flash again.
+**Calibrate without reflashing** — hold down **encoder 1** (its switch) while
+plugging the Pico in:
+
+| Action | Result |
+| --- | --- |
+| Encoder switch 1 / 2 | selected value −500 / −50 |
+| Encoder switch 3 / 4 | selected value +50 / +500 |
+| Encoder switch 5–8 | select value 1–4 (LED blinks 1–4 times) |
+| F5–F8 (GP18–21) | same as encoder switches 5–8 |
+| **Group** (GP26) | save to LittleFS and return |
+
+The mouse cursor follows the value being adjusted. Values are stored in
+`/ecal.bin` (LittleFS) and are reloaded on every boot; the compile-time defaults in
+`ENC_CAL_DEFAULT` are used until the first save.
+
+> Requires the 64 KB LittleFS partition (`board_build.filesystem_size = 64` in
+> `platformio.ini`). Without it `LittleFS.begin()` fails and nothing is saved —
+> the firmware then prints a warning on the serial console.
+
+The old blink-through mode still exists for reference: set `#define ENC_CALIBRATE 1`
+in `src/main.cpp` to walk through all 8 target points (4 s each) and correct the
+interpolated values printed on the serial console.
 
 ---
 

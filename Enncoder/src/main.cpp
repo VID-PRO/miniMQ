@@ -6,6 +6,7 @@
 #include <tusb.h>
 #include <tusb-hid.h>
 #include "class/hid/hid_device.h"
+#include <LittleFS.h>
 
 // ==========================================
 // 1. PIN-DEFINITIONEN (Raspberry Pi Pico)
@@ -165,12 +166,63 @@ void absMouseClickAt(int16_t x, int16_t y) {
 // liegen an festen Bildschirmpositionen. Hier die Zielkoordinaten (absolut in
 // 0..32767, X=links-nach-rechts, Y=oben-nach-unten).
 //
-// KALIBRIEREN: ENC_CALIBRATE=1 setzen und flashen. Der Cursor wandert dann
-// nacheinander auf alle 8 Zielpunkte (blinkt jeweils Startnummer 1..8, alle
-// 4 s weiter). Sobald jede LED-Nummer sicher über dem richtigen On-Screen-
-// Encoder landet, die Koordinaten unten eintragen und ENC_CALIBRATE=0 setzen.
-const int16_t ENC_TARGET_X[] = { 9000, 9000, 9000, 9000, 26000, 26000, 26000, 26000 };
-const int16_t ENC_TARGET_Y[] = { 4000, 13000, 20000, 27000, 7000, 13000, 20000, 27000 };
+// Die 8 On-Screen-Encoder liegen im MagicQ-Konsolen-Layout in einem Raster:
+// 2 Spalten x 4 Zeilen. Deshalb reichen VIER Stellschrauben, aus denen alle 8
+// Positionen berechnet werden:
+//   xA = X Spalte A (Encoder 1..4), xB = X Spalte B (Encoder 5..8)
+//   yTop = Y Encoder 1, yBot = Y Encoder 4  (dazwischen linear interpoliert)
+//
+// KALIBRIEREN (ohne Neuflashen): Pico mit gedruecktem ENCODER 1 starten ->
+// Kalibrier-UI. Encoder 1..4 = -500 / -50 / +50 / +500 verschieben,
+// Encoder 5..8 = Stellschraube waehlen (LED blinkt 1..4), GROUP = speichern
+// und zurueck. Die Werte liegen dauerhaft in LittleFS (/ecal.bin).
+struct EncCal {
+    uint16_t xA, xB, yTop, yBot;
+};
+static const EncCal ENC_CAL_DEFAULT = { 9000, 26000, 4000, 27000 };
+static EncCal encCal = ENC_CAL_DEFAULT;
+static int16_t ENC_TARGET_X[8];
+static int16_t ENC_TARGET_Y[8];
+#define ENC_CAL_FILE "/ecal.bin"
+
+// Stellschrauben -> 8 Zielpositionen (Raster 2 Spalten x 4 Zeilen).
+void applyEncCal() {
+  for (int i = 0; i < 8; i++) {
+    ENC_TARGET_X[i] = (int16_t)((i < 4) ? encCal.xA : encCal.xB);
+    ENC_TARGET_Y[i] = (int16_t)(encCal.yTop + ((int32_t)encCal.yBot - encCal.yTop) * (i % 4) / 3);
+  }
+}
+
+bool loadEncCal() {
+  if (!LittleFS.begin()) {
+    Serial.println("[CAL] WARN LittleFS nicht verfuegbar - Werte werden NICHT gespeichert");
+    return false;
+  }
+  File f = LittleFS.open(ENC_CAL_FILE, "r");
+  if (!f || f.size() != (int)sizeof(EncCal)) {
+    if (f) f.close();
+    LittleFS.end();
+    return false;
+  }
+  EncCal tmp;
+  size_t got = f.read((uint8_t *)&tmp, sizeof(tmp));
+  f.close();
+  LittleFS.end();
+  if (got != sizeof(tmp)) return false;
+  encCal = tmp;
+  return true;
+}
+
+bool saveEncCal() {
+  if (!LittleFS.begin()) return false;
+  File f = LittleFS.open(ENC_CAL_FILE, "w");
+  if (!f) { LittleFS.end(); return false; }
+  size_t put = f.write((const uint8_t *)&encCal, sizeof(encCal));
+  f.close();
+  LittleFS.end();
+  return put == sizeof(encCal);
+}
+
 #define ENC_CALIBRATE 0
 
 // ==========================================
@@ -262,6 +314,123 @@ bool customKeyStable[] = {HIGH, HIGH};
 // SETUP
 // ==========================================
 
+// ============================================================
+// KALIBRIER-UI (Start mit gedrueckter SHIFT-Taste)
+// ============================================================
+// Encoder-Klicks 1..4 = -500 / -50 / +50 / +500 verschieben die gewaehlte
+// Stellschraube, Encoder-Klicks 5..8 = Stellschraube 1..4 waehlen (LED blinkt
+// so oft), GROUP = speichern (LittleFS) und zurueck zum Normalbetrieb.
+// Der Mauszeiger folgt der Stellschraube, damit man sieht, was just verstellt
+// wird - der Cursor wandert also mit und das ist Absicht.
+void encCalBlink(uint8_t n) {
+  for (uint8_t i = 0; i < n; i++) {
+    digitalWrite(ledPin, HIGH);
+    delay(120);
+    digitalWrite(ledPin, LOW);
+    delay(120);
+  }
+  delay(500);
+}
+
+void encCalUi() {
+  const char *pName[4] = { "X Spalte A (Enc 1)", "X Spalte B (Enc 5)",
+                            "Y oben     (Enc 1)", "Y unten    (Enc 4)" };
+  // Cursor-Index je Stellschraube: xA->Enc1, xB->Enc5, yTop->Enc1, yBot->Enc4
+  const uint8_t pEnc[4] = { 0, 4, 0, 3 };
+  uint16_t *pVal[4] = { &encCal.xA, &encCal.xB, &encCal.yTop, &encCal.yBot };
+  const int32_t pStep[4] = { 500, 50, 50, 500 };   // Vorzeichen: +/-500, +/-50
+  const int16_t pMin[4] = { 0, 0, 0, 0 };
+  const int16_t pMax[4] = { 32767, 32767, 32767, 32767 };
+
+  uint8_t sel = 0;
+  uint16_t swPrev = 0xFFFF;
+  bool groupPrev = HIGH;
+  bool fPrev[4] = { HIGH, HIGH, HIGH, HIGH };
+
+  Serial.println("[CAL] Encoder-Positionskalibrierung");
+  Serial.println("[CAL] Enc1-4 = -500/-50/+50/+500   Enc5-8 = Stellschraube 1-4");
+  Serial.println("[CAL] GROUP = speichern + fertig");
+  applyEncCal();
+  absMouseMove(ENC_TARGET_X[pEnc[sel]], ENC_TARGET_Y[pEnc[sel]]);
+  encCalBlink(sel + 1);
+
+  for (;;) {
+    if (!mcpOK) {
+      Serial.println("[CAL] ABBRUCH: MCP23017 fehlt - nicht kalibrierbar");
+      return;
+    }
+    uint16_t sw = mcp.readGPIOAB();
+    bool group = digitalRead(groupKeyPin);
+    bool f[4];
+    for (int i = 0; i < 4; i++) f[i] = digitalRead(fKeyPins[i]);
+
+    // Encoder-Klicks 1..4: verstellen
+    for (int i = 0; i < 4; i++) {
+      bool pressed = ((sw >> encBtnMCP[i]) & 1) == 0;
+      bool was = ((swPrev >> encBtnMCP[i]) & 1) == 0;
+      if (pressed && !was) {
+        int32_t v = (int32_t)(*pVal[sel]) + ((i < 2) ? -pStep[i] : pStep[i]);
+        if (v < pMin[sel]) v = pMin[sel];
+        if (v > pMax[sel]) v = pMax[sel];
+        *pVal[sel] = (uint16_t)v;
+        applyEncCal();
+        absMouseMove(ENC_TARGET_X[pEnc[sel]], ENC_TARGET_Y[pEnc[sel]]);
+        Serial.printf("[CAL] %s = %u\n", pName[sel], (unsigned)*pVal[sel]);
+        encCalBlink(i + 1);
+      }
+    }
+
+    // Encoder-Klicks 5..8: Stellschraube waehlen
+    for (int i = 4; i < 8; i++) {
+      bool pressed = ((sw >> encBtnMCP[i]) & 1) == 0;
+      bool was = ((swPrev >> encBtnMCP[i]) & 1) == 0;
+      if (pressed && !was) {
+        sel = (uint8_t)(i - 4);
+        Serial.printf("[CAL] Stellschraube %u: %s = %u\n", sel + 1, pName[sel],
+                      (unsigned)*pVal[sel]);
+        encCalBlink(sel + 1);
+      }
+    }
+
+    // F1..F4: Stellschraube direkt waehlen (Alternative zu Enc5-8)
+    for (int i = 0; i < 4; i++) {
+      if (f[i] == LOW && fPrev[i] == HIGH) {
+        sel = (uint8_t)i;
+        Serial.printf("[CAL] Stellschraube %u: %s = %u\n", sel + 1, pName[sel],
+                      (unsigned)*pVal[sel]);
+        encCalBlink(sel + 1);
+      }
+      fPrev[i] = f[i];
+    }
+
+    // GROUP: speichern + beenden
+    if (group == LOW && groupPrev == HIGH) {
+      bool ok = saveEncCal();
+      applyEncCal();
+      Serial.printf("[CAL] gespeichert (%s): xA=%u xB=%u yTop=%u yBot=%u\n",
+                    ok ? "LittleFS" : "FEHLER", encCal.xA, encCal.xB,
+                    encCal.yTop, encCal.yBot);
+      encCalBlink(8);
+      return;
+    }
+
+    swPrev = sw;
+    groupPrev = group;
+    delay(10);   // Entprellen: Klicks werden erst nach ~20 ms ausgewertet
+  }
+}
+
+// ENCODER 1 beim Start gedrueckt -> Kalibrier-UI (Klick auf GPA0 am MCP23017,
+// zweimal gelesen damit ein Kontaktpreller nicht schon beim Start ausloest).
+bool encCalBootKey() {
+  if (!mcpOK) return false;
+  uint16_t sw = mcp.readGPIOAB();
+  if (sw & (1u << encBtnMCP[0])) return false;   // nicht gedrueckt -> normal
+  delay(60);
+  sw = mcp.readGPIOAB();
+  return (sw & (1u << encBtnMCP[0])) == 0;
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -326,6 +495,23 @@ void setup() {
   // Group (GP26) / FX (GP27): interne Pullups
   pinMode(groupKeyPin, INPUT_PULLUP);
   pinMode(fxKeyPin, INPUT_PULLUP);
+
+  // Kalibrierdaten aus LittleFS (sonst Defaults aus dem Raster 2x4).
+  if (loadEncCal()) {
+    Serial.printf("[CAL] /ecal.bin geladen: xA=%u xB=%u yTop=%u yBot=%u\n",
+                  encCal.xA, encCal.xB, encCal.yTop, encCal.yBot);
+  } else {
+    Serial.printf("[CAL] Defaults: xA=%u xB=%u yTop=%u yBot=%u\n",
+                  encCal.xA, encCal.xB, encCal.yTop, encCal.yBot);
+  }
+  applyEncCal();
+
+  // Mit ENCODER 1 gedrueckt starten -> Positionskalibrierung.
+  if (encCalBootKey()) {
+    Serial.println("[CAL] ENCODER 1 beim Start gedrueckt -> Kalibrier-UI");
+    encCalUi();
+    Serial.println("[CAL] Kalibrierung beendet");
+  }
 }
 
 // ==========================================
