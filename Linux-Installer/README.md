@@ -11,6 +11,7 @@ Ubuntu + Openbox + ChamSys MagicQ as a dedicated show PC for the **Compact Wing*
 - [3. Install Ubuntu (recommended: 24.04 LTS Server)](#3-install-ubuntu-recommended-2404-lts-server)
 - [4. Repair the boot path (BOOTX64.EFI) – absolutely required!](#4-repair-the-boot-path-bootx64efi-absolutely-required)
 - [5. Run the setup script](#5-run-the-setup-script)
+  - [5.1 Offline installation (local packages, no internet)](#51-offline-installation-local-packages-no-internet)
 - [6. Install MagicQ (if not done by the script)](#6-install-magicq-if-not-done-by-the-script)
   - [6.1 Qt5 and runtime dependencies](#61-qt5-and-runtime-dependencies)
 - [7. Compact Wing & panel mode – how it works](#7-compact-wing-panel-mode-how-it-works)
@@ -26,6 +27,8 @@ Ubuntu + Openbox + ChamSys MagicQ as a dedicated show PC for the **Compact Wing*
   - [13.3 Troubleshooting: MagicQ "cannot create the data folder"](#133-troubleshooting-magicq-cannot-create-the-data-folder)
   - [13.4 Hide the mouse cursor](#134-hide-the-mouse-cursor)
   - [13.5 Monitor should always stay on (no power saving)](#135-monitor-should-always-stay-on-no-power-saving)
+  - [13.6 Boot time "0 seconds" (no GRUB menu)](#136-boot-time-0-seconds-no-grub-menu)
+  - [13.7 Boot resolution stays 1280x800 (no jump from 800x480)](#137-boot-resolution-stays-1280x800-no-jump-from-800x480)
 - [14. Troubleshooting (short list)](#14-troubleshooting-short-list)
 - [15. Compact command overview](#15-compact-command-overview)
 - [Project structure](#project-structure)
@@ -155,6 +158,58 @@ chmod +x setup_magicq_wyse.sh
 sudo ./setup_magicq_wyse.sh                            # without .deb -> MagicQ later manually
 sudo ./setup_magicq_wyse.sh magicq_ubuntu_*.deb        # with .deb in the same folder
 ```
+
+### 5.1 Offline installation (local packages, no internet)
+
+The folder `offline/` contains a complete **local APT repository** with all
+packages the setup script needs (Ubuntu 24.04 / **noble**, amd64), including
+every dependency:
+
+- `offline/repo/pool/*.deb` – 532 packages (~240 MB), verified against the
+  Ubuntu archive checksums, including all MagicQ runtime dependencies
+  (e.g. `liblzo2-2`).
+- `offline/repo/Packages(.gz)` – the APT index (flat repository).
+- `offline/magicq_ubuntu_1.9.8.3.deb` – **MagicQ itself** (placed here after
+  download, automatically detected by the installer).
+- `offline/install_offline.sh` – installs from the USB stick **without a
+  network connection**: it temporarily activates the local repository, runs a
+  simulation check, then executes `setup_magicq_wyse.sh` as usual.
+
+The package set contains everything the script installs for a 24.04 install:
+Openbox + X, Qt5/xcb plugins, GStreamer/FFmpeg, ALSA, mesa, plymouth themes,
+x11-apps and more (the `plymouth-theme-ubuntu-logo`/`plymouth-theme-script`/
+`xcursor-invisible` package names do not exist on noble and are handled
+tolerantly by the script).
+
+**Usage** (copy the whole `offline/` folder to a USB stick, boot the freshly
+installed Ubuntu 24.04, then):
+
+```bash
+cd /media/usb/offline          # path depends on the mounted USB stick
+sudo ./install_offline.sh                      # finds magicq_ubuntu_*.deb automatically
+sudo ./install_offline.sh ~/magicq_ubuntu_2.0.0.deb   # or with an explicit .deb
+```
+
+The script:
+
+1. Backs up and disables the network APT sources (stored in
+   `offline/.apt-sources-backup/`), so `apt-get update`/`install` stays fully local.
+2. Adds the local repository as
+   `deb [trusted=yes] file:/media/usb/offline/repo ./`.
+3. Runs a `apt-get --simulate` check that all packages are resolvable **before**
+   touching anything.
+4. Runs `setup_magicq_wyse.sh` (optionally with your MagicQ `.deb`).
+
+> **Note:** Without `--restore` the system sources stay disabled afterwards
+> (this is a dedicated offline show PC). Re-enable them later with
+> `sudo ./install_offline.sh --restore` or `--check-only` to only inspect the
+> repository.
+
+> ℹ️ **MagicQ** is included in the bundle as `offline/magicq_ubuntu_1.9.8.3.deb`
+> (the setup script installs it via `dpkg -i`, exactly like section 6). Download a
+> newer version with a ChamSys account at <https://www.chamsys.co.uk/mqdownload/>
+> (→ Ubuntu 64 bit `.deb`) and drop it next to the script – the installer detects
+> it automatically.
 
 ---
 
@@ -497,22 +552,43 @@ Procedure:
    therefore sets the alternatives link `/etc/alternatives/default.plymouth` **directly** to
    our theme and **verifies** the result via `readlink`.
 5. Writes to `/etc/default/grub`:
-   ```
-   GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 vt.global_cursor_default=0"
-   GRUB_GFXMODE=1280x800
-   GRUB_GFXPAYLOAD_LINUX=keep
-   GRUB_TERMINAL_OUTPUT=console
-   GRUB_TIMEOUT=0
-   ```
-   - **`quiet splash`** (mandatory!) → enables the splash + no kernel messages.
-   - **`loglevel=3`** → only errors/warnings on the console (practically nothing).
-   - **`GRUB_GFXMODE=1280x800` / `GRUB_GFXPAYLOAD_LINUX=keep`** → graphics console + splash
-     run at **1280x800**, so the splash runs fullscreen (prevents switching to text-VGA).
-   - **`GRUB_TERMINAL_OUTPUT=console`** → prevents GRUB from forcing output onto a
-     foreign terminal.
-6. Runs `update-initramfs -u` and `update-grub` and **afterwards checks** via
-   `lsinitramfs` whether theme + `script.so` made it into the initramfs. If something is
-   missing, the theme is set again and rebuilt.
+    ```
+    GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 video=1280x800 vt.global_cursor_default=0"
+    GRUB_GFXMODE=1280x800,auto
+    GRUB_GFXPAYLOAD_LINUX=keep
+    GRUB_TERMINAL_OUTPUT=console
+    GRUB_TIMEOUT=0
+    GRUB_TIMEOUT_STYLE=hidden
+    GRUB_HIDDEN_TIMEOUT=0
+    GRUB_HIDDEN_TIMEOUT_QUIET=true
+    GRUB_RECORDFAIL_TIMEOUT=0
+    ```
+    - **`quiet splash`** (mandatory!) → enables the splash + no kernel messages.
+    - **`loglevel=3`** → only errors/warnings on the console (practically nothing).
+    - **`video=1280x800`** → forces the kernel framebuffer/Plymouth to **1280x800 from
+      the first frame onward**. Without it the firmware often boots into `800x480`
+      first and the display "jumps" to 1280x800 only when X starts (see
+      [13.7](#137-boot-resolution-stays-1280x800-no-jump-from-800x480)).
+    - **`GRUB_GFXMODE=1280x800,auto` / `GRUB_GFXPAYLOAD_LINUX=keep`** → graphics console +
+      splash run at **1280x800** (falls back to `auto` if the panel rejects it),
+      so the splash runs fullscreen (prevents switching to text-VGA).
+    - **`GRUB_TERMINAL_OUTPUT=console`** → prevents GRUB from forcing output onto a
+      foreign terminal.
+    - **`GRUB_TIMEOUT=0` / `GRUB_TIMEOUT_STYLE=hidden`** → **zero seconds wait** at the GRUB
+      menu, it boots straight into Ubuntu (see [13.6](#136-boot-time-0-seconds-no-grub-menu)).
+    - **`GRUB_HIDDEN_TIMEOUT=0` / `GRUB_HIDDEN_TIMEOUT_QUIET=true`** → no hidden
+      countdown either (belt-and-braces alongside `GRUB_TIMEOUT_STYLE=hidden`).
+    - **`GRUB_RECORDFAIL_TIMEOUT=0`** → no wait even after an unclean shutdown
+      (`recordfail`), which would otherwise force the menu again.
+    To protect these settings against `/etc/default/grub.d/*.cfg` drop-ins (which are
+    read **after** `/etc/default/grub` and could overwrite `GRUB_TIMEOUT` again – a common
+    reason why `GRUB_TIMEOUT=0` "doesn't work"), the script also removes those variables
+    from existing drop-ins and writes a **`/etc/default/grub.d/99-minimq-boot-time.cfg`**
+    (loaded last → always wins).
+ 6. Runs `update-initramfs -u` and `update-grub` and **afterwards verifies** via
+    `lsinitramfs` that theme + `script.so` made it into the initramfs, **and** checks
+    that `set timeout=0` is actually present in `/boot/grub/grub.cfg`. If something is
+    missing, the theme is set again and rebuilt.
 
 **Check activation / set afterwards (without `plymouth-set-default-theme`):**
 
@@ -747,7 +823,78 @@ xset dpms 0 0 0
 > If the monitor still powers off, additionally check the monitor's own
 > settings (auto standby) and whether the amplifier/DP adapter is controlling it.
 
+### 13.6 Boot time "0 seconds" (no GRUB menu)
+
+The show PC boots **directly** into Ubuntu – the GRUB menu never waits and never appears.
+The script enforces this with `GRUB_TIMEOUT=0`, `GRUB_TIMEOUT_STYLE=hidden` and
+`GRUB_RECORDFAIL_TIMEOUT=0`.
+
+Why a plain `GRUB_TIMEOUT=0` in `/etc/default/grub` is **not** sufficient on Ubuntu 24.04:
+
+1. **Drop-ins override it.** `/etc/default/grub.d/*.cfg` (e.g. `50-…`) is sourced
+   **after** `/etc/default/grub` and silently re-sets `GRUB_TIMEOUT` to its default
+   (`5`). The script therefore strips these variables from all drop-ins and writes
+   `/etc/default/grub.d/99-minimq-boot-time.cfg` (highest priority → always wins).
+2. **UEFI wants `GRUB_TIMEOUT_STYLE=hidden`.** Without it, GRUB shows the menu even
+   with a zero timeout. `GRUB_TIMEOUT_STYLE=hidden` hides the menu completely.
+3. **`recordfail`.** After an unclean shutdown GRUB would show the menu again
+   on the next boot (`GRUB_RECORDFAIL_TIMEOUT`). `GRUB_RECORDFAIL_TIMEOUT=0` disables that.
+
+The script **verifies** the result after `update-grub` and warns if
+`set timeout=0` is missing from `/boot/grub/grub.cfg`.
+
+Check/adjust manually on the box:
+
+```bash
+cat /etc/default/grub.d/99-minimq-boot-time.cfg        # must show timeout=0 + hidden
+grep -E "set (timeout|timeout_style)" /boot/grub/grub.cfg   # must show timeout=0
+
+# force it (if you ever changed something / need to re-apply):
+sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/; s/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=hidden/' /etc/default/grub
+echo -e "GRUB_TIMEOUT=0\nGRUB_TIMEOUT_STYLE=hidden\nGRUB_RECORDFAIL_TIMEOUT=0" | \
+    sudo tee /etc/default/grub.d/99-minimq-boot-time.cfg
+sudo update-grub
+```
+
+> **Note:** With the menu hidden you can still reach the GRUB menu during boot by
+> holding **`Shift`** (BIOS) or **`Esc`** (UEFI).
+
 ---
+
+### 13.7 Boot resolution stays 1280x800 (no jump from 800x480)
+
+Many panels/firmwares boot at **800x480** (a GOP/text-mode fallback) and only switch
+to **1280x800** when X starts — the display visibly "jumps". The script prevents this
+with two complementary settings on the boot side:
+
+- **Kernel flag `video=1280x800`** in `GRUB_CMDLINE_LINUX_DEFAULT` → the kernel
+  framebuffer (and therefore Plymouth) comes up in **1280x800 from the first frame**.
+- **`GRUB_GFXMODE=1280x800,auto`** + **`GRUB_GFXPAYLOAD_LINUX=keep`** → GRUB's graphics
+  console runs at 1280x800 too (`auto` falls back cleanly if the panel rejects the mode).
+
+Together with the Xorg settings (section 3b / `11-resolution.conf`) everything runs at
+one resolution from GRUB → splash → X → MagicQ.
+
+Check / set manually on the box:
+
+```bash
+# settings should be present:
+grep -o "video=1280x800" /proc/cmdline
+grep -E "^(GRUB_GFXMODE|GRUB_GFXPAYLOAD_LINUX)" /etc/default/grub
+grep -o "set gfxmode=1280x800" /boot/grub/grub.cfg
+grep -o "quiet splash.*video=1280x800" /boot/grub/grub.cfg
+
+# force it manually (if you ever changed something / need to re-apply):
+sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 video=1280x800 vt.global_cursor_default=0"/;
+             s/^GRUB_GFXMODE=.*/GRUB_GFXMODE=1280x800,auto/' /etc/default/grub
+sudo update-grub
+sudo reboot
+```
+
+> **Note:** if your panel is natively **800x480** and X only *scales* to 1280x800,
+> the clean fix is to run **everything** at the native resolution instead. Replace
+> `1280x800` with your panel's native resolution in this section, in the Xorg config
+> (section 3b) and in `runmagicq.sh`; the scaling/jump disappears either way.
 
 ## 14. Troubleshooting (short list)
 
@@ -827,7 +974,12 @@ sudo reboot
 
 ```
 Linux-Installer/
-├── README.md            # This handbook
-├── setup_magicq_wyse.sh  # Setup script
-└── splash.png            # Plymouth splash screen
+├── README.md              # This handbook
+├── setup_magicq_wyse.sh   # Setup script
+├── splash.png             # Plymouth splash screen
+└── offline/               # Offline installation (no internet needed)
+    ├── install_offline.sh # Installer for the offline bundle
+    └── repo/              # Local APT repository
+        ├── Packages(.gz)  #   package index
+        └── pool/          #   531 .deb packages
 ```

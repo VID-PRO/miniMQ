@@ -294,8 +294,8 @@ fi
 # Erzwingt für die X-Sitzung (und damit MagicQ fullscreen) 1280x800 über den
 # modesetting-Treiber (Standard auf Ubuntu 24.04). 'PreferredMode' + 'Modes'
 # sorgen dafür, dass Xorg 1280x800 als einzige/bzw. bevorzugte Auflösung nutzt.
-# Der Splash/Plymouth läuft über GRUB_GFXMODE=1280x800 (Abschnitt 6b) ebenfalls
-# in 1280x800 - alles bleibt konsistent.
+# Bootseitig wird 1280x800 durch video=1280x800 + GRUB_GFXMODE=1280x800
+# (Abschnitt 6b) bereits vor X eingestellt - alles bleibt konsistent.
 mkdir -p /etc/X11/xorg.conf.d
 cat > /etc/X11/xorg.conf.d/11-resolution.conf <<'EOF'
 Section "Device"
@@ -549,8 +549,12 @@ echo ">>> 5f/6 Blende Maus-Cursor aus (transparentes XCursor-Theme)..."
 # Paket 'x11-apps' (Datei /usr/bin/xcursorgen). Er wird NUR als Fallback gebraucht:
 # Primär schreibt das Skript das XCursor-Binärformat direkt per Python (unabhängig
 # von xcursorgen/x11-apps). x11-apps trotzdem versuchen zu installieren.
+# xcursor-invisible existiert auf noble NICHT (Paket dabei -> apt-get bricht sonst
+# den GESAMTEN Aufruf ab, x11-apps würde damit nie installiert). Daher getrennt:
 apt-get install -y --no-install-recommends \
-    x11-apps xcursor-invisible 2>/dev/null || true
+    x11-apps 2>/dev/null || true
+apt-get install -y --no-install-recommends \
+    xcursor-invisible 2>/dev/null || true
 if ! command -v xcursorgen >/dev/null 2>&1; then
     apt-get update 2>/dev/null || true
     apt-get install -y --no-install-recommends \
@@ -720,15 +724,19 @@ echo ">>> 6/6 Installiere Plymouth-Splashscreen, um Boot-Logs zu verdecken..."
 # WICHTIG: 'backgrounds.so' gibt es auf noble in KEINEM Paket -> kein
 # backgrounds-Theme möglich (das verursachte "backgrounds.so missing").
 # Wir nutzen script.so (im plymouth-Basis-Paket), das garantiert da ist.
+# plymouth-theme-ubuntu-logo und plymouth-theme-script existieren auf noble NICHT
+# (ein nicht auffindbares Paket lässt apt-get den GESAMTEN Aufruf fehlschlagen ->
+# plymouth selbst würde mit keiner der oben genannten Komponenten installiert).
+# Deshalb: existierende Pakete fest, die fehlenden optional einzeln mit || true.
 apt-get install -y --no-install-recommends \
     plymouth \
     plymouth-themes \
     plymouth-label \
     plymouth-theme-ubuntu-text \
-    plymouth-theme-ubuntu-logo \
     plymouth-theme-spinner \
-    plymouth-theme-script \
-    2>/dev/null
+    2>/dev/null || true
+apt-get install -y --no-install-recommends \
+    plymouth-theme-ubuntu-logo plymouth-theme-script 2>/dev/null || true
 
 # Harte Prüfung auf das plymouth-Binary selbst (nicht plymouth-set-default-theme:
 # dieses fehlt auf Ubuntu 24.04 "Noble" bekanntermaßen - LP #1596220). Ohne die
@@ -862,20 +870,26 @@ echo ">>> Eigenes script-Theme '$PLYMOUTH_THEME' angelegt (script.so aus plymout
 
 # --- 6b. GRUB anpassen (quiet + splash, keine Log-Meldungen) -----------------
 # WICHTIG: 'splash' muss in GRUB_CMDLINE_LINUX_DEFAULT stehen, sonst startet
-# Plymouth nicht. Wir setzen zusätzlich GRUB_GFXMODE=1280x800, damit die
-# Grafikkonsole + der Splash in 1280x800 laufen (verhindert Umschalten auf Text).
+# Plymouth nicht. Mit GRUB_GFXMODE=1280x800 und dem Bootflag video=1280x800
+# laufen GRUB/Grafikkonsole + Splash durchgehend in 1280x800 (kein kurzfristiger
+# Firmware-Modus 800x480, der erst beim X-Start auf 1280x800 umschaltet).
 GRUB_CFG="/etc/default/grub"
 if [ -f "$GRUB_CFG" ]; then
     sed -i \
-        -e 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 vt.global_cursor_default=0"/' \
+        -e 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 video=1280x800 vt.global_cursor_default=0"/' \
         -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=""/' \
         "$GRUB_CFG"
 
     if ! grep -q "^GRUB_CMDLINE_LINUX_DEFAULT" "$GRUB_CFG"; then
-        echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 vt.global_cursor_default=0"' >> "$GRUB_CFG"
+        echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 video=1280x800 vt.global_cursor_default=0"' >> "$GRUB_CFG"
     fi
 
-    for line in 'GRUB_GFXMODE=1280x800' 'GRUB_GFXPAYLOAD_LINUX=keep' 'GRUB_TIMEOUT=0' 'GRUB_HIDDEN_TIMEOUT=0' 'GRUB_HIDDEN_TIMEOUT_QUIET=true' 'GRUB_TERMINAL_OUTPUT=console'; do
+    # Boot sofort: GRUB_TIMEOUT=0 + Menue verstecken (GRUB_TIMEOUT_STYLE=hidden).
+    # GRUB_RECORDFAIL_TIMEOUT=0 verhindert die Wartezeit nach "unsauberem" Herunterfahren.
+    # GRUB_GFXMODE=1280x800,auto + GRUB_GFXPAYLOAD_LINUX=keep + Kernelflag
+    # video=1280x800: auch GRUB/Kernel/Plymouth laufen in 1280x800 statt erst
+    # (Firmware-typisch) in 800x480 zu starten und dann auf 1280x800 umzuschalten.
+    for line in 'GRUB_GFXMODE=1280x800,auto' 'GRUB_GFXPAYLOAD_LINUX=keep' 'GRUB_TIMEOUT=0' 'GRUB_TIMEOUT_STYLE=hidden' 'GRUB_HIDDEN_TIMEOUT=0' 'GRUB_HIDDEN_TIMEOUT_QUIET=true' 'GRUB_RECORDFAIL_TIMEOUT=0' 'GRUB_TERMINAL_OUTPUT=console'; do
         key="${line%%=*}"
         if grep -q "^${key}=" "$GRUB_CFG" 2>/dev/null; then
             sed -i "s|^${key}=.*|${line}|" "$GRUB_CFG"
@@ -883,6 +897,25 @@ if [ -f "$GRUB_CFG" ]; then
             echo "$line" >> "$GRUB_CFG"
         fi
     done
+
+    # Drop-Ins (/etc/default/grub.d/50-*.cfg) koennen den Timeout UEBERSCHREIBEN
+    # (sie werden NACH /etc/default/grub gelesen). Eigene Variable dort entfernen
+    # und eine 99-*-Datei anlegen (wird zuletzt gelesen => gewinnt immer).
+    for dropin in /etc/default/grub.d/*.cfg; do
+        [ -e "$dropin" ] || continue
+        case "$dropin" in
+            */99-minimq-boot-time.cfg) continue ;;
+        esac
+        sed -i -e '/^GRUB_TIMEOUT=/d' -e '/^GRUB_TIMEOUT_STYLE=/d' \
+               -e '/^GRUB_RECORDFAIL_TIMEOUT=/d' "$dropin" 2>/dev/null || true
+    done
+    mkdir -p /etc/default/grub.d
+    cat > /etc/default/grub.d/99-minimq-boot-time.cfg <<'EOF'
+GRUB_TIMEOUT=0
+GRUB_TIMEOUT_STYLE=hidden
+GRUB_RECORDFAIL_TIMEOUT=0
+EOF
+    chmod 644 /etc/default/grub.d/99-minimq-boot-time.cfg
 fi
 
 # --- 6c. initramfs + GRUB neu bauen ------------------------------------------
@@ -892,6 +925,14 @@ fi
 echo ">>> Baue initramfs + GRUB neu (Thema wird eingebacken)..."
 update-initramfs -u || true
 update-grub 2>/dev/null || true
+
+# Verifikation: Steht der Boot-Timeout tatsaechlich in der gebauten grub.cfg?
+if grep -qE "set timeout=0" /boot/grub/grub.cfg 2>/dev/null; then
+    echo ">>> OK: grub.cfg bootet ohne Wartezeit (set timeout=0)."
+else
+    echo "!!! ACHTUNG: grub.cfg hat KEIN 'set timeout=0' - das GRUB-Menue wird evtl. angezeigt."
+    echo "    Pruefen: grep -E 'set timeout' /boot/grub/grub.cfg"
+fi
 
 echo ">>> Splashscreen konfiguriert: Theme='$PLYMOUTH_THEME', Bild=splash.png, GRUB quiet+splash."
 

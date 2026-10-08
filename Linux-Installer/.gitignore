@@ -1,0 +1,6 @@
+# Offline-Paketbundle (240 MB .deb) – regenerierbar per Skript
+offline/repo/
+
+# MagicQ-.deb (198 MB, Lizenz/Login) + Fixture-Bibliothek – nicht committen
+offline/magicq_ubuntu_*.deb
+heads.all
