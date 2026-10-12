@@ -1,5 +1,5 @@
 // DIY MagicQ Compact Mini Connect Wing
-// Raspberry Pi Pico + 74HC4067 mux + 3x13 key matrix + USB HID keyboard
+// Raspberry Pi Pico + 74HC4067 mux + 5x13 key matrix + USB HID keyboard
 // PlatformIO (earlephilhower Arduino core, native TinyUSB HID)
 
 // Temporäre Fader-Deaktivierung (Testing ohne Fader): auf 1 setzen zum Wiedereinschalten
@@ -371,17 +371,17 @@ void absMouseMove(int16_t x, int16_t y) {
 // Pin mapping (see README)
 // ============================================================
 // Mux select bits (74HC4067)
-constexpr uint8_t MUX_S0 = 17;
-constexpr uint8_t MUX_S1 = 18;
-constexpr uint8_t MUX_S2 = 19;
-constexpr uint8_t MUX_S3 = 20;
+constexpr uint8_t MUX_S0 = 20;
+constexpr uint8_t MUX_S1 = 21;
+constexpr uint8_t MUX_S2 = 22;
+constexpr uint8_t MUX_S3 = 26;
 constexpr uint8_t MUX_ADC = A1;      // GP27 / ADC1
 
-// Key matrix: 3 rows (outputs), 13 cols (inputs, pull-down)
-// Reihenfolge = physische Verdrahtung (gemessen): GP4=obere S-Reihe,
-// GP2=mittlere GO-Reihe, GP3=untere Flash/ALT-Reihe.
-constexpr uint8_t ROW_PINS[3]  = {4, 2, 3};
-constexpr uint8_t COL_PINS[13] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 21, 22};
+// Key matrix: 5 rows (outputs), 13 cols (inputs, pull-down/pull-up je nach
+// MATRIX_POL). Physische Verdrahtung (neues Layout): Rows auf GP2..GP6,
+// Cols 1..13 auf GP7..GP19 (GP6 bleibt Row5 - Row5 und Col1 teilen sich KEINEN Pin).
+constexpr uint8_t ROW_PINS[5] = {2, 3, 4, 5, 6};
+constexpr uint8_t COL_PINS[13] = {7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
 constexpr uint8_t NUM_FADERS = 11;   // 0 = Grand Master, 1-10 = Playbacks
 
@@ -427,9 +427,10 @@ constexpr uint8_t FADER_ENDSTOP = 1;      // % innerhalb dieses Rands wird auf 0
 // ============================================================
 // MagicQ "Playback shortcuts" (läuft auf Mac + PC/Linux):
 //   S1..S10 = 1..0, GO = Q..P, Flash = '\' z x c v b n m , .
-//   SWOP = '`', MASTER PAUSE = '#', MASTER GO = Space,
-//   DBO (Phys.) = F11, NEXT = '[', PREV = ']',
+//   ADD/SWAP = '`', PAUSE MASTER = '#', GO MASTER = Space,
+//   DBO (Phys.) = F11, NEXT PAGE = '[', PREV PAGE = ']', REL = '-',
 //   ALT = DBO-Schnellbefehl: Control + Option + 0 (wie Modifier halten)
+//   GROUP/INT/POS/COL/BEAM/FX = Ctrl+G/I/P/K/J/F (MagicQ-Fenster), SHIFT = Modifier
 // Flash-Tasten sind MagicQ "Test"-Keys: sie TOGGLEN das Playback 100% an/aus.
 // Daher senden wir beim DRUECKEN die Taste (an) und beim LOSLASSEN
 // die Taste erneut (aus) -> das ergibt ein momentanes Flash.
@@ -440,30 +441,45 @@ enum KeyType : uint8_t {
     KT_DBO   = 3,   // ALT -> Controller-Paste: Control+Option+0 halten
     KT_SEL   = 4,   // S1..S10 (Select): nimmt an der S+GO-Akkordlogik teil
     KT_GO    = 5,   // GO1..GO10: nimmt an der S+GO-Akkordlogik teil
+    KT_CKEY  = 6,   // Ctrl+<code>: GROUP/INT/POS/COL/BEAM/FX (MagicQ-Fenster)
+    KT_MOD   = 7,   // reiner Modifier (SHIFT): press/release halten
 };
 
 struct KeyCell { unsigned char code; uint8_t type; };
 
-// Zellen-Tabelle per Dump verifiziert (Keycap -> Zelle r.c):
-//   ALT=(0,0), S1..S10=(0,2..11), MASTER GO=(0,12),
-//   DBO=(1,0), GO1..GO10=(1,2..11), RELEASE=(1,12),
-//   SWOP=(2,0), PREV=(2,1), Flash F1..F10=(2,2..11), MASTER PAUSE=(2,12)
-constexpr KeyCell KEYMAP[3][13] = {
-    // ALT                      NEXT          S1    S2    S3    S4    S5    S6    S7    S8    S9    S10   MASTER GO
-    { {0, KT_DBO},              {'[', KT_KEY},
+// Zellen-Tabelle des 5x13-Layouts (Row0=GP2 ... Row4=GP6, Col1..13=GP7..GP19).
+//   Row0: DBO | NEXT PAGE | S1..S10 | REL
+//   Row1: ADD/SWAP | PREV PAGE | GO1..GO10 | PAUSE MASTER
+//   Row2: ALT | X | F1..F10 | GO MASTER
+//   Row3: X | X | GROUP | INT | POS | COL | BEAM | FX | SHIFT | X | X | X | X
+//   Row4: (alle X, frei belegbar)
+// (X = nicht belegt, KT_NONE)
+constexpr KeyCell KEYMAP[5][13] = {
+    // Row0  DBO                 NEXT PAGE       S1    S2    S3    S4    S5    S6    S7    S8    S9    S10   REL
+    { {KEY_F11, KT_KEY},         {'[', KT_KEY},
       {'1', KT_SEL}, {'2', KT_SEL}, {'3', KT_SEL}, {'4', KT_SEL}, {'5', KT_SEL},
       {'6', KT_SEL}, {'7', KT_SEL}, {'8', KT_SEL}, {'9', KT_SEL}, {'0', KT_SEL},
-      {' ', KT_KEY} },
-    // DBO                       NEXT          GO1   GO2   GO3   GO4   GO5   GO6   GO7   GO8   GO9   GO10  RELEASE
-    { {KEY_F11, KT_KEY},         {'[', KT_KEY},
+      {'-', KT_KEY} },
+    // Row1  ADD/SWAP            PREV PAGE       GO1   GO2   GO3   GO4   GO5   GO6   GO7   GO8   GO9   GO10  PAUSE MASTER
+    { {'`', KT_KEY},             {']', KT_KEY},
       {'q', KT_GO}, {'w', KT_GO}, {'e', KT_GO}, {'r', KT_GO}, {'t', KT_GO},
       {'y', KT_GO}, {'u', KT_GO}, {'i', KT_GO}, {'o', KT_GO}, {'p', KT_GO},
-      {'-', KT_KEY} },
-    // SWOP                      PREV          F1    F2    F3    F4    F5    F6    F7    F8    F9    F10   MASTER PAUSE
-    { {'`', KT_KEY},             {']', KT_KEY},
+      {'#', KT_KEY} },
+    // Row2  ALT                 X              F1    F2    F3    F4    F5    F6    F7    F8    F9    F10   GO MASTER
+    { {0, KT_DBO},               {0, KT_NONE},
       {'\\', KT_FLASH}, {'z', KT_FLASH}, {'x', KT_FLASH}, {'c', KT_FLASH},
       {'v', KT_FLASH}, {'b', KT_FLASH}, {'n', KT_FLASH}, {'m', KT_FLASH},
-      {',', KT_FLASH}, {'.', KT_FLASH}, {'#', KT_KEY} },
+      {',', KT_FLASH}, {'.', KT_FLASH}, {' ', KT_KEY} },
+    // Row3  X    X    GROUP INT  POS  COL  BEAM FX   SHIFT X    X    X    X
+    { {0, KT_NONE},              {0, KT_NONE},
+      {'g', KT_CKEY}, {'i', KT_CKEY}, {'p', KT_CKEY}, {'k', KT_CKEY},
+      {'j', KT_CKEY}, {'f', KT_CKEY}, {KEY_LEFT_SHIFT, KT_MOD},
+      {0, KT_NONE},   {0, KT_NONE},   {0, KT_NONE},   {0, KT_NONE} },
+    // Row4  alle X (frei belegbar)
+    { {0, KT_NONE},              {0, KT_NONE},      {0, KT_NONE},      {0, KT_NONE},
+      {0, KT_NONE},              {0, KT_NONE},      {0, KT_NONE},      {0, KT_NONE},
+      {0, KT_NONE},              {0, KT_NONE},      {0, KT_NONE},      {0, KT_NONE},
+      {0, KT_NONE} },
 };
 // Hinweis: GO wird in Kleinbuchstaben gesendet (MagicQ matched den Keycode,
 // nicht die Shift-Taste). Das Vermeiden von Shift-Events reduziert die
@@ -498,9 +514,9 @@ static int       faderTarget[NUM_FADERS];   // anzuzeigender absoluter %-Wert (D
 static int       faderLastTyped[NUM_FADERS];// zuletzt per Keyboard-Befehl getippt
 #endif
 #endif
-static bool      keyState[3][13];
-static bool      keyRaw[3][13];
-static uint32_t  keySince[3][13];
+static bool      keyState[5][13];
+static bool      keyRaw[5][13];
+static uint32_t  keySince[5][13];
 
 // Gibt die Playback-Nummer (1..10) fuer die Zelle (r,c) zurueck, oder 0.
 int playbackIndex(uint8_t r, uint8_t c) {
@@ -532,7 +548,7 @@ void debugKey(const char *event, unsigned char key) {
 // Nur Ziffern und R,C -> layoutsicher (auch auf deutscher Tastatur).
 void dumpMatrixText() {
     typeText("M");
-    for (uint8_t r = 0; r < 3; r++) {
+    for (uint8_t r = 0; r < 5; r++) {
         digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
         delayMicroseconds(10);
         for (uint8_t c = 0; c < 13; c++) {
@@ -1212,12 +1228,12 @@ void faderCalUi(bool allowSave) {
     int calRawF = 0;         // Fader fuer die Endwerte (0 = GM)
     int calRawEnd = 0;       // 0 = LO (unten), 1 = HI (oben)
     bool calRawMode = false; // S8 schaltet in den Endwert-Modus
-    bool calPrev[3][13];
+    bool calPrev[5][13];
     memset(calPrev, 0, sizeof(calPrev));
     uint32_t calLastPrint = 0;
 
     while (true) {
-        for (uint8_t r = 0; r < 3; r++) {
+        for (uint8_t r = 0; r < 5; r++) {
             digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
             delayMicroseconds(10);
             for (uint8_t c = 0; c < 13; c++) {
@@ -1259,10 +1275,10 @@ void faderCalUi(bool allowSave) {
                     calSel = c - 2;
                     blinkLed();
                     Serial.printf("[CAL] %s\n", CAL_ITEM[calSel]);
-                } else if (calRawMode && r == 1 && (c == 0 || (c >= 2 && c <= 11))) {
-                    calRawF = (c == 0) ? 0 : (c - 1);             // DBO = GM, GO1..GO10
+                } else if (calRawMode && ((r == 0 && c == 0) || (r == 1 && c >= 2 && c <= 11))) {
+                    calRawF = (c == 0) ? 0 : (c - 1);             // DBO (Row0) = GM, GO1..GO10
                     blinkLed();
-                } else if (calRawMode && r == 0 && c == 12) {    // MASTER GO = Istwert
+                } else if (calRawMode && r == 2 && c == 12) {    // GO MASTER = Istwert
                     int32_t cur = readFaderRaw((uint8_t)calRawF);
                     if (calRawEnd == 0) calRawLo[calRawF] = (int)cur;
                     else                calRawHi[calRawF] = (int)cur;
@@ -1328,10 +1344,10 @@ void faderCalUi(bool allowSave) {
 // DBO beim Boot gedrueckt? Zwei Abfragen im Abstand (Entprellung).
 bool dboHeldAtBoot(void) {
     for (uint8_t i = 0; i < 2; i++) {
-        digitalWrite(ROW_PINS[1], MATRIX_ACTIVE);
+        digitalWrite(ROW_PINS[0], MATRIX_ACTIVE);   // DBO sitzt in Row0 (GP2)
         delayMicroseconds(50);
         bool on = (digitalRead(COL_PINS[0]) == MATRIX_PRESSED(true));
-        digitalWrite(ROW_PINS[1], MATRIX_IDLE);
+        digitalWrite(ROW_PINS[0], MATRIX_IDLE);
         if (!on) return false;
         delay(30);
     }
@@ -1434,7 +1450,7 @@ void setup() {
 
     // Matrix-Selbsttest beim Boot: zeigt pro Reihe den Rohzustand aller Spalten.
     // Aktiv = gedrückt/kurzgeschlossen, sonst offen (normal ohne Tastendruck)
-    for (uint8_t r = 0; r < 3; r++) {
+    for (uint8_t r = 0; r < 5; r++) {
         digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
         delayMicroseconds(10);
         Serial.print("row ");
@@ -1581,6 +1597,15 @@ void processKey(uint8_t r, uint8_t c) {
             Keyboard.press(cell.code);
             Keyboard.release(cell.code);
             debugKey("FLASH ON", cell.code);
+        } else if (cell.type == KT_CKEY) {
+            // MagicQ-Fenster Oeffnen: Ctrl+<code> gedrueckt halten.
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(cell.code);
+            debugKey("PRESS CTRL+", cell.code);
+        } else if (cell.type == KT_MOD) {
+            // Reiner Modifier (Shift) - press/release halten.
+            Keyboard.press(cell.code);
+            debugKey("PRESS MOD", cell.code);
         } else if (!isChord) {
             Keyboard.press(cell.code);
             debugKey("PRESS", cell.code);
@@ -1600,6 +1625,13 @@ void processKey(uint8_t r, uint8_t c) {
             Keyboard.press(cell.code);
             Keyboard.release(cell.code);
             debugKey("FLASH OFF", cell.code);
+        } else if (cell.type == KT_CKEY) {
+            Keyboard.release(cell.code);
+            Keyboard.release(KEY_LEFT_CTRL);
+            debugKey("RELEASE CTRL+", cell.code);
+        } else if (cell.type == KT_MOD) {
+            Keyboard.release(cell.code);
+            debugKey("RELEASE MOD", cell.code);
         } else if (!isChord) {
             Keyboard.release(cell.code);
             debugKey("RELEASE", cell.code);
@@ -1616,7 +1648,7 @@ void loop() {
 #endif
 
     // ---- 1. Key matrix scan (active level laut MATRIX_POL) ----
-    for (uint8_t r = 0; r < 3; r++) {
+    for (uint8_t r = 0; r < 5; r++) {
         digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);   // row active
         delayMicroseconds(10);                      // allow lines to settle
         for (uint8_t c = 0; c < 13; c++) {
@@ -1683,11 +1715,16 @@ void loop() {
     static uint32_t lastKeep = 0;
     if (now - lastKeep > KEEPALIVE_MS) {
         lastKeep = now;
-        for (uint8_t r = 0; r < 3; r++) {
+        for (uint8_t r = 0; r < 5; r++) {
             for (uint8_t c = 0; c < 13; c++) {
                 if (!keyState[r][c]) continue;
                 const KeyCell cell = KEYMAP[r][c];
                 if (cell.type == KT_KEY) {
+                    Keyboard.press(cell.code);
+                } else if (cell.type == KT_CKEY) {
+                    Keyboard.press(KEY_LEFT_CTRL);
+                    Keyboard.press(cell.code);
+                } else if (cell.type == KT_MOD) {
                     Keyboard.press(cell.code);
                 } else if (cell.type == KT_DBO) {
                     Keyboard.press(KEY_LEFT_CTRL);

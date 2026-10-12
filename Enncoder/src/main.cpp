@@ -1,7 +1,5 @@
 #include <Arduino.h>
-#include <Keyboard.h>
 #include <Rotary.h>
-#include <Adafruit_MCP23X17.h>
 #include <USB.h>
 #include <tusb.h>
 #include <tusb-hid.h>
@@ -10,116 +8,96 @@
 #include <LittleFS.h>
 
 // ==========================================
-// 1. PIN-DEFINITIONEN (Raspberry Pi Pico)
+// 1. PIN-DEFINITIONEN (Raspberry Pi Pico / RP2040 Zero)
 // ==========================================
+// Das Encoder-Modul ist in ZWEI Bausteine aufgeteilt: linker und rechter
+// Baustein, jeder mit 4 Drehencodern. Beide verwenden das IDENTISCHE Pinout
+// (gleiche Firmware, gleiches Layout) - nur die Default-Zielpunkte unterscheiden
+// sich je nach Seite (ENC_SIDE). Die Kalibrierung ist pro RP2040 getrennt und
+// liegt in dessen eigenem LittleFS (/ecal.bin).
 
-// --- Drehencoder Pins (CLK, DT) - 8 Stück direkt auf GPIO 0-15 ---
-// Rotary(pin1, pin2) - Pin-Reihenfolge entspricht CLK/DT pro Encoder
-Rotary enc1(0, 1);
-Rotary enc2(2, 3);
-Rotary enc3(4, 5);
-Rotary enc4(6, 7);
-Rotary enc5(8, 9);
-Rotary enc6(10, 11);
-Rotary enc7(12, 13);
-Rotary enc8(14, 15);
+// --- Drehencoder Pins (CLK=A, DT=B) - 4 Stück direkt auf GPIO ---
+// ENC-A-i und ENC-B-i sind die beiden Quadratur-Ausgaenge des Encoders i.
+// ENC_A wird als CLK behandelt (Pin 1 der Rotary-Bibliothek).
+static const uint8_t ENC_A[4] = {29, 28, 27, 26};   // ENC-A-1..4
+static const uint8_t ENC_B[4] = { 3,  4,  5,  6};   // ENC-B-1..4
+// --- Encoder-Switches (gegen GND, Pullup, aktiv-LOW) ---
+static const uint8_t ENC_SW[4] = {15, 7, 14, 8};    // ENC-SW-1..4
 
-Rotary* encoders[8] = { &enc1, &enc2, &enc3, &enc4, &enc5, &enc6, &enc7, &enc8 };
+Rotary enc1(29, 3);
+Rotary enc2(28, 4);
+Rotary enc3(27, 5);
+Rotary enc4(26, 6);
 
-// --- I²C für MCP23017 ---
-// Pico: GP16 = SDA, GP17 = SCL
-#define I2C_SDA 16
-#define I2C_SCL 17
-
-// --- Freie Pico-GPIOs für direkte Tasten (gegen GND, Pullup aktiv) ---
-// F5..F8 = GP18..GP21, Shift = GP22, Group = GP26, FX = GP27
-const int fKeyPins[] = {18, 19, 20, 21};
-const int shiftKeyPin = 22;   // Shift-Taste (Modifier, gehalten)
-const int groupKeyPin = 26;
-const int fxKeyPin = 27;
-
-// --- Tasten am MCP23017 (I/O-Expander, 16 Pins, Adresse 0x20) ---
-// GPA0..GPA7 = Encoder-SW 1..8
-const uint8_t encBtnMCP[] = {0, 1, 2, 3, 4, 5, 6, 7};   // GPA0-GPA7
+Rotary* encoders[4] = { &enc1, &enc2, &enc3, &enc4 };
 
 // --- Onboard-LED (GP25) als Diagnose-Anzeige ---
 const int ledPin = 25;
 
-// PIN-FINDER-Modus: scannt GP20..GP28 und zeigt via LED-Blitzcode,
-// welcher GPIO bei Tastendruck auf LOW geht.
-//   1x=GP20 2x=GP21 3x=GP22 4x=GP23 5x=GP24 6x=GP26 7x=GP27 8x=GP28
-#define PIN_FINDER 0
+// --- Wertebereich der absoluten Maus ---
+#define ENC_COORD_MAX 32767
+
+// ==========================================
+// 2. MODUL-SEITE (LEFT/RIGHT)
+// ==========================================
+// Welche Haelfte dieser RP2040 bedient - steuert NUR die kompilierten
+// Default-Zielpunkte (X/Y fuer On-Screen-Encoder 1..4 rechts bzw. 5..8 links).
+// Nach der Kalibrierung (siehe unten) spielt die Seite keine Rolle mehr: die
+// 4 Zielpositionen kommen dann aus /ecal.bin dieses Moduls.
+//   0 = linker Baustein  (On-Screen-Encoder 1..4)
+//   1 = rechter Baustein (On-Screen-Encoder 5..8)
+#ifndef ENC_SIDE
+#define ENC_SIDE 0
+#endif
+#if ENC_SIDE == 1
+#define ENC_SIDE_NAME "RIGHT"
+#else
+#define ENC_SIDE_NAME "LEFT"
+#endif
+
+// Drehrichtung: 0 = wie beim Vorgaenger verifiziert (CW -> Wert -)
+//               1 = invertieren, falls die neue Verdrahtung anders zaehlt
+#define ENC_INVERT_DIR 0
 
 // ==========================================
 // ABSOLUTE MOUSE (CURSOR-POSITIONIERUNG)
 // ==========================================
-// Die 8 Drehencoder sollen den Mauszeiger zuerst auf den korrespondierenden
-// On-Screen-Encoder in MagicQ setzen und DORT scrollen/klicken. Dazu wird ein
-// zweites HID-Device registriert: eine absolute Maus (digitizer-style), die
-// den ganzen Bildschirm in X=0..32767 / Y=0..32767 abbildet.
+// Die 4 Drehencoder setzen den Mauszeiger auf den korrespondierenden
+// On-Screen-Encoder in MagicQ und scrollen/klicken DORT. Dazu wird ein zweites
+// HID-Device registriert: eine absolute Maus (digitizer-style), die den ganzen
+// Bildschirm in X=0..32767 / Y=0..32767 abbildet.
 //
 // Eigene Routine statt MouseAbsolute: dessen click()/press() rufen move(0,0,0)
-// auf, was bei absoluter Maus den Cursor in die Ecke (0,0) springen lässt.
+// auf, was bei absoluter Maus den Cursor in die Ecke (0,0) springen laesst.
+
+// Relative Maus (nur fuer die HID-Reihenfolge), wird als ERSTER HID-Report
+// registriert (ordering 8): macOS akzeptiert Pointing-Devices in einem
+// Composite nur, wenn ein Maus-Report VOR evtl. Keyboard-Reports steht.
+static const uint8_t desc_rel_mouse[] = { TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(1)) };
+static uint8_t relMouseLocalID = 0;
+static bool relMouseRunning = false;
 
 static const uint8_t desc_abs_mouse[] = { TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(1)) };
 static uint8_t absMouseLocalID = 0;
 static bool absMouseRunning = false;
 
-// Eigene relative Maus (nur für Klicks), registriert als ALLERERSTER
-// HID-Report. Die HID_Mouse-Bibliothek nutzt intern ordering 20 (hinter dem
-// Keyboard 10/11) - macOS ignoriert Pointer-Buttons dann vollständig.
-static const uint8_t desc_rel_mouse[] = { TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(1)) };
-static uint8_t relMouseLocalID = 0;
-static bool relMouseRunning = false;
-
 // ====== DEBUG ======
-// 1 = ausführliche Serial-Ausgabe, 0 = normal.
 #define DEBUG_VERBOSE 1
-#define DEBUG_VERSION "ENC-DEBUG-v7-CLICKFIX"
+#define DEBUG_VERSION "ENC-DUAL-v8-SPLIT-4ENC"
 #define DEBUG_MSG(...) do { if (DEBUG_VERBOSE) { Serial.printf(__VA_ARGS__); } } while (0)
-
-void relMouseReport(int16_t x, int16_t y, int8_t wheel, uint8_t buttons) {
-  if (!relMouseRunning) {
-    DEBUG_MSG("[RELMOUSE] skip: not running\n");
-    return;
-  }
-  // Debug VOR der Mutex-Sperre: Serial läuft über USB-CDC und darf nicht
-  // unter dem USB-Mutex blockieren, sonst geht der Druck verloren.
-  DEBUG_MSG("[RELMOUSE] attempt rid=%u buttons=%u x=%d y=%d wheel=%d mounted?%d\n",
-            USB.findHIDReportID(relMouseLocalID), buttons, x, y, wheel, (int)tud_mounted());
-  CoreMutex m(&USB.mutex);
-  tud_task();
-  if (tud_hid_ready()) {
-    tud_hid_mouse_report(USB.findHIDReportID(relMouseLocalID), buttons, x, y, wheel, 0);
-  }
-  tud_task();
-}
-
-void relMouseClick(uint8_t button) {
-  DEBUG_MSG("[CLICK] down\n");
-  relMouseReport(0, 0, 0, button);
-  delay(15);
-  DEBUG_MSG("[CLICK] up\n");
-  relMouseReport(0, 0, 0, 0);
-  delay(15);
-}
 
 void absMouseBegin() {
   if (absMouseRunning) {
     return;
   }
-  // WICHTIG (macOS): Die Maus muss als ERSTER HID-Report registriert werden.
-  // macOS akzeptiert Pointing-Devices in einem Composite nur, wenn der Maus-Report
-  // vor den Keyboard-Reports steht (sonst wird der Cursor nie bewegt).
   USB.disconnect();
   relMouseLocalID = USB.registerHIDDevice(desc_rel_mouse, sizeof(desc_rel_mouse), 8, 0x0002);
   absMouseLocalID = USB.registerHIDDevice(desc_abs_mouse, sizeof(desc_abs_mouse), 9, 0x0002);
   USB.connect();
   absMouseRunning = true;
   relMouseRunning = true;
-  // USB.connect() bewirkt Re-Enumeration -> der Mac verliert kurz die
-  // USB-Verbindung. Diese Prints gehen VERLOREN, deshalb erfolgt jetzt KEINE
-  // Ausgabe hier; der Status wird in loop() beim / nach dem Mount ausgegeben.
+  // USB.connect() bewirkt Re-Enumeration -> der Rechner verliert kurz die
+  // USB-Verbindung. Diese Prints gehen VERLOREN, Status kommt in loop().
 }
 
 // Sendet Position+x-Achsen-Wheel+Buttons in EINEM HID-Report (absolut).
@@ -129,7 +107,6 @@ void absMouseReport(int16_t x, int16_t y, int8_t wheel, uint8_t buttons) {
     DEBUG_MSG("[ABSMOUSE] skip: not running\n");
     return;
   }
-  // Debug VOR der Mutex-Sperre ausgeben, s. relMouseReport().
   DEBUG_MSG("[ABSMOUSE] attempt rid=%u buttons=%u x=%d y=%d wheel=%d mounted?%d\n",
             USB.findHIDReportID(absMouseLocalID), buttons, x, y, wheel, (int)tud_mounted());
   CoreMutex m(&USB.mutex);
@@ -145,16 +122,12 @@ void absMouseMove(int16_t x, int16_t y) {
   absMouseReport(x, y, 0, 0);
 }
 
-// Linksklick GENAU an der übergebenen Position über die ABSOLUTE Maus.
-// macOS wertet einen Button im selben Report noch an der ALTEN Cursorposition
-// aus, bevor die neue absolute Position wirkt. Deshalb zuerst eine reine
-// Positionsmeldung (buttons=0), kurz warten, dann Button down/up mit
-// denselben Koordinaten.
+// Linksklick GENAU an der uebergebenen Position ueber die ABSOLUTE Maus.
 void absMouseClickAt(int16_t x, int16_t y) {
   DEBUG_MSG("[CLICKHANDLE] pos(%d,%d)\n", x, y);
   absMouseReport(x, y, 0, 0x00); // erst Cursor positionieren
   delay(40);
-  absMouseReport(x, y, 0, 0x01); // MOUSE_LEFT drücken
+  absMouseReport(x, y, 0, 0x01); // MOUSE_LEFT druecken
   delay(20);
   absMouseReport(x, y, 0, 0x00); // loslassen
   delay(10);
@@ -163,18 +136,13 @@ void absMouseClickAt(int16_t x, int16_t y) {
 // ==========================================
 // ON-SCREEN-ENCODER-ZIELPOSITIONEN (KALIBRIERUNG)
 // ==========================================
-// MagicQ im Vollbild/Maximiert: Die 8 On-Screen-Encoder des Konsolen-Layouts
-// liegen an festen Bildschirmpositionen. Hier die Zielkoordinaten (absolut in
-// 0..32767, X=links-nach-rechts, Y=oben-nach-unten).
+// MagicQ im Vollbild/Maximiert: die On-Screen-Encoder des Konsolen-Layouts
+// liegen an festen Bildschirmpositionen. Jeder der 4 lokalen Encoder hat eine
+// EIGENE Zielposition. Zur Laufzeit liegen sie in encCal.x[4]/y[4] (>/ecal.bin
+// in LittleFS). Defaults je Seite (ENC_SIDE): links = Encoder 1..4, rechts =
+// Encoder 5..8 einer 8er-Anordnung. Die Kalibrierung ist PRO RP2040 getrennt.
 //
-// Jeder Encoder hat seine EIGENE Zielposition (kein Raster-Interpolieren), damit
-// auch ein ungleichmaessiges MagicQ-Layout exakt getroffen wird. Die Defaults
-// entsprechen dem bisherigen Raster 2 Spalten x 4 Zeilen.
-//
-// Kalibrierwerte liegen in encCal.x[8] / encCal.y[8] und werden als /ecal.bin in
-// LittleFS gespeichert (siehe loadEncCal/saveEncCal).
-//
-// KALIBRIEREN (ohne Neuflashen): Pico mit gedruecktem ENCODER 1 starten ->
+// KALIBRIEREN (ohne Neuflashen): Modul mit gedruecktem ENCODER-SW 1 starten ->
 // Kalibrier-UI:
 //   Klick auf Encoder i          -> Encoder i auswaehlen (Cursor springt hin)
 //   drehen an Encoder 1           -> X grob   (+/-ENC_CAL_X_COARSE)
@@ -182,27 +150,19 @@ void absMouseClickAt(int16_t x, int16_t y) {
 //   drehen an Encoder 3           -> Y grob   (+/-ENC_CAL_Y_COARSE)
 //   drehen an Encoder 4           -> Y fein   (+/-ENC_CAL_Y_FINE)
 //   erneuter Klick auf den gewaehlten Encoder -> diesen Encoder speichern
-//   sind alle 8 gespeichert -> Neustart des Pico.
-// Jeder Encoder hat seine eigene X/Y-Position (kein Raster-Interpolieren), das
-// liegt dauerhaft in LittleFS (/ecal.bin).
+//   sind alle 4 gespeichert -> Neustart des RP2040.
 struct EncCal {
-    uint16_t x[8];
-    uint16_t y[8];
+    uint16_t x[4];
+    uint16_t y[4];
 };
-// Defaults = bisherige Raster-Werte (Enc 5 lag eine Rastung tiefer).
-static const EncCal ENC_CAL_DEFAULT = {
-    { 9000, 9000, 9000, 9000, 26000, 26000, 26000, 26000 },
-    { 4000, 13000, 20000, 27000, 7000, 13000, 20000, 27000 }
-};
-static EncCal encCal = ENC_CAL_DEFAULT;
+static EncCal encCal;
+static EncCal ENC_CAL_DEFAULT;   // wird in setup() nach ENC_SIDE befuellt
 #define ENC_CAL_FILE "/ecal.bin"
 
-// Schrittweiten der vier Dreh-Regler (Cursorstufen je Rastung).
-constexpr int32_t ENC_CAL_X_COARSE = 500;
-constexpr int32_t ENC_CAL_X_FINE   = 50;
-constexpr int32_t ENC_CAL_Y_COARSE = 500;
-constexpr int32_t ENC_CAL_Y_FINE   = 50;
-constexpr uint16_t ENC_COORD_MAX = 32767;
+#define ENC_CAL_X_COARSE 500
+#define ENC_CAL_X_FINE   50
+#define ENC_CAL_Y_COARSE 500
+#define ENC_CAL_Y_FINE   50
 
 bool loadEncCal() {
   if (!LittleFS.begin()) {
@@ -234,35 +194,18 @@ bool saveEncCal() {
   return put == sizeof(encCal);
 }
 
-#define ENC_CALIBRATE 0
-
 // ==========================================
-// 2. ZEIT-/VERHALTENS-KONFIGURATION
+// 3. ZEIT-/VERHALTENS-KONFIGURATION
 // ==========================================
-const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit aller Tasten
-const unsigned long SHIFT_KEEPALIVE_MS = 60; // Nachsendung Shift DOWN, solange gehalten
+const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit der Encoder-Switches
 
-// ============================================================
-// Encoder-Steuerung per absoluter Maus (Buttons-only Busking)
-// ============================================================
-// MagicQ am PC/Mac zeigt im Konsolen-Layout (Vollbild/maximiert) 8 virtuelle
-// Drehencoder um den Touch-Screen-Bereich. Jede Aktion an einem physischen Rad
-// positioniert den Mauszeiger zuerst per ABSOLUTER Maus genau auf den passenden
-// On-Screen-Encoder (siehe encCal.x/y oben) und sendet dort dann das
-// Mausrad-Scrolling bzw. den Linksklick.
-//
-// WICHTIG: Es wird KEIN Keyboard-Mode-Toggle (CAPS LOCK etc.) mehr verwendet.
-// Das Mausrad-Scrolling über den On-Screen-Encodern funktioniert in jedem
-// MagicQ Keyboard-Mode, auch in "Playback shortcuts" (den der Fader-Wing
-// braucht).
-//
-// MagicQ-Syntax am PC: nicht "1+" / "1-" tippen. Encoder-Inkrement gibt es am
-// PC nur über die On-Screen-Encoder (Maus) oder MIDI/OSC (im Demo-Modus gesperrt).
+// Encoder-Steuerung per absoluter Maus (Buttons-only Busking).
+// Jedes Rad positioniert den Cursor zuerst per ABSOLUTER Maus auf den passenden
+// On-Screen-Encoder und sendet dort dann Mausrad-Scrolling bzw. Linksklick.
+// Kein Keyboard-Mode-Toggle: funktioniert in jedem MagicQ Keyboard-Mode.
 constexpr signed char MOUSE_WHEEL_STEP = 1;   // Rasten pro MagicQ-Encoder-Schritt
 
-// Kurzer LED-Blink bei jedem gesendeten Tastendruck (Diagnose).
-// Nicht-blockierend: setzt die LED an und lässt serviceLed() den Blink
-// zeitgesteuert abbauen, damit der Loop keine 8 ms stillsteht.
+// Kurzer LED-Blink bei jeder Aktion (Diagnose), nicht-blockierend.
 const unsigned long LED_FLASH_MS = 8;
 unsigned long lastLedOnMs = 0;
 bool ledFlashPending = false;
@@ -273,7 +216,6 @@ void ledFlash() {
   ledFlashPending = true;
 }
 
-// In loop() aufrufen: LED nach LED_FLASH_MS wieder abdunkeln.
 void serviceLed() {
   if (ledFlashPending && (millis() - lastLedOnMs >= LED_FLASH_MS)) {
     ledFlashPending = false;
@@ -281,60 +223,26 @@ void serviceLed() {
   }
 }
 
-// Sendet eine Tastenkombination mit gedrückter Strg-Taste
-void sendCtrlKey(char c) {
-  Keyboard.press(KEY_LEFT_CTRL);
-  Keyboard.write(c);
-  Keyboard.release(KEY_LEFT_CTRL);
-}
-
-Adafruit_MCP23X17 mcp;
-bool mcpOK = false;   // true, wenn der MCP23017 erkannt wurde
-bool shiftStable = HIGH;
-
-// ==========================================
-// 3. MAPPINGS & CONFIGURATION
-// ==========================================
-
-// Attribute in MagicQ via Strg-Kombination: INT/POS/COL/BEAM
-const char fKeyMapping[] = {'I', 'P', 'K', 'J'};
-
-// Ctrl+Kombinationen: Group = Strg+g, FX = Strg+f
-const char customKeyMapping[] = {'g', 'f'};
-
 // ==========================================
 // 4. STATUS-VARIABLEN (SPEICHER)
 // ==========================================
-
-bool lastEncBtnState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
-unsigned long lastEncDebounceTime[] = {0, 0, 0, 0, 0, 0, 0, 0};
-bool encBtnStable[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
-
-bool lastFKeyState[] = {HIGH, HIGH, HIGH, HIGH};
-unsigned long lastFKeyDebounceTime[] = {0, 0, 0, 0};
-bool fKeyStable[] = {HIGH, HIGH, HIGH, HIGH};
-
-bool lastShiftState = HIGH;
-unsigned long lastShiftDebounce = 0;
-
-bool lastCustomKeyState[] = {HIGH, HIGH};
-unsigned long lastCustomKeyDebounceTime[] = {0, 0};
-bool customKeyStable[] = {HIGH, HIGH};
+bool lastEncBtnState[] = {HIGH, HIGH, HIGH, HIGH};
+unsigned long lastEncDebounceTime[] = {0, 0, 0, 0};
+bool encBtnStable[] = {HIGH, HIGH, HIGH, HIGH};
 
 // ==========================================
 // SETUP
 // ==========================================
 
-// ============================================================
-// KALIBRIER-UI (Start mit gedruecktem ENCODER 1)
-// ============================================================
-//   Klick auf Encoder i           -> Encoder i auswaehlen (Cursor springt hin)
-//   drehen Encoder 1 / 2          -> X grob / X fein
-//   drehen Encoder 3 / 4          -> Y grob / Y fein
-//   erneuter Klick auf Encoder i  -> Position von Encoder i SPEICHERN
-//   alle 8 gespeichert           -> Neustart des Pico (einziger Ausgang)
-// Der Mauszeiger folgt dem gewaehlten Encoder, damit man sieht, was man just
-// verstellt - das ist Absicht, nicht ein Bug.
+// Neustart des RP2040 (Watchdog-Reset).
+void encReboot() {
+  Serial.println("[CAL] alle 4 Encoder gespeichert -> Neustart");
+  Serial.flush();
+  delay(300);
+  watchdog_enable(500, true);
+  for (;;) { delay(10); }
+}
+
 void encCalBlink(uint8_t n) {
   for (uint8_t i = 0; i < n; i++) {
     digitalWrite(ledPin, HIGH);
@@ -345,38 +253,30 @@ void encCalBlink(uint8_t n) {
   delay(400);
 }
 
-// Neustart des Pico (Watchdog-Reset).
-void encReboot() {
-  Serial.println("[CAL] alle 8 Encoder gespeichert -> Neustart");
-  Serial.flush();
-  delay(300);
-  watchdog_enable(500, true);       // 2. Parameter true = Reset statt Panic
-  for (;;) { delay(10); }
-}
-
+// KALIBRIER-UI (Start mit gedruecktem ENCODER-SW 1):
+//   Klick auf Encoder i           -> Encoder i auswaehlen (Cursor springt hin)
+//   drehen Encoder 1 / 2          -> X grob / X fein
+//   drehen Encoder 3 / 4          -> Y grob / Y fein
+//   erneuter Klick auf Encoder i  -> Position von Encoder i SPEICHERN
+//   alle 4 gespeichert            -> Neustart des RP2040
 void encCalUi() {
-  bool saved[8] = { false };
+  bool saved[4] = { false };
   uint8_t sel = 0xFF;
   uint8_t done = 0;
-  uint16_t swPrev = 0xFFFF;
 
-  Serial.println("[CAL] Positionskalibrierung der 8 On-Screen-Encoder");
+  Serial.println("[CAL] Positionskalibrierung der 4 On-Screen-Encoder");
   Serial.println("[CAL] Klick auf Encoder = auswaehlen | Enc1 X grob, Enc2 X fein,");
   Serial.println("[CAL] Enc3 Y grob, Enc4 Y fein | Klick auf gewaehlten = speichern");
 
-  for (;;) {
-    if (!mcpOK) {
-      Serial.println("[CAL] ABBRUCH: MCP23017 fehlt - nicht kalibrierbar");
-      return;
-    }
-    uint16_t sw = mcp.readGPIOAB();
-
-    // 1) Klicks: erst auswaehlen, beim zweiten Klick auf denselben Encoder
-    //    die Position als gespeichert markieren.
-    for (int i = 0; i < 8; i++) {
-      bool pressed = ((sw >> encBtnMCP[i]) & 1) == 0;
-      bool was = ((swPrev >> encBtnMCP[i]) & 1) == 0;
-      if (!(pressed && !was)) continue;
+  while (true) {
+    // 1) Klicks (direkt an den GPIOs, aktiv-LOW). Entprellt ueber die
+    //    blockierende UI-Schleife (Delay ~10 ms je Durchlauf).
+    static bool last[4] = {HIGH, HIGH, HIGH, HIGH};
+    for (int i = 0; i < 4; i++) {
+      bool pressed = (digitalRead(ENC_SW[i]) == LOW);
+      bool risingEdge = pressed && !last[i];
+      last[i] = pressed;
+      if (!risingEdge) continue;
 
       if (sel == 0xFF || sel != i) {
         sel = (uint8_t)i;
@@ -387,17 +287,17 @@ void encCalUi() {
       } else if (!saved[i]) {
         saved[i] = true;
         done++;
-        Serial.printf("[CAL] Encoder %u gespeichert: x=%u y=%u (%u/8)\n", sel + 1,
+        Serial.printf("[CAL] Encoder %u gespeichert: x=%u y=%u (%u/4)\n", sel + 1,
                       encCal.x[sel], encCal.y[sel], done);
         encCalBlink(done);
-        if (done >= 8) {
+        if (done >= 4) {
           if (saveEncCal()) {
             Serial.println("[CAL] /ecal.bin geschrieben");
-            encCalBlink(8);
+            encCalBlink(4);
             encReboot();
           } else {
             Serial.println("[CAL] FEHLER beim Schreiben von /ecal.bin - "
-                           "LittleFS vorhanden? (platformio.ini)");
+                           "LittleFS vorhanden? (platformio.ini board_build.filesystem_size=64)");
           }
         }
       } else {
@@ -406,9 +306,7 @@ void encCalUi() {
       }
     }
 
-    // 2) Drehregler X1/X2 = X grob/fein, X3/X4 = Y grob/fein des gewaehlten
-    //    Encoders. Encoder 1..4 sind im Kalibrier-Modus reine Regler; die
-    //    Zielpositionen kommen aus dem MCP-Klick.
+    // 2) Drehregler X1/X2 = X grob/fein, X3/X4 = Y grob/fein des gewaehlten Encoders.
     if (sel != 0xFF) {
       for (int k = 0; k < 4; k++) {
         unsigned char dir = encoders[k]->process();
@@ -417,7 +315,6 @@ void encCalUi() {
         bool coarse = ((k == 0) || (k == 2));
         int32_t step = coarse ? ENC_CAL_X_COARSE : ENC_CAL_X_FINE;
         if (k >= 2) step = coarse ? ENC_CAL_Y_COARSE : ENC_CAL_Y_FINE;
-        // DIR_CW = nach rechts / nach unten -> +, DIR_CCW = -
         int32_t delta = (dir == DIR_CW) ? step : -step;
         uint16_t *target = cx ? &encCal.x[sel] : &encCal.y[sel];
         int32_t v = (int32_t)(*target) + delta;
@@ -431,30 +328,22 @@ void encCalUi() {
       }
     }
 
-    swPrev = sw;
-    delay(10);   // Klicks werden erst nach ~20 ms als Flanke gewertet
+    delay(10);
   }
 }
 
-// ENCODER 1 beim Start gedrueckt -> Kalibrier-UI (Klick auf GPA0 am MCP23017,
-// zweimal gelesen damit ein Kontaktpreller nicht schon beim Start ausloest).
+// ENCODER-SW 1 beim Start gedrueckt -> Kalibrier-UI (zweimal gelesen, damit
+// ein Kontaktpreller nicht schon beim Start ausloest).
 bool encCalBootKey() {
-  if (!mcpOK) return false;
-  uint16_t sw = mcp.readGPIOAB();
-  if (sw & (1u << encBtnMCP[0])) return false;   // nicht gedrueckt -> normal
+  if (digitalRead(ENC_SW[0]) != LOW) return false;
   delay(60);
-  sw = mcp.readGPIOAB();
-  return (sw & (1u << encBtnMCP[0])) == 0;
+  return digitalRead(ENC_SW[0]) == LOW;
 }
 
 void setup() {
   Serial.begin(115200);
-
-  // Warte kurz, bis der Serial-Monitor sicher verbunden ist, damit die
-  // Boot-Ausgabe nicht verloren geht.
   delay(1500);
 
-  // Onboard-LED als Boot-/Diagnose-Anzeige (3x Blinken)
   pinMode(ledPin, OUTPUT);
   for (int i = 0; i < 3; i++) {
     digitalWrite(ledPin, HIGH);
@@ -463,68 +352,48 @@ void setup() {
     delay(100);
   }
 
-  DEBUG_MSG("========== %s ==========\n", DEBUG_VERSION);
-
-  // USB-HID starten (Keyboard + Absolute-Mouse + relative Mouse als Composite).
-  // Die relative Maus wird als erster HID-Report registriert (ordering 8),
-  // die Absolut-Maus folgt (9), das Keyboard zuletzt (10/11) - macOS verlangt
-  // Maus-Reports VOR den Keyboard-Reports im Composite.
-  Keyboard.begin();
-  absMouseBegin();
-
-  Serial.println("[BOOT] ready: encoders=F5-F8=shift=GP18-22, group=GP26, fx=GP27");
-
-  // I²C für MCP23017 initialisieren
-  Wire.setSDA(I2C_SDA);
-  Wire.setSCL(I2C_SCL);
-  Wire.begin();
-
-  // MCP23017 mit Pullups konfigurieren (Tasten schalten gegen GND)
-  // Fehlgeschlagene Erkennung => mcpOK=false, die Encoder-Klicks werden
-  // sicher übersprungen statt die I²C-Register zu lesen (BusIO-Crash).
-  if (!mcp.begin_I2C(0x20)) {
-    mcpOK = false;
-    Serial.println("[WARN] MCP23017 nicht erkannt! (I2C-Adresse 0x20?) - Encoder-Klicks gehen nicht, Rest weiter");
-  } else {
-    mcpOK = true;
-    Serial.println("[BOOT] MCP23017 erkannt (0x20)");
-    // Encoder-SW (GPA0-GPA7): INPUT_PULLUP
-    for (int i = 0; i < 8; i++) {
-      mcp.pinMode(encBtnMCP[i], INPUT_PULLUP);
-    }
-  }
-
-  // Encoder-Pins (CLK/DT): interner Pullup
-  int encPins[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-  for (int i = 0; i < 16; i++) {
+  // Encoder-Pins (A/B): interner Pullup.
+  int encPins[] = {29, 28, 27, 26, 3, 4, 5, 6};
+  for (uint8_t i = 0; i < 8; i++) {
     pinMode(encPins[i], INPUT_PULLUP);
   }
 
-  // F-Tasten (GP18-GP21): interne Pullups
-  for (int i = 0; i < 4; i++) {
-    pinMode(fKeyPins[i], INPUT_PULLUP);
+  // Encoder-Switches (gegen GND): interner Pullup, aktiv-LOW.
+  for (uint8_t i = 0; i < 4; i++) {
+    pinMode(ENC_SW[i], INPUT_PULLUP);
   }
 
-  // Shift (GP22): interner Pullup
-  pinMode(shiftKeyPin, INPUT_PULLUP);
+  // Default-Zielpunkte je Seite.
+  if (ENC_SIDE == 1) {
+    // rechter Baustein: On-Screen-Encoder 5..8
+    ENC_CAL_DEFAULT = EncCal{ { 26000, 26000, 26000, 26000 },
+                              { 7000, 13000, 20000, 27000 } };
+  } else {
+    // linker Baustein: On-Screen-Encoder 1..4
+    ENC_CAL_DEFAULT = EncCal{ { 9000, 9000, 9000, 9000 },
+                              { 4000, 13000, 20000, 27000 } };
+  }
+  encCal = ENC_CAL_DEFAULT;
 
-  // Group (GP26) / FX (GP27): interne Pullups
-  pinMode(groupKeyPin, INPUT_PULLUP);
-  pinMode(fxKeyPin, INPUT_PULLUP);
+  // USB-HID starten (absolute + relative Maus als Composite). Es gibt KEINE
+  // Tastatur mehr: dieses Modul hat nur die 4 Drehencoder mit Klick.
+  absMouseBegin();
 
-  // Kalibrierdaten aus LittleFS (sonst die bisherigen Raster-Defaults).
+  DEBUG_MSG("========== %s (Seite %s) ==========\n", DEBUG_VERSION, ENC_SIDE_NAME);
+
+  // Kalibrierdaten aus LittleFS (sonst die Defaults der Seite).
   if (loadEncCal()) {
     Serial.println("[CAL] /ecal.bin geladen:");
   } else {
     Serial.println("[CAL] Defaults (kein /ecal.bin):");
   }
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 4; i++) {
     Serial.printf("[CAL]   Enc %u: x=%u y=%u\n", i + 1, encCal.x[i], encCal.y[i]);
   }
 
-  // Mit ENCODER 1 gedrueckt starten -> Positionskalibrierung.
+  // Mit ENCODER-SW 1 gedrueckt starten -> Positionskalibrierung.
   if (encCalBootKey()) {
-    Serial.println("[CAL] ENCODER 1 beim Start gedrueckt -> Kalibrier-UI");
+    Serial.println("[CAL] ENCODER-SW 1 beim Start gedrueckt -> Kalibrier-UI");
     encCalUi();
     Serial.println("[CAL] Kalibrierung beendet");
   }
@@ -537,146 +406,25 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // Status einmalig und nach jedem (Re-)Mount ausgeben. Die Boot-Prints nach
-  // Keyboard.begin()/absMouseBegin() gehen sonst beim USB-Re-Enum verloren.
   static bool mountedWas = false;
   static unsigned long lastStatusPrint = 0;
   bool mountedNow = (tud_mounted() != 0);
   if (mountedNow && (!mountedWas || (currentMillis - lastStatusPrint > 2000))) {
     lastStatusPrint = currentMillis;
-
-    // Live-Ping an den MCP23017 (Adresse 0x20): antwortet er beim I²C-Scan?
-    Wire.beginTransmission(0x20);
-    int ack = Wire.endTransmission();
-
-    Serial.printf("[STATUS] mounted=1 mcpOK=%d ack0x20=%d relLocalID=%u absLocalID=%u relRID=%u absRID=%u\n",
-                  mcpOK ? 1 : 0, ack,
+    Serial.printf("[STATUS] mounted=1 relLocalID=%u absLocalID=%u relRID=%u absRID=%u\n",
                   relMouseLocalID, absMouseLocalID,
                   USB.findHIDReportID(relMouseLocalID), USB.findHIDReportID(absMouseLocalID));
-    if (!mcpOK) {
-      Serial.println("[WARN] MCP23017 NICHT erkannt -> Encoder-Klicks deaktiviert!");
-    }
-    if (ack != 0) {
-      Serial.println("[WARN] I2C 0x20 antwortet nicht (ack != 0). Verdrahtung/Pullups/Adresse pruefen.");
-    } else if (!mcpOK) {
-      Serial.println("[INFO] MCP antwortet jetzt auf 0x20 -> ggf. Neustart, wird dann erkannt.");
-    }
-
-    // Vollständiger Adress-Scan, um den MCP bei abweichender Adresse zu finden.
-    Serial.print("[I2CSCAN] ");
-    bool any = false;
-    for (uint8_t addr = 0x03; addr < 0x78; addr++) {
-      Wire.beginTransmission(addr);
-      if (Wire.endTransmission() == 0) {
-        Serial.printf("0x%02X ", addr);
-        any = true;
-      }
-    }
-    if (!any) {
-      Serial.print("kein Geraet gefunden!");
-    }
-    Serial.println();
   }
   mountedWas = mountedNow;
 
-#if PIN_FINDER
-  const int findPins[] = {20, 21, 22, 23, 24, 26, 27, 28};
-  static int lastFound = -1;
-  int found = -1;
-  for (unsigned int i = 0; i < sizeof(findPins)/sizeof(findPins[0]); i++) {
-    if (digitalRead(findPins[i]) == LOW) {
-      found = i;
-      break;
-    }
-  }
-  if (found != lastFound) {
-    lastFound = found;
-    digitalWrite(ledPin, LOW);
-    for (int b = 0; b <= found; b++) {
-      digitalWrite(ledPin, HIGH);
-      delay(150);
-      digitalWrite(ledPin, LOW);
-      delay(150);
-    }
-  }
-  delay(50);
-  return;
-#else
-
-  // ------------------------------------------
-  // TEIL 1: SHIFT-TASTE (GP22) - Modifier, wird gehalten
-  // ------------------------------------------
-
-  bool readingShift = digitalRead(shiftKeyPin);
-  if (readingShift != lastShiftState) {
-    lastShiftDebounce = currentMillis;
-  }
-  if ((currentMillis - lastShiftDebounce) > DEBOUNCE_MS) {
-    if (readingShift != shiftStable) {
-      shiftStable = readingShift;
-      ledFlash();
-      if (readingShift == LOW) {
-        Keyboard.press(KEY_LEFT_SHIFT);
-      } else {
-        Keyboard.release(KEY_LEFT_SHIFT);
-      }
-    }
-  }
-  lastShiftState = readingShift;
-
-  // Keep-alive: macOS/MagicQ werten ein einzelnes Shift-DOWN als "Tap" ab.
-  // Während die Shift-Taste gehalten wird, sendet das Pico periodisch das
-  // DOWN-Report erneut (wie der Auto-Repeat einer echten Tastatur).
-  if (shiftStable == LOW) {
-    static unsigned long lastShiftKeep = 0;
-    if (currentMillis - lastShiftKeep > SHIFT_KEEPALIVE_MS) {
-      lastShiftKeep = currentMillis;
-      Keyboard.press(KEY_LEFT_SHIFT);
-    }
-  }
-
-  // ------------------------------------------
-  // TEIL 2: ENCODER DREHUNG & KLICK (8 Stück)
-  // ------------------------------------------
-
-#if ENC_CALIBRATE
-  // Kalibrier-Modus: Cursor wandert nacheinander auf jeden der 8 Zielpunkte.
-  for (int i = 0; i < 8; i++) {
-    absMouseMove((int16_t)encCal.x[i], (int16_t)encCal.y[i]);
-    Serial.printf("CALIB target %d: x=%u y=%u\n", i + 1, encCal.x[i], encCal.y[i]);
-    for (int b = 0; b <= i; b++) {
-      digitalWrite(ledPin, HIGH);
-      delay(150);
-      digitalWrite(ledPin, LOW);
-      delay(150);
-    }
-    delay(4000);
-  }
-  return;
-#else
-
-  // Encoder-Klick-Status: ein I²C-Read für alle 8 SW statt 8 Einzelreads.
-  // GPA0..GPA7 (Encoder-SW 1..8) = Bits 0..7 des GPIOAB-Registers (aktiv-Low).
-  uint16_t encSw = mcpOK ? mcp.readGPIOAB() : 0xFFFF;
-
-  // Raw-Änderungen am MCP ausgeben (aktiv-Low: Bit=0 => Taste gedrückt).
-  static uint16_t lastEncSwRaw = 0xFFFF;
-  if (DEBUG_VERBOSE && mcpOK && encSw != lastEncSwRaw) {
-    Serial.printf("[ENCRAW] GPIOAB=0x%04X (gedrückt: ", encSw);
-    for (int b = 0; b < 8; b++) {
-      if (!(encSw & (1 << b))) {
-        Serial.printf("ENC%d ", b + 1);
-      }
-    }
-    Serial.println(")");
-    lastEncSwRaw = encSw;
-  }
-
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 4; i++) {
     // Drehung: process() liefert DIR_CW, DIR_CCW oder DIR_NONE
     unsigned char dir = encoders[i]->process();
     if (dir == DIR_CW || dir == DIR_CCW) {
       signed char step = (dir == DIR_CW) ? -MOUSE_WHEEL_STEP : MOUSE_WHEEL_STEP;
+#if ENC_INVERT_DIR
+      step = -step;
+#endif
       // Cursor zuerst auf den On-Screen-Encoder positionieren, dann scrollen.
       absMouseReport((int16_t)encCal.x[i], (int16_t)encCal.y[i], step, 0);
       Serial.printf("ENC %d -> pos(%u,%u) wheel %+d\n", i + 1,
@@ -684,12 +432,8 @@ void loop() {
       ledFlash();
     }
 
-    // Encoder-Klick: nur auswerten, wenn der Expander vorhanden ist.
-    // Ohne MCP bleibt der Klick deaktiviert, aber Dreh- und F-Tasten
-    // funktionieren trotzdem weiter.
-    if (!mcpOK) continue;
-
-    bool readingEnc = ((encSw >> encBtnMCP[i]) & 1) ? HIGH : LOW;
+    // Encoder-Klick (direkt am GPIO, aktiv-LOW, entprellt).
+    bool readingEnc = (digitalRead(ENC_SW[i]) == LOW) ? LOW : HIGH;
     if (readingEnc != lastEncBtnState[i]) {
       lastEncDebounceTime[i] = currentMillis;
     }
@@ -706,60 +450,7 @@ void loop() {
     }
     lastEncBtnState[i] = readingEnc;
   }
-#endif
-
-  // ------------------------------------------
-  // TEIL 3: ATTRIBUT-TASTEN (F5 bis F8)
-  // ------------------------------------------
-
-  for (int i = 0; i < 4; i++) {
-    bool readingFKey = digitalRead(fKeyPins[i]);
-    if (readingFKey != lastFKeyState[i]) {
-      lastFKeyDebounceTime[i] = currentMillis;
-    }
-    if ((currentMillis - lastFKeyDebounceTime[i]) > DEBOUNCE_MS) {
-      if (readingFKey != fKeyStable[i]) {
-        fKeyStable[i] = readingFKey;
-        if (readingFKey == LOW) {
-          ledFlash();
-          sendCtrlKey(fKeyMapping[i]);
-        }
-      }
-    }
-    lastFKeyState[i] = readingFKey;
-  }
-
-  // ------------------------------------------
-  // TEIL 4: CUSTOM-TASTEN (Group, FX)
-  // ------------------------------------------
-
-  const int customKeyPins[] = {groupKeyPin, fxKeyPin};
-  for (int i = 0; i < 2; i++) {
-    int readingCustomKey = digitalRead(customKeyPins[i]);
-
-    if (readingCustomKey != lastCustomKeyState[i]) {
-      lastCustomKeyDebounceTime[i] = currentMillis;
-    }
-
-    if ((currentMillis - lastCustomKeyDebounceTime[i]) > DEBOUNCE_MS) {
-      if (readingCustomKey != customKeyStable[i]) {
-        customKeyStable[i] = readingCustomKey;
-        if (readingCustomKey == LOW) {
-          Serial.print("[KEY] GPIO");
-          Serial.print(customKeyPins[i]);
-          Serial.print(" -> Ctrl+");
-          Serial.print(customKeyMapping[i]);
-          Serial.println();
-          ledFlash();
-          sendCtrlKey(customKeyMapping[i]);
-        }
-      }
-    }
-    lastCustomKeyState[i] = readingCustomKey;
-  }
 
   serviceLed();
-
   delay(2);
-#endif
 }

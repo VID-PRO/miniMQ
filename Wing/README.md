@@ -2,7 +2,7 @@
 
 This handbook describes building your own lighting console modeled after the modern **MagicQ Compact Mini Connect layout**. The console controls the MagicQ software via **keyboard commands (HID emulation)** using the software's built-in playback shortcuts function.
 
-> **Note:** The firmware uses a **3×13 button grid**. This handbook documents the keymap according to the **verified** state (checked via the firmware's diagnostic dump). The labeling of the individual keys can follow your own needs – what matters is the cell → key code mapping in the table below.
+> **Note:** The firmware uses a **5×13 button grid**. This handbook documents the keymap according to the **verified** state (checked via the firmware's diagnostic dump). The labeling of the individual keys can follow your own needs – what matters is the cell → key code mapping in the table below.
 
 ## Table of contents
 
@@ -12,21 +12,27 @@ This handbook describes building your own lighting console modeled after the mod
 - [2. Required hardware & shopping list](#2-required-hardware-shopping-list)
 - [3. Hardware wiring](#3-hardware-wiring)
   - [3.1 The faders (via the 74HC4067 multiplexer)](#31-the-faders-via-the-74hc4067-multiplexer)
-  - [3.2 The key matrix (3x13 matrix) & diode wiring plan](#32-the-key-matrix-3x13-matrix-diode-wiring-plan)
+  - [3.2 The key matrix (5x13 matrix) & diode wiring plan](#32-the-key-matrix-5x13-matrix-diode-wiring-plan)
 - [4. Installation & flashing the bootloader](#4-installation-flashing-the-bootloader)
 - [5. Setup in MagicQ](#5-setup-in-magicq)
 - [Project structure](#project-structure)
 
 ## 1. The layout (physical arrangement)
 
-The console has **3 rows of 13 buttons** and the fader section below them. At the top: the **S row** (select playback) with **MASTER GO** far right. Middle: the **GO row**. Bottom: the **flash row (F1–F10)** with **SWOP/PREV** on the left and **MASTER PAUSE** far right.
+The console has **5 rows of 13 buttons** and the fader section below them.
+
+* **Row 1 (GP2):** **DBO** + **NEXT PAGE** + the **S row** (select playback 1–10) with **REL** far right.
+* **Row 2 (GP3):** **ADD/SWAP** + **PREV PAGE** + the **GO row** (GO 1–10) with **PAUSE MASTER** far right.
+* **Row 3 (GP4):** **ALT** + the **flash row (F1–F10)** with **GO MASTER** far right.
+* **Row 4 (GP5):** the **attribute keys** — GROUP, INT, POS, COL, BEAM, FX, SHIFT.
+* **Row 5 (GP6):** free (unused cells, easy to extend).
 
 ```
                                       [ MINI CONNECT WING ]
 =====================================================================================================
-  ALT  |  NEXT |  S1  |  S2  |  S3  |  S4  |  S5  |  S6  |  S7  |  S8  |  S9  |  S10|  MASTER GO
-  DBO  |  NEXT |  GO1 |  GO2 |  GO3 |  GO4 |  GO5 |  GO6 |  GO7 |  GO8 |  GO9 |  GO10|  RELEASE
-  SWOP |  PREV |  F1  |  F2  |  F3  |  F4  |  F5  |  F6  |  F7  |  F8  |  F9  |  F10 | MASTER PAUSE
+  DBO  | NEXT PAGE|  S1  |  S2  |  S3  |  S4  |  S5  |  S6  |  S7  |  S8  |  S9  |  S10 |  REL
+  ADD/SWAP | PREV PAGE| GO1 |  GO2 |  GO3 |  GO4 |  GO5 |  GO6 |  GO7 |  GO8 |  GO9 |  GO10| PAUSE MASTER
+  ALT  |    -     |  F1  |  F2  |  F3  |  F4  |  F5  |  F6  |  F7  |  F8  |  F9  |  F10 |  GO MASTER
 =====================================================================================================
 
     ||                    ||      ||      ||      ||      ||      ||      ||      ||      ||      ||
@@ -36,29 +42,38 @@ The console has **3 rows of 13 buttons** and the fader section below them. At th
 
 ### 1.1 Firmware keymap (verified)
 
-The mapping is defined in `src/main.cpp` as `KEYMAP[3][13]` and checked via the diagnostic combination S10+GO10 (which types the cell table into the editor):
+The mapping is defined in `src/main.cpp` as `KEYMAP[5][13]` and checked via the diagnostic combination S10+GO10 (which types the cell table into the editor):
 
 | Cell | Key(s) | Key code | Function in MagicQ "Playback shortcuts" |
 |------|--------|----------|-----------------------------------------|
-| 0,0   | ALT      | `Ctrl+Alt+0` (hold) | **Dead Black Out (DBO)** short-circuit |
-| 0,1   | NEXT     | `[`        | Next playback page |
+| 0,0   | DBO      | `F11`      | **Dead Black Out** (Mac keyboard layout) |
+| 0,1   | NEXT PAGE | `[`      | Next playback page |
 | 0,2–0,11 | S1–S10 | `1 2 3 4 5 6 7 8 9 0` | **Select Playback 1–10** |
-| 0,12  | MASTER GO | `Space`   | **Manual GO** |
-| 1,0   | DBO      | `F11`      | **Dead Black Out** (Mac keyboard layout) |
-| 1,1   | NEXT     | `[`        | Next playback page (2nd key) |
+| 0,12  | REL      | `-`        | **Release Playback** |
+| 1,0   | ADD/SWAP | `` ` ``    | **Add/Swap** |
+| 1,1   | PREV PAGE | `]`      | Previous playback page |
 | 1,2–1,11 | GO1–GO10 | `q w e r t y u i o p` | **GO Playback 1–10** |
-| 1,12  | RELEASE | `-`       | **Release Playback** |
-| 2,0   | SWOP     | `` ` ``    | **Add/Swap** |
-| 2,1   | PREV     | `]`        | Previous playback page |
+| 1,12  | PAUSE MASTER | `#`  | **Manual STOP** |
+| 2,0   | ALT      | `Ctrl+Alt+0` (hold) | **Dead Black Out (DBO)** short-circuit |
+| 2,1   | –        | –          | unused |
 | 2,2–2,11 | F1–F10  | `\ z x c v b n m , .` | **Flash Playback 1–10** (momentary) |
-| 2,12  | MASTER PAUSE | `#`  | **Manual STOP** |
+| 2,12  | GO MASTER | `Space`   | **Manual GO** |
+| 3,2   | GROUP    | `Ctrl+G`   | Open **Group** window |
+| 3,3   | INT      | `Ctrl+I`   | **Intensity** window |
+| 3,4   | POS      | `Ctrl+P`   | **Position** window |
+| 3,5   | COL      | `Ctrl+K`   | **Color** window |
+| 3,6   | BEAM     | `Ctrl+J`   | **Beam** window |
+| 3,7   | FX       | `Ctrl+F`   | **FX** window |
+| 3,8   | SHIFT    | `Shift` (held) | Modifier |
+| 4,0–4,12 | –       | –          | free |
 
 **Special firmware behaviors:**
 
 * **Flash (F1–F10):** MagicQ "Test" keys toggle the playback to 100% – the firmware therefore sends a key press (**on**) when pressed and again (**off**) when released. Result: a **momentary** flash while your finger is on the key.
 * **S + GO (same playback) = PAUSE/STOP:** While S_n and GO_n are held together, the firmware sends the **STOP key** (`a s d f g h j k l ;`). STOP is a toggle in MagicQ – every press pauses/starts. To avoid a "ws" ghost key press, each S/GO key is delayed ~40 ms; the chord detection decides whether STOP or the individual key is sent.
-* **ALT:** held like a modifier (`Ctrl+Alt+0`) until the key is released.
-* **MASTER GO / MASTER PAUSE:** in this layout they sit top right (GO) or bottom right (PAUSE) instead of being stacked vertically.
+* **Hold keys (ALT, GROUP, INT, POS, COL, BEAM, FX, SHIFT, GO MASTER):** pressed like modifiers (`Ctrl+Alt+0`, `Ctrl+<key>`, `Shift`) until released. Held keys are re-typed every ~500 ms (keep-alive loop) because MagicQ's front-stop interrupts HID key presses mid-hold.
+* **GO MASTER / PAUSE MASTER** sit on the **middle row** right (GO) / **row 2** right (PAUSE) instead of being stacked vertically.
+* **Row 4 = attribute keys:** the graphical windows (GROUP/INT/POS/COL/BEAM/FX) and SHIFT now live on the wing (they used to be hardware buttons on the encoder module).
 
 **Fader handling (direct drag on the on-screen faders):**
 
@@ -117,9 +132,9 @@ PB2–PB9 are interpolated automatically between X(PB1) and X(PB10). Values are 
 * **11x slide potentiometers (faders)**:
   * **Recommendation**: Bourns PTA6043 or ALPS RS6011Y.
   * **Specification**: **10k Ohm, LINEAR** (Important: labeled "B10K" or "10K Lin"). **60mm** travel corresponds to the original.
-* **38x mechanical key switches** (3×13 grid, 38 cells populated, 1 spare):
+* **46x mechanical key switches** (5×13 grid, 44 cells populated + 2 spare):
   * **Recommendation**: Cherry MX Black or Cherry MX Red (linear feel without audible clicking for fast, silent flashing).
-* **38x keycaps**: standard 1U size. Suggested color scheme: gray (S), blue (Flash), green (GO).
+* **46x keycaps**: standard 1U size. Suggested color scheme: gray (S), blue (Flash), green (GO).
 * **38x diodes**: model **1N4148** (indispensable for avoiding "ghosting" in the key matrix).
 
 ## 3. Hardware wiring
@@ -133,13 +148,13 @@ The Pico has only 3 analog inputs (ADC), but we need 11 inputs for 10 playbacks 
   * **VCC** -> 3V3 (Pico pin 36)
   * **GND** -> GND (Pico pin 38)
   * **SIG / COM** -> **GP27** (Pico pin 32 / ADC1)
-  * **S0** -> **GP17** (Pico pin 22)
-  * **S1** -> **GP18** (Pico pin 24)
-  * **S2** -> **GP19** (Pico pin 25)
-  * **S3** -> **GP20** (Pico pin 26)
+  * **S0** -> **GP20** (Pico pin 26)
+  * **S1** -> **GP21** (Pico pin 27)
+  * **S2** -> **GP22** (Pico pin 29)
+  * **S3** -> **GP26** (Pico pin 31 / ADC0)
 
-### 3.2 The key matrix (3x13 matrix) & diode wiring plan
-To save pins, we wire the keys in 3 rows and 13 columns. A **1N4148** diode is soldered onto each switch to prevent false triggers when pressing multiple keys at once (ghosting).
+### 3.2 The key matrix (5x13 matrix) & diode wiring plan
+To save pins, we wire the keys in **5 rows and 13 columns**. A **1N4148** diode is soldered onto each switch to prevent false triggers when pressing multiple keys at once (ghosting).
 
 **There are two valid combinations of diode direction and scan polarity — the sections must match!**
 
@@ -165,7 +180,7 @@ Row line (row from Pico output, e.g. GP2)
                        (cathode / black ring)
                                |
                                v
-Column line (column to Pico input, e.g. GP6)
+Column line (column to Pico input, e.g. GP7)
 ```
 
 Current path when pressing a key: **Column** (pull-up, HIGH) -> **Anode** -> **Cathode** -> **Switch** -> **Row** (LOW). The diode conducts current from the column to the low row and pulls the column LOW.
@@ -190,7 +205,7 @@ Row line (row from Pico output, e.g. GP2)
                                |
                                |
                                v
-Column line (column to Pico input, e.g. GP6)
+Column line (column to Pico input, e.g. GP7)
 ```
 
 Current path when pressing a key: **Row** (HIGH) -> **Switch** -> **Anode** -> **Cathode** -> **Column** (pull-down, LOW). The diode conducts current from the high row to the column and pulls the column HIGH.
@@ -198,8 +213,8 @@ Current path when pressing a key: **Row** (HIGH) -> **Switch** -> **Anode** -> *
 **Caution with existing wiring:** If the diodes are already soldered and point toward the **Column** (original handbook), you do **not** need to re-solder them — the firmware (`src/main.cpp`) scans **Active-High** and works with that. The variant described above (cathode toward row) is what a fresh board expects.
 
 **Pin assignment on the Pico for the matrix:**
-* **Rows (outputs)**: Row 0 (S row) = **GP4**, Row 1 (GO row) = **GP2**, Row 2 (Flash row) = **GP3**
-* **Columns (inputs)**: Column 1 to 13 on **GP6 to GP16, GP21, GP22**
+* **Rows (outputs)**: Row 0 (DBO/S/REL) = **GP2**, Row 1 (ADD/SWAP + GO/PAUSE) = **GP3**, Row 2 (ALT + F1–F10 + GO MASTER) = **GP4**, Row 3 (attributes) = **GP5**, Row 4 (free) = **GP6**
+* **Columns (inputs)**: Column 1 to 13 on **GP7 to GP19**
 
 ## 4. Installation & flashing the bootloader
 
