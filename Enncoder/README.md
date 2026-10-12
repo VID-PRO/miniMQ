@@ -39,14 +39,14 @@ device anymore; they live on the **Wing** (row 3).
 Each module (left and right) carries **4 rotary encoders with click**:
 
 ```
-   [ LEFT MODULE ]  = On-screen encoders 1–4        [ RIGHT MODULE ]  = On-screen encoders 5–8
+   [ LEFT MODULE ]  = On-screen encoders 1–4    [ RIGHT MODULE ]  = On-screen encoders 5–8
 
-   (Enc 1)  (Enc 2)  (Enc 3)  (Enc 4)               (Enc 5)  (Enc 6)  (Enc 7)  (Enc 8)
-      ◯        ◯        ◯        ◯                     ◯        ◯        ◯        ◯
+   (Enc 1)  (Enc 2)  (Enc 3)  (Enc 4)           (Enc 5)  (Enc 6)  (Enc 7)  (Enc 8)
+      ◯        ◯        ◯        ◯                 ◯        ◯        ◯        ◯
 
-   ┌──────────────────────────────┐  ┌────────────────────────────────────────────┐
-   │                              │  │                                            │
-   └──────────────────────────────┘  └────────────────────────────────────────────┘
+   ┌──────-────────────────────────┐              ┌─────────────────────────────┐
+   │                               │              │                             │
+   └───────────────────-───────────┘              └─────────────────────────────┘
 ```
 
 * Each module uses the **same firmware** and the **identical pinout** – only the compiled-in
