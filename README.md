@@ -24,8 +24,8 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 
 ```
   [ Enncoder ]        [ Wing ]             [ ArtNet-USB ]        [ Linux-Installer ]
-   8 encoders         11 faders            4x DMX ports          Wyse 3040
-   + 7 keys           + 3x13 key grid      Art-Net over USB      Ubuntu + MagicQ
+   2x RP2040 Zero     11 faders            4x DMX ports          Wyse 3040
+   (4 encoders ea.)   + 5x13 key grid      Art-Net over USB      Ubuntu + MagicQ
       |                   |                     |                    (boot-to-MagicQ)
       +---------+---------+                     |                        |
                 |                               |                        |
@@ -37,8 +37,8 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 | Folder | What it does |
 |--------|--------------|
 | [ArtNet-USB/](ArtNet-USB/) | Raspberry Pi Pico 4-port **Art-Net ↔ DMX512** bridge over USB. The Pico enumerates as a USB Ethernet (CDC-NCM) adapter on the PC, answers ArtPoll, and drives four DMX ports (GPIO 2–5), each configurable as input or output, with RDM gateway and a config web page (http://10.0.0.10/). PlatformIO / Arduino-Pico. |
-| [Enncoder/](Enncoder/) | **ChamSys MagicQ encoder controller**: 8 rotary encoders with push switches plus F5–F8, Shift, Group and FX keys, emulated as a USB HID keyboard. Encoder clicks handled via an MCP23017 I²C expander. PlatformIO / Arduino-Pico. |
-| [Wing/](Wing/) | **DIY MagicQ Compact Mini Connect Wing**: 11 linear faders (10 playback + grand master) read through a 74HC4067 multiplexer and a 3×13 button matrix (38 keys), all over USB HID — latency-optimized C++ firmware (PlatformIO / Arduino-Pico). |
+| [Enncoder/](Enncoder/) | **ChamSys MagicQ encoder controller**: two Raspberry Pi Pico (RP2040 Zero) modules — left and right — each with 4 rotary encoders with push switches. The modules emulate an **absolute + relative USB HID mouse** that moves the cursor onto the on-screen encoders and scrolls/clicks there. Identical firmware and pinout on both sides, separate calibration per module (LittleFS `/ecal.bin`). PlatformIO / Arduino-Pico. |
+| [Wing/](Wing/) | **DIY MagicQ Compact Mini Connect Wing**: 11 linear faders (10 playback + grand master) read through a 74HC4067 multiplexer and a 5×13 button matrix (46 keys), all over USB HID (keyboard + absolute mouse for the fader drags) — latency-optimized C++ firmware (PlatformIO / Arduino-Pico). |
 | [Linux-Installer/](Linux-Installer/) | **Show-PC setup for a Dell Wyse 3040**: Ubuntu + Openbox + MagicQ as a dedicated, boot-to-MagicQ lighting console. One script installs all dependencies, autostart, autologin, boot splashscreen, transparent cursor, USB auto-mount and auto-shutdown. |
 | [3D/](3D/) | 3D-printable enclosure (`.3mf`) for a MagicQ control wing. |
 | [easyEDA/](easyEDA/) | EasyEDA schematic / PCB design documents for the hardware. |
@@ -57,9 +57,9 @@ The suite consists of three Pico firmwares, one show-PC image and two design fol
 
 | Peripheral | Used by | Connected to |
 |------------|---------|--------------|
-| 74HC4067 16-channel analog multiplexer | Wing | GP27 (COM) + GP17–GP20 (S0–S3), fader wipers on C0–C10 |
-| 3×13 key matrix (dioded) | Wing | rows GP2–GP4, columns GP6–GP16, GP21, GP22 |
-| MCP23017 I/O expander (I²C) | Enncoder | GP16 (SDA) / GP17 (SCL), carries the 8 encoder switches |
+| 74HC4067 16-channel analog multiplexer | Wing | GP27 (COM) + GP20–GP22, GP26 (S0–S3), fader wipers on C0–C10 |
+| 5×13 key matrix (dioded) | Wing | rows GP2–GP6, columns GP7–GP19 |
+| Rotary encoders (A/B) + push switches | Enncoder (per module) | A = GP26–GP29, B = GP3–GP6, switches GP15/7/14/8 (identical on both modules) |
 | MAX485 / MAX3485 transceivers | ArtNet-USB | DMX ports on GPIO 2–5 via PIO |
 | Dell Wyse 3040 (eMMC) | Linux-Installer | — (runs MagicQ as show computer) |
 
@@ -86,6 +86,12 @@ into bootloader mode via **BOOTSEL** (hold, plug in USB, release) the first time
 work directly over USB. The resulting file is at `.pio/build/pico/firmware.uf2` and can also be
 dragged onto the `RPI-RP2` drive.
 
+> **Note:** the Enncoder project builds **both** modules from the same source — the left module
+> (`pio run -d Enncoder -e pico-left`) and the right module (`pio run -d Enncoder -e pico-right`).
+> `ENC_SIDE` only sets the compiled-in default target positions; the per-module **calibration
+> (`/ecal.bin`)** fully determines the mapping, so both sides work regardless of which env was
+> flashed.
+
 > **Note:** `Wing` and `Enncoder` set `board_build.filesystem_size = 64`. That 64 KB **LittleFS**
 > partition is what their runtime calibrations write to (`/fcal.bin`, `/ecal.bin`) — without it
 > `LittleFS.begin()` fails and nothing is saved. `ArtNet-USB` needs no filesystem.
@@ -99,8 +105,8 @@ miniMQ/
 ├── Makefile
 ├── platformio.ini        # Workspace-level PlatformIO config
 ├── ArtNet-USB/           # Art-Net over USB -> 4x DMX512 (Pico firmware)
-├── Enncoder/             # 8 encoders + 7 keys -> MagicQ (Pico firmware)
-├── Wing/                # 11 faders + 3x13 keys -> MagicQ (Pico firmware)
+├── Enncoder/             # 2x RP2040 Zero (4 rotary encoders each) -> MagicQ
+├── Wing/                # 11 faders + 5x13 keys -> MagicQ (Pico firmware)
 ├── Linux-Installer/      # Dell Wyse 3040 show-PC image setup
 ├── 3D/                   # 3D-printable enclosure
 ├── easyEDA/              # EasyEDA schematic / PCB documents

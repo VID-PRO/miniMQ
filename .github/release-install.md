@@ -2,7 +2,8 @@
 
 All three controllers communicate with your PC over USB with **no drivers to install**:
 
-- **miniMQ Wing** and **miniMQ Encoder** present themselves as a USB keyboard (HID).
+- **miniMQ Wing** presents itself as a USB keyboard (+ an absolute mouse for the fader drags).
+- **miniMQ Encoder** (two modules) presents itself as a USB mouse (absolute + relative composite).
 - **miniMQ ArtNet-USB** presents itself as a USB Ethernet adapter (NCM) and drives up to four Art-Net ↔ DMX universes.
 
 ### Flashing a Raspberry Pi Pico (any variant, first time)
@@ -18,7 +19,7 @@ If you ever need to recover the factory state, hold BOOTSEL again and re-flash t
 
 ### 1. Wing — `miniMQ-fader.uf2`
 
-DIY fader wing compatible with the MagicQ Compact layouts: 10 faders + grand master (+ 3×13 key grid in the full Mini Connect layout).
+DIY fader wing compatible with the MagicQ Compact layouts: 10 faders + grand master (+ 5×13 key grid in the full Mini Connect layout).
 
 1. Flash `miniMQ-fader.uf2` to the wing's Pico.
 2. In MagicQ: **Setup → View Settings → Keypad Encoders**.
@@ -31,16 +32,13 @@ Notes:
 - macOS: if the Mac's physical Shift key occasionally drops out while the Pico is connected, unplug the Pico while typing only on the Mac keyboard (known macOS multi-HID behavior).
 - The wing ships as a compiled `.uf2` only (PlatformIO / Arduino-Pico); there is no interpreter variant.
 
-### 2. Encoder — `miniMQ-encoder.uf2`
+### 2. Encoder — `miniMQ-encoder.left.uf2` / `miniMQ-encoder.right.uf2`
 
-8 rotary encoders (with click) + F5–F8, Shift, Group and FX keys for MagicQ virtual encoders and windows.
+Two Raspberry Pi Pico (RP2040 Zero) modules — **left** and **right** — each with **4 rotary encoders (with click)**. They control MagicQ's on-screen encoders via an absolute mouse: a turn/click first moves the cursor onto the matching on-screen encoder, then scrolls/clicks there. No keyboard mode, no key codes.
 
-1. Flash `miniMQ-encoder.uf2` to the encoder box's Pico.
-2. In MagicQ: **Setup → View Settings → Keypad Encoders**.
-3. Set **MagicQ PC Keyboard Mode** to **Programming Shortcuts**.
-4. Assign encoder numbers `1`–`8` to the desired windows/soft buttons.
-
-The F5–F8 keys open INT/POS/COL/BEAM (`Ctrl+I/P/K/J`), Group opens the Group window, FX the FX window, and holding Shift gives 0.1 % ultra-fine adjustment.
+1. Flash `miniMQ-encoder.left.uf2` to the **left** module and `miniMQ-encoder.right.uf2` to the **right** module. Both modules share the same source code and pinout; the side only sets the compiled-in default target positions (left = on-screen encoders 1–4, right = 5–8).
+2. Start MagicQ **full screen / maximized** so the on-screen encoders appear at fixed screen positions.
+3. Calibrate each module once: **hold encoder 1 (its switch) while powering the module on** → the calibration UI starts (encoder click selects an on-screen encoder, encoders 1–4 adjust X coarsely/finely and Y coarsely/finely). After all 4 positions are saved, the module restarts automatically. The mapping is stored per module in `/ecal.bin` — later re-calibration is done on the device, no re-flashing needed.
 
 ### 3. ArtNet-USB — `miniMQ-artnet.uf2`
 
