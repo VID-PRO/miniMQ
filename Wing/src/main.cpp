@@ -1407,23 +1407,20 @@ void setup() {
     }
 
 #if FADER_BOOT_SCAN
-    // Boot-Diagnose: Roh- und %-Wert jedes Mux-Kanals prüft die Verdrahtung
-    // (Fader = Poti: hochziehen des Werten muss im Prozentwert sichtbar sein).
+    // Boot-Diagnose: Roh- und %-Wert jedes Mux-Kanals prüft die Verdrahtung.
+    // Bewusst dieselbe Mittelung/Settle wie im Betrieb (readFaderRaw): der
+    // allererste Einzel-Sample nach langer Ruhe kann Muell liefern (z.B. 87%
+    // auf einem ruhenden Kanal) und die Diagnose dadurch verwirren.
     delay(1500);
     Serial.println("Fader ADC scan (ch raw%):");
     for (uint8_t f = 0; f < NUM_FADERS; f++) {
         uint8_t ch = faderChannel(f);
-        digitalWrite(MUX_S0, (ch & 1) ? HIGH : LOW);
-        digitalWrite(MUX_S1, (ch & 2) ? HIGH : LOW);
-        digitalWrite(MUX_S2, (ch & 4) ? HIGH : LOW);
-        digitalWrite(MUX_S3, (ch & 8) ? HIGH : LOW);
-        delayMicroseconds(30);
-        uint16_t raw = analogRead(MUX_ADC);
+        int32_t raw = readFaderRaw(f);
         int pct = (int)((raw * 100L) / 65535L);
 #if FADER_INVERT
         pct = 100 - pct;
 #endif
-        Serial.printf("  ch%d raw=%5u %d%%\n", ch, raw, pct);
+        Serial.printf("  ch%d raw=%5ld %d%%\n", ch, (long)raw, pct);
     }
 #endif
 #endif
@@ -1484,19 +1481,11 @@ void setup() {
         digitalWrite(ROW_PINS[r], MATRIX_IDLE);
     }
 
-    // Start USB HID (Keyboard + Absolute-Mouse als Composite).
-    // Reihenfolge der HID-Reports nach `ordering`: Keyboard 10, Consumer 11,
-    // Absolute-Maus 21 - wie im Core (MouseAbsolute). macOS bindet die Tastatur
-    // nur korrekt, wenn der Keyboard-Report der erste ist; beim Encoder-Wing
-    // (ohne Tastatur) war die Maus-Reihenfolge dagegen irrelevant.
-    Keyboard.begin();
-    absMouseBegin();
-
 #if ENABLE_FADERS && FADER_OUT_MODE == 2
     // Kalibrierung loeschen: REL beim Boot gedrueckt halten -> /fcal.bin weg,
     // danach gelten die Vollbereichs-Defaults (kein LOCKED durch Alt-Daten).
     if (relHeldAtBoot()) {
-        Serial.println("[CAL] REL beim Boot gedrueckt -> /fcal.bin loeschen");
+        Serial.println("[CAL] REL beim Boot gedrueckt -> /fcal.bin loeschen"); Serial.flush();
         if (LittleFS.begin()) {
             bool removed = LittleFS.remove(FADER_CAL_FILE);
             LittleFS.end();
@@ -1505,11 +1494,37 @@ void setup() {
         } else {
             Serial.println("[CAL] WARN LittleFS nicht verfuegbar");
         }
+        Serial.flush();
     }
-    // Kalibrierdaten: aus LittleFS laden, sonst Defaults. Mit gedrueckter
-    // DBO-Taste starten -> Kalibrier-UI (NEXT Page speichert und beendet).
+    // Kalibrierdaten aus LittleFS laden, sonst Defaults. Bewusst VOR dem
+    // USB-HID-Aufbau (kein blockierender Flash-Zugriff nach der Renumeration).
     bool calFromFlash = loadFaderCal();
     printFaderCal(calFromFlash ? " flash" : " default");
+#endif
+
+    // Start USB HID (Keyboard + Absolute-Mouse als Composite).
+    // WICHTIG: Keyboard.begin()/absMouseBegin() bauen den USB-Descriptor per
+    // disconnect/connect neu (Renumeration). Nach dem tud_connect() darf KEIN
+    // blockierender Flash-Zugriff mehr folgen (LittleFS.begin() kann bei
+    // fehlendem/defektem FS mit abgeschalteten IRQs formatieren) - sonst kann
+    // TinyUSB die Enumeration nicht beantworten und der Host bindet den Port
+    // nie. Darum stehen alle LittleFS-Zugriffe/Logs VOR diesen Schritt und der
+    // HID-Aufbau ist das Letzte in setup().
+    // Reihenfolge der HID-Reports nach `ordering`: Keyboard 10, Consumer 11,
+    // Absolute-Maus 21 - wie im Core (MouseAbsolute).
+    Serial.flush();   // Boot-Logs noch rausschieben, bevor USB neu enumeriert
+    Keyboard.begin();
+    absMouseBegin();
+    delay(500);   // Host Zeit geben, die Renumeration zu uebernehmen
+
+    // Fertig-Bestaetigung: 2x kurz (USB sollte jetzt stehen).
+    for (uint8_t i = 0; i < 2; i++) {
+        digitalWrite(LED_BUILTIN, HIGH); delay(60);
+        digitalWrite(LED_BUILTIN, LOW);  delay(60);
+    }
+
+#if ENABLE_FADERS && FADER_OUT_MODE == 2
+    // Kalibrier-UI erst NACH dem USB-Aufbau (faderCalUi bewegt den Cursor).
     if (dboHeldAtBoot()) {
         Serial.println("[CAL] DBO beim Boot gedrueckt -> Kalibrier-Modus");
         for (uint8_t i = 0; i < 4; i++) { digitalWrite(LED_BUILTIN, HIGH); delay(80); digitalWrite(LED_BUILTIN, LOW); delay(80); }
