@@ -243,8 +243,8 @@ Enncoder/
 ├── README.md             # This handbook
 ├── README.pdf            # PDF export of this handbook
 ├── platformio.ini        # PlatformIO configuration (pico-left / pico-right)
-├── pcb/                  # Gerbers, BOM and pick&place for the encoder PCB
-├── pcb 2/                # earlier PCB revision
 └── src/
     └── main.cpp          # Firmware (left + right module share this file)
 ```
+
+> The encoder PCB design sources are kept in the shared [`../easyEDA/`](../easyEDA/) project.

@@ -405,16 +405,14 @@ ArtNet-USB/
 ├── src/
 │   ├── main.cpp         # Node firmware (DMX, NCM Ethernet, Art-Net, RDM, web page)
 │   └── index_html.h     # Embedded config web page
-├── lib/
-│   ├── DmxOut/          # Custom DMX512 TX PIO (BREAK ~185 µs, MAB 16 µs) + DMA driver
-│   ├── ArtnetRdm/       # RDM gateway: E1.20 protocol, per-port RDM RX (pio1), ArtRdm bridge
-│   ├── ArtnetConfig/    # Persisted per-port direction + Art-Net address map (EEPROM-backed)
-│   └── lwIP_USB_NCM/    # Vendored NCMEthernetlwIP with the local fixes (section 5.5)
-└── pcb/                 # PCB release files
-    ├── BOM_ArtNet-Pico-5V_ArtNet-Pico-5V_2026-09-20.xlsx
-    ├── Gerber_ArtNet-Pico-5V_2026-09-20.zip
-    └── PickAndPlace_ArtNet-Pico-5V_2026-09-20.xlsx
+└── lib/
+    ├── DmxOut/          # Custom DMX512 TX PIO (BREAK ~185 µs, MAB 16 µs) + DMA driver
+    ├── ArtnetRdm/       # RDM gateway: E1.20 protocol, per-port RDM RX (pio1), ArtRdm bridge
+    ├── ArtnetConfig/    # Persisted per-port direction + Art-Net address map (EEPROM-backed)
+    └── lwIP_USB_NCM/    # Vendored NCMEthernetlwIP with the local fixes (section 5.5)
 ```
+
+> The Art-Net PCB design sources are kept in the shared [`../easyEDA/`](../easyEDA/) project.
 
 What the sources contribute:
 

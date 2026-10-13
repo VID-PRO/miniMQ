@@ -265,7 +265,8 @@ The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag &
 Wing/
 ├── README.md            # This handbook
 ├── platformio.ini       # PlatformIO configuration (earlephilhower core)
-├── pcb/                 # Gerbers, BOM and pick&place for the wing PCBs
 └── src/
     └── main.cpp         # C++ source (latency-optimized, USB-HID)
 ```
+
+> The wing PCB design sources are kept in the shared [`../easyEDA/`](../easyEDA/) project.
