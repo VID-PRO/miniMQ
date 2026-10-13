@@ -83,15 +83,20 @@ automatically. The mouse cursor follows the selected encoder, so you can see wha
 
 | Action | Function |
 |--------|----------|
-| **Click encoder *i*** | select encoder *i* (cursor jumps to its stored position) |
-| **Turn encoder 1 / 2** | selected encoder: **X** coarse / fine (±500 / ±50) |
-| **Turn encoder 3 / 4** | selected encoder: **Y** coarse / fine (±500 / ±50) |
-| **Click encoder *i* again** | **save** that encoder's position — the LED blinks the number of encoders saved so far |
-| **all 4 saved** | `/ecal.bin` is written and the module **restarts automatically** — this is the only way out of calibration |
+| **Click encoder *i*** | select encoder *i* (cursor jumps to its stored position) — LED flashes **once** in that encoder's colour |
+| **Turn encoder 2** | selected encoder: move **X** (slow = ±50, fast = ±500 per detent) |
+| **Turn encoder 3** | selected encoder: move **Y** (slow = ±50, fast = ±500 per detent) |
+| **Click encoder *i* again** | **save** that encoder's position — LED flashes **twice** in that encoder's colour |
+| **all 4 saved** | the four encoder colours flash in sequence, `/ecal.bin` is written and the module **restarts automatically** — this is the only way out of calibration |
 
-Turn clockwise = plus (right / down). Encoders 1–4 act purely as adjustment knobs while
-calibrating; the target positions always come from the encoder SW clicks. `[CAL] …` on the serial
-console reports every selection, adjustment and save.
+Turn clockwise = plus (right / down). While calibrating, **encoder 2 adjusts X** and **encoder 3
+adjusts Y** of the selected encoder: turn slowly for fine steps (±50), quickly for coarse steps
+(±500). Encoders 1 and 4 are not used for movement. The target positions always come from the
+encoder SW clicks. `[CAL] …` on the serial console reports every selection, adjustment and save.
+
+**LED colours:** encoder 1 = **red**, encoder 2 = **green**, encoder 3 = **blue**,
+encoder 4 = **orange**. The same colour is used for the short action flash during normal
+operation (turning or clicking an encoder).
 
 > **Note:** The calibration values are stored in LittleFS, which requires the
 > **64 KB filesystem partition** (`board_build.filesystem_size = 64k`, already set in
@@ -117,7 +122,7 @@ For the **complete console** (left + right module):
 > - **GP29/28/27/26** = encoder A (CLK) 1–4
 > - **GP3/4/5/6** = encoder B (DT) 1–4
 > - **GP15/7/14/8** = encoder switches 1–4 (against GND, pull-up)
-> - **GP16** = onboard WS2812 (NeoPixel) LED — flashes green on each action
+> - **GP16** = onboard WS2812 (NeoPixel) LED — flashes in the encoder's colour on each action
 > - All remaining GPIOs are free.
 
 ## 3. Hardware wiring

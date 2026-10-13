@@ -36,8 +36,23 @@ Rotary* encoders[4] = { &enc1, &enc2, &enc3, &enc4 };
 // Frueher GP25 (einfache LED) - auf diesem Board liegt dort keine LED.
 const int ledPin = 16;
 Adafruit_NeoPixel led(1, ledPin, NEO_GRB + NEO_KHZ800);
-// Farbe der Aktions-Rueckmeldung (gedimmt gruen).
-static const uint8_t LED_R = 0, LED_G = 48, LED_B = 0;
+// LED-Farben je Encoder (Index 0..3): 1=rot, 2=gruen, 3=blau, 4=orange.
+// Gedimmt, damit die Anzeige nicht blendet.
+static const uint8_t ENC_LED_RGB[4][3] = {
+  { 80,  0,  0 },   // Enc1 rot
+  {  0, 80,  0 },   // Enc2 gruen
+  {  0,  0, 80 },   // Enc3 blau
+  { 80, 40,  0 },   // Enc4 orange
+};
+// Neutrale Farbe fuer Boot und "alle 4 gespeichert".
+static const uint8_t LED_NEUTRAL[3] = { 60, 60, 60 };
+
+static inline uint32_t encLedColor(uint8_t idx) {
+  return led.Color(ENC_LED_RGB[idx][0], ENC_LED_RGB[idx][1], ENC_LED_RGB[idx][2]);
+}
+static inline uint32_t neutralLedColor() {
+  return led.Color(LED_NEUTRAL[0], LED_NEUTRAL[1], LED_NEUTRAL[2]);
+}
 
 // --- Wertebereich der absoluten Maus ---
 #define ENC_COORD_MAX 32767
@@ -150,12 +165,10 @@ void absMouseClickAt(int16_t x, int16_t y) {
 // KALIBRIEREN (ohne Neuflashen): Modul mit gedruecktem ENCODER-SW 1 starten ->
 // Kalibrier-UI:
 //   Klick auf Encoder i          -> Encoder i auswaehlen (Cursor springt hin)
-//   drehen an Encoder 1           -> X grob   (+/-ENC_CAL_X_COARSE)
-//   drehen an Encoder 2           -> X fein   (+/-ENC_CAL_X_FINE)
-//   drehen an Encoder 3           -> Y grob   (+/-ENC_CAL_Y_COARSE)
-//   drehen an Encoder 4           -> Y fein   (+/-ENC_CAL_Y_FINE)
+//   drehen an Encoder 2           -> X verschieben (langsam fein / schnell grob)
+//   drehen an Encoder 3           -> Y verschieben (langsam fein / schnell grob)
 //   erneuter Klick auf den gewaehlten Encoder -> diesen Encoder speichern
-//   sind alle 4 gespeichert -> Neustart des RP2040.
+//   sind alle 4 gespeichert -> nach /ecal.bin schreiben und RP2040 neu starten.
 struct EncCal {
     uint16_t x[4];
     uint16_t y[4];
@@ -164,10 +177,9 @@ static EncCal encCal;
 static EncCal ENC_CAL_DEFAULT;   // wird in setup() nach ENC_SIDE befuellt
 #define ENC_CAL_FILE "/ecal.bin"
 
-#define ENC_CAL_X_COARSE 500
-#define ENC_CAL_X_FINE   50
-#define ENC_CAL_Y_COARSE 500
-#define ENC_CAL_Y_FINE   50
+#define ENC_CAL_STEP_SLOW 50    // Schrittweite bei langsamem Drehen (fein)
+#define ENC_CAL_STEP_FAST 500   // Schrittweite bei schnellem Drehen (grob)
+#define ENC_CAL_FAST_US   40000 // < 40 ms zwischen zwei Rasten -> grob
 
 bool loadEncCal() {
   if (!LittleFS.begin()) {
@@ -211,12 +223,13 @@ const unsigned long DEBOUNCE_MS = 50;    // Entprellzeit der Encoder-Switches
 constexpr signed char MOUSE_WHEEL_STEP = 1;   // Rasten pro MagicQ-Encoder-Schritt
 
 // Kurzer LED-Blink bei jeder Aktion (Diagnose), nicht-blockierend.
+// Faerbt die LED in der Farbe des betroffenen Encoders.
 const unsigned long LED_FLASH_MS = 8;
 unsigned long lastLedOnMs = 0;
 bool ledFlashPending = false;
 
-void ledFlash() {
-  led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+void ledFlash(uint8_t idx) {
+  led.setPixelColor(0, encLedColor(idx));
   led.show();
   lastLedOnMs = millis();
   ledFlashPending = true;
@@ -250,9 +263,10 @@ void encReboot() {
   for (;;) { delay(10); }
 }
 
-void encCalBlink(uint8_t n) {
+// Blinkt n-mal in der angegebenen Farbe (blockierend, nur in der Kalibrier-UI).
+void encCalBlink(uint8_t n, uint32_t color) {
   for (uint8_t i = 0; i < n; i++) {
-    led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+    led.setPixelColor(0, color);
     led.show();
     delay(120);
     led.setPixelColor(0, 0);
@@ -264,18 +278,20 @@ void encCalBlink(uint8_t n) {
 
 // KALIBRIER-UI (Start mit gedruecktem ENCODER-SW 1):
 //   Klick auf Encoder i           -> Encoder i auswaehlen (Cursor springt hin)
-//   drehen Encoder 1 / 2          -> X grob / X fein
-//   drehen Encoder 3 / 4          -> Y grob / Y fein
+//   drehen Encoder 2              -> X verschieben (langsam fein / schnell grob)
+//   drehen Encoder 3              -> Y verschieben (langsam fein / schnell grob)
 //   erneuter Klick auf Encoder i  -> Position von Encoder i SPEICHERN
-//   alle 4 gespeichert            -> Neustart des RP2040
+//   alle 4 gespeichert            -> nach /ecal.bin schreiben + Neustart
 void encCalUi() {
   bool saved[4] = { false };
   uint8_t sel = 0xFF;
   uint8_t done = 0;
+  uint32_t lastStepUs[4] = { 0, 0, 0, 0 };
 
   Serial.println("[CAL] Positionskalibrierung der 4 On-Screen-Encoder");
-  Serial.println("[CAL] Klick auf Encoder = auswaehlen | Enc1 X grob, Enc2 X fein,");
-  Serial.println("[CAL] Enc3 Y grob, Enc4 Y fein | Klick auf gewaehlten = speichern");
+  Serial.println("[CAL] Klick auf Encoder = auswaehlen | Enc2 = X, Enc3 = Y |");
+  Serial.println("[CAL] langsam drehen = fein (+/-50), schnell = grob (+/-500)");
+  Serial.println("[CAL] Klick auf gewaehlten Encoder = speichern");
 
   while (true) {
     // 1) Klicks (direkt an den GPIOs, aktiv-LOW). Entprellt ueber die
@@ -292,17 +308,17 @@ void encCalUi() {
         Serial.printf("[CAL] Encoder %u gewaehlt: x=%u y=%u%s\n", sel + 1,
                       encCal.x[sel], encCal.y[sel],
                       saved[sel] ? " (bereits gespeichert)" : "");
-        encCalBlink(sel + 1);
+        encCalBlink(1, encLedColor(sel));
       } else if (!saved[i]) {
         saved[i] = true;
         done++;
         Serial.printf("[CAL] Encoder %u gespeichert: x=%u y=%u (%u/4)\n", sel + 1,
                       encCal.x[sel], encCal.y[sel], done);
-        encCalBlink(done);
+        encCalBlink(2, encLedColor(i));
         if (done >= 4) {
           if (saveEncCal()) {
             Serial.println("[CAL] /ecal.bin geschrieben");
-            encCalBlink(4);
+            for (uint8_t e = 0; e < 4; e++) encCalBlink(1, encLedColor(e));
             encReboot();
           } else {
             Serial.println("[CAL] FEHLER beim Schreiben von /ecal.bin - "
@@ -315,25 +331,36 @@ void encCalUi() {
       }
     }
 
-    // 2) Drehregler X1/X2 = X grob/fein, X3/X4 = Y grob/fein des gewaehlten Encoders.
+    // 2) Drehen: Encoder 2 (Index 1) verschiebt X, Encoder 3 (Index 2) Y
+    //    des gewaehlten Encoders. Schnelles Drehen = groesserer Schritt.
+    //    Encoder 1 und 4 bewegen nichts.
     if (sel != 0xFF) {
       for (int k = 0; k < 4; k++) {
         unsigned char dir = encoders[k]->process();
         if (dir == DIR_NONE) continue;
-        bool cx = (k < 2);
-        bool coarse = ((k == 0) || (k == 2));
-        int32_t step = coarse ? ENC_CAL_X_COARSE : ENC_CAL_X_FINE;
-        if (k >= 2) step = coarse ? ENC_CAL_Y_COARSE : ENC_CAL_Y_FINE;
+        uint16_t *target;
+        const char *axis;
+        if (k == 1) {
+          target = &encCal.x[sel];
+          axis = "X";
+        } else if (k == 2) {
+          target = &encCal.y[sel];
+          axis = "Y";
+        } else {
+          continue;
+        }
+        uint32_t now = micros();
+        uint32_t dt = now - lastStepUs[k];
+        lastStepUs[k] = now;
+        int32_t step = (dt < ENC_CAL_FAST_US) ? ENC_CAL_STEP_FAST : ENC_CAL_STEP_SLOW;
         int32_t delta = (dir == DIR_CW) ? step : -step;
-        uint16_t *target = cx ? &encCal.x[sel] : &encCal.y[sel];
         int32_t v = (int32_t)(*target) + delta;
         if (v < 0) v = 0;
         if (v > ENC_COORD_MAX) v = ENC_COORD_MAX;
         *target = (uint16_t)v;
         absMouseMove((int16_t)encCal.x[sel], (int16_t)encCal.y[sel]);
-        Serial.printf("[CAL] Encoder %u %s %s %+ld -> %u\n", sel + 1,
-                      cx ? "X" : "Y", coarse ? "grob" : "fein", (long)delta,
-                      (unsigned)*target);
+        Serial.printf("[CAL] Encoder %u %s %+ld -> %u\n", sel + 1,
+                      axis, (long)delta, (unsigned)*target);
       }
     }
 
@@ -358,7 +385,7 @@ void setup() {
   led.setPixelColor(0, 0);
   led.show();
   for (int i = 0; i < 3; i++) {
-    led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+    led.setPixelColor(0, neutralLedColor());
     led.show();
     delay(100);
     led.setPixelColor(0, 0);
@@ -443,7 +470,7 @@ void loop() {
       absMouseReport((int16_t)encCal.x[i], (int16_t)encCal.y[i], step, 0);
       Serial.printf("ENC %d -> pos(%u,%u) wheel %+d\n", i + 1,
                     encCal.x[i], encCal.y[i], step);
-      ledFlash();
+      ledFlash(i);
     }
 
     // Encoder-Klick (direkt am GPIO, aktiv-LOW, entprellt).
@@ -455,7 +482,7 @@ void loop() {
       if (readingEnc != encBtnStable[i]) {
         encBtnStable[i] = readingEnc;
         if (readingEnc == LOW) {
-          ledFlash();
+          ledFlash(i);
           absMouseClickAt((int16_t)encCal.x[i], (int16_t)encCal.y[i]);
           Serial.printf("ENC %d -> click at (%d,%d)\n", i + 1,
                         encCal.x[i], encCal.y[i]);
