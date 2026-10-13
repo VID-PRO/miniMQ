@@ -14,6 +14,13 @@
 #define FADER_LOOP_DIAG 0
 #define FADER_LOOP_DIAG_MS 5000
 
+// Erweiterte Mux-Diagnose: beim Boot FADER_MUX_DIAG_MS lang ALLE 16 Kanaele
+// roh ausgeben (nicht nur die genutzten). Verdrahtete Eingaenge sind stabil,
+// schwebende driften. Zeitlich begrenzt, damit danach HID/Loop normal startet
+// und der 1200-bps-Touch-Upload weiter funktioniert.
+#define FADER_MUX_DIAG 0
+#define FADER_MUX_DIAG_MS 35000
+
 // Idle-Guard: Beim Boot wird jeder Kanal einmal mit kurzem (30 us) und einmal
 // mit vollem Settle (3000 us) gemessen. Echter Poti: beide identisch (±Drift).
 // Unbestückter/schwimmender Eingang: divergiert massiv und wird weggesperrt
@@ -1421,6 +1428,32 @@ void setup() {
         pct = 100 - pct;
 #endif
         Serial.printf("  ch%d raw=%5ld %d%%\n", ch, (long)raw, pct);
+    }
+#endif
+
+#if FADER_MUX_DIAG
+    // Alle 16 Mux-Kanaele roh, fortlaufend. Jetzt den GRAND-MASTER-Fader
+    // langsam hoch/runter schieben: ch10 muss dem folgen. Bleibt ch10 auf einem
+    // driftenden Wert -> Verdrahtung des C10-Eingangs (Wiper/3V3) defekt.
+    Serial.println("MUX DIAG (16 ch raw) - Master-Fader bewegen!");
+    uint32_t muxDiagStart = millis();
+    while (millis() - muxDiagStart < (uint32_t)FADER_MUX_DIAG_MS) {
+        Serial.print("MUX");
+        for (uint8_t ch = 0; ch < 16; ch++) {
+            digitalWrite(MUX_S0, (ch & 1) ? HIGH : LOW);
+            digitalWrite(MUX_S1, (ch & 2) ? HIGH : LOW);
+            digitalWrite(MUX_S2, (ch & 4) ? HIGH : LOW);
+            digitalWrite(MUX_S3, (ch & 8) ? HIGH : LOW);
+            delayMicroseconds(1500);
+            uint32_t sum = 0;
+            for (uint8_t k = 0; k < 8; k++) {
+                sum += analogRead(MUX_ADC);
+                delayMicroseconds(10);
+            }
+            Serial.printf(" c%02d=%5lu", ch, (unsigned long)(sum / 8u));
+        }
+        Serial.println();
+        delay(250);
     }
 #endif
 #endif
