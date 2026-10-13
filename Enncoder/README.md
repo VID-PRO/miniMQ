@@ -94,9 +94,13 @@ calibrating; the target positions always come from the encoder SW clicks. `[CAL]
 console reports every selection, adjustment and save.
 
 > **Note:** The calibration values are stored in LittleFS, which requires the
-> **64 KB filesystem partition** (`board_build.filesystem_size = 64`, already set in
+> **64 KB filesystem partition** (`board_build.filesystem_size = 64k`, already set in
 > `platformio.ini`). Values are read back on every boot (`[CAL] /ecal.bin geladen: …`, otherwise
 > the compiled-in defaults for the selected side).
+>
+> **The unit suffix matters:** the Raspberry Pi platform parses a **bare number as bytes**, so `64`
+> means 64 *bytes*, not 64 KB. A 64-byte partition makes the LittleFS format loop forever with
+> interrupts disabled, so the module hangs at boot and never enumerates. Always write `64k`.
 
 ## 2. Required hardware & shopping list
 
@@ -104,7 +108,7 @@ For the **complete console** (left + right module):
 
 | Qty | Component | Note |
 |---|---|---|
-| 2 | Raspberry Pi Pico (RP2040 Zero) | 1× left, 1× right module |
+| 2 | Raspberry Pi Pico (RP2040 Zero) | 1× left, 1× right module; onboard WS2812 on GP16 (e.g. RP2040-Zero "WS") |
 | 8 | Mech. rotary encoders with push button (e.g. EC11) | 4 per module, 20 detents, 3-pin variant |
 | – | hook-up wires / stranded wire | for wiring |
 | – | optional: pin headers / breadboards | |
@@ -113,7 +117,7 @@ For the **complete console** (left + right module):
 > - **GP29/28/27/26** = encoder A (CLK) 1–4
 > - **GP3/4/5/6** = encoder B (DT) 1–4
 > - **GP15/7/14/8** = encoder switches 1–4 (against GND, pull-up)
-> - **GP25** = onboard LED (diagnostics)
+> - **GP16** = onboard WS2812 (NeoPixel) LED — flashes green on each action
 > - All remaining GPIOs are free.
 
 ## 3. Hardware wiring
@@ -190,12 +194,13 @@ calibration (section 1.2) both modules behave correctly regardless of the side y
 each stores its own `/ecal.bin`.
 
 > **Note on libraries:** The `Rotary` library comes from `lostcaggy/CaggyRotary` (declared in
-> `platformio.ini`). The `lib_ldf_mode = chain+` option builds the required core library
+> `platformio.ini`), and `adafruit/Adafruit NeoPixel` drives the onboard WS2812 on GP16.
+> The `lib_ldf_mode = chain+` option builds the required core library
 > `tusb-hid` automatically. **No** external TinyUSB package and **no** MCP23017/I²C library are
 > needed anymore.
 >
-> `board_build.filesystem_size = 64` reserves the 64 KB **LittleFS** partition that the
-> calibration needs.
+> `board_build.filesystem_size = 64k` reserves the 64 KB **LittleFS** partition that the
+> calibration needs (a bare `64` would mean 64 *bytes* and hang the boot — always use the `k`).
 
 ## 5. Setup in MagicQ
 

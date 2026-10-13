@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Rotary.h>
+#include <Adafruit_NeoPixel.h>
 #include <USB.h>
 #include <tusb.h>
 #include <tusb-hid.h>
@@ -31,8 +32,12 @@ Rotary enc4(26, 6);
 
 Rotary* encoders[4] = { &enc1, &enc2, &enc3, &enc4 };
 
-// --- Onboard-LED (GP25) als Diagnose-Anzeige ---
-const int ledPin = 25;
+// --- Onboard-LED: WS2812 (NeoPixel) auf GP16 (RP2040-Zero "WS") ---
+// Frueher GP25 (einfache LED) - auf diesem Board liegt dort keine LED.
+const int ledPin = 16;
+Adafruit_NeoPixel led(1, ledPin, NEO_GRB + NEO_KHZ800);
+// Farbe der Aktions-Rueckmeldung (gedimmt gruen).
+static const uint8_t LED_R = 0, LED_G = 48, LED_B = 0;
 
 // --- Wertebereich der absoluten Maus ---
 #define ENC_COORD_MAX 32767
@@ -211,7 +216,8 @@ unsigned long lastLedOnMs = 0;
 bool ledFlashPending = false;
 
 void ledFlash() {
-  digitalWrite(ledPin, HIGH);
+  led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+  led.show();
   lastLedOnMs = millis();
   ledFlashPending = true;
 }
@@ -219,7 +225,8 @@ void ledFlash() {
 void serviceLed() {
   if (ledFlashPending && (millis() - lastLedOnMs >= LED_FLASH_MS)) {
     ledFlashPending = false;
-    digitalWrite(ledPin, LOW);
+    led.setPixelColor(0, 0);
+    led.show();
   }
 }
 
@@ -245,9 +252,11 @@ void encReboot() {
 
 void encCalBlink(uint8_t n) {
   for (uint8_t i = 0; i < n; i++) {
-    digitalWrite(ledPin, HIGH);
+    led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+    led.show();
     delay(120);
-    digitalWrite(ledPin, LOW);
+    led.setPixelColor(0, 0);
+    led.show();
     delay(120);
   }
   delay(400);
@@ -344,11 +353,16 @@ void setup() {
   Serial.begin(115200);
   delay(1500);
 
-  pinMode(ledPin, OUTPUT);
+  led.begin();
+  led.setBrightness(255);
+  led.setPixelColor(0, 0);
+  led.show();
   for (int i = 0; i < 3; i++) {
-    digitalWrite(ledPin, HIGH);
+    led.setPixelColor(0, led.Color(LED_R, LED_G, LED_B));
+    led.show();
     delay(100);
-    digitalWrite(ledPin, LOW);
+    led.setPixelColor(0, 0);
+    led.show();
     delay(100);
   }
 

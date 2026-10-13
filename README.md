@@ -99,9 +99,13 @@ drive.
 > (`/ecal.bin`)** fully determines the mapping, so both sides work regardless of which env was
 > flashed.
 
-> **Note:** `Wing` and `Enncoder` set `board_build.filesystem_size = 64`. That 64 KB **LittleFS**
+> **Note:** `Wing` and `Enncoder` set `board_build.filesystem_size = 64k`. That 64 KB **LittleFS**
 > partition is what their runtime calibrations write to (`/fcal.bin`, `/ecal.bin`) — without it
 > `LittleFS.begin()` fails and nothing is saved. `ArtNet-USB` needs no filesystem.
+>
+> **The unit suffix matters:** the Raspberry Pi platform parses a **bare number as bytes**, so `64`
+> means 64 *bytes*, not 64 KB. A 64-byte partition makes the LittleFS format loop forever with
+> interrupts disabled, so the Pico hangs at boot and USB/HID never appears. Always write `64k`.
 
 ## Project structure
 

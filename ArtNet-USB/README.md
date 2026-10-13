@@ -1,7 +1,7 @@
 # MagicQ miniQ ArtNet-USB
-<v>
+
 This handbook describes a **4-port Art-Net <-> DMX bridge** built around a Raspberry Pi Pico (RP2040). The Pico appears to your stage-lighting PC (MagicQ & co.) as a **USB network adapter**, exchanges Art-Net over that USB link, and drives four DMX ports on GPIO2, GPIO3, GPIO4 and GPIO5.
-v
+
 Each of the four ports is individually configurable as an **output** (ArtDmx -> DMX out) or an **input** (DMX in -> ArtDmx), so the same node can drive a rig, read a rig, or do both at once. On top of the DMX ports the node answers Art-Net discovery (ArtPoll/ArtPollReply), accepts addressing over the network (ArtAddress), bridges RDM, and serves a small config web page.
 
 > **Note:** The Pico has no Wi-Fi or wired Ethernet of its own — the USB link *is* the network. Modern Windows 10/11, macOS and Linux mount an NCM network adapter with **no driver install** (see section 1.1).
@@ -13,7 +13,7 @@ Each of the four ports is individually configurable as an **output** (ArtDmx -> 
   - [1.2 Addressing: static IP or DHCP server](#12-addressing-static-ip-or-dhcp-server)
   - [1.3 DMX and RDM: the PIO state machines](#13-dmx-and-rdm-the-pio-state-machines)
   - [1.4 Firmware responsibilities in `src/main.cpp`](#14-firmware-responsibilities-in-srcmaincpp)
-- [2. Required hardware](#2-required-hardware)9<vv<>>
+- [2. Required hardware](#2-required-hardware)
 - [3. Hardware wiring](#3-hardware-wiring)
   - [3.1 DMX port ↔ Pico pin assignment](#31-dmx-port-pico-pin-assignment)
   - [3.2 Transceivers (MAX485 vs MAX3485)](#32-transceivers-max485-vs-max3485)

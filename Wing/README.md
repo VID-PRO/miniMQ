@@ -127,6 +127,7 @@ PB2–PB9 are interpolated automatically between X(PB1) and X(PB10). Values are 
 
 * **S10 + GO10** (keep both held): types the currently pressed matrix cells as `M R2C3 R0C1` into the focused editor.
 * **S1 + GO1**: types the current fader levels as `F GM=42% PB1=87% ...`.
+* **Boot mux diagnostic (`FADER_MUX_DIAG` in `src/main.cpp`, default off):** during `FADER_MUX_DIAG_MS` (35 s) after boot the firmware prints **all 16** multiplexer channels raw (`c00=… c15=…`), not just the wired ones. Move a fader in that window: a properly wired input sweeps the full range (~`0…65520`), a floating one drifts. This separates a **cold/dry solder joint on a mux input** from a firmware fault — a bad fader reads only a small, offset range (e.g. ~`2100…4900`) while a good fader on the **same** multiplexer spans the full `0…65520`.
 
 ## 2. Required hardware & shopping list
 
@@ -241,6 +242,10 @@ requires **BOOTSEL** (hold while plugging in USB, then release).
 Pi USB reset interface, but on this composite HID stack it broke USB enumeration on macOS (no
 `/dev/cu.usb*` port, no HID keyboard). Pin the touch port via `upload_port` (the `usbmodem` name
 can change after replugging — check with `pio device list`).
+
+`board_build.filesystem_size = 64k` reserves the 64 KB **LittleFS** partition that `/fcal.bin`
+needs (a bare `64` would mean 64 *bytes*, not 64 KB, and hangs the boot with interrupts disabled —
+always use the `k`).
 
 The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag & drop onto the `RPI-RP2` drive after starting the Pico in BOOTSEL mode).
 
