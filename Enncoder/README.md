@@ -123,6 +123,7 @@ For the **complete console** (left + right module):
 > - **GP3/4/5/6** = encoder B (DT) 1–4
 > - **GP15/7/14/8** = encoder switches 1–4 (against GND, pull-up)
 > - **GP16** = onboard WS2812 (NeoPixel) LED — flashes in the encoder's colour on each action
+>   (encoder 1 = red, encoder 2 = green, encoder 3 = blue, encoder 4 = orange)
 > - All remaining GPIOs are free.
 
 ## 3. Hardware wiring
@@ -131,12 +132,12 @@ For the **complete console** (left + right module):
 
 Both modules use the **identical** wiring:
 
-| Component | A (CLK) | B (DT) | SW (button) |
-|---|---|---|---|
-| **Encoder 1** | GP29 | GP3 | GP15 |
-| **Encoder 2** | GP28 | GP4 | GP7 |
-| **Encoder 3** | GP27 | GP5 | GP14 |
-| **Encoder 4** | GP26 | GP6 | GP8 |
+| Component | A (CLK) | B (DT) | SW (button) | LED colour |
+|---|---|---|---|---|
+| **Encoder 1** | GP29 | GP3 | GP15 | red |
+| **Encoder 2** | GP28 | GP4 | GP7 | green |
+| **Encoder 3** | GP27 | GP5 | GP14 | blue |
+| **Encoder 4** | GP26 | GP6 | GP8 | orange |
 
 Each switch goes **against GND** (the firmware enables internal pull-ups; SW = LOW means pressed).
 
