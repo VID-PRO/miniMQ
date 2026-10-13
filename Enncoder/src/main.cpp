@@ -165,8 +165,8 @@ void absMouseClickAt(int16_t x, int16_t y) {
 // KALIBRIEREN (ohne Neuflashen): Modul mit gedruecktem ENCODER-SW 1 starten ->
 // Kalibrier-UI:
 //   Klick auf Encoder i          -> Encoder i auswaehlen (Cursor springt hin)
-//   drehen an Encoder 2           -> X verschieben (langsam fein / schnell grob)
-//   drehen an Encoder 3           -> Y verschieben (langsam fein / schnell grob)
+//   drehen an Encoder 2           -> X verschieben (+/-ENC_CAL_STEP px)
+//   drehen an Encoder 3           -> Y verschieben (+/-ENC_CAL_STEP px)
 //   erneuter Klick auf den gewaehlten Encoder -> diesen Encoder speichern
 //   sind alle 4 gespeichert -> nach /ecal.bin schreiben und RP2040 neu starten.
 struct EncCal {
@@ -177,9 +177,7 @@ static EncCal encCal;
 static EncCal ENC_CAL_DEFAULT;   // wird in setup() nach ENC_SIDE befuellt
 #define ENC_CAL_FILE "/ecal.bin"
 
-#define ENC_CAL_STEP_SLOW 50    // Schrittweite bei langsamem Drehen (fein)
-#define ENC_CAL_STEP_FAST 500   // Schrittweite bei schnellem Drehen (grob)
-#define ENC_CAL_FAST_US   40000 // < 40 ms zwischen zwei Rasten -> grob
+#define ENC_CAL_STEP 250 // fixer Schritt pro Raste (px)
 
 bool loadEncCal() {
   if (!LittleFS.begin()) {
@@ -286,11 +284,10 @@ void encCalUi() {
   bool saved[4] = { false };
   uint8_t sel = 0xFF;
   uint8_t done = 0;
-  uint32_t lastStepUs[4] = { 0, 0, 0, 0 };
 
   Serial.println("[CAL] Positionskalibrierung der 4 On-Screen-Encoder");
   Serial.println("[CAL] Klick auf Encoder = auswaehlen | Enc2 = X, Enc3 = Y |");
-  Serial.println("[CAL] langsam drehen = fein (+/-50), schnell = grob (+/-500)");
+  Serial.println("[CAL] drehen = fixer Schritt (+/-250 px)");
   Serial.println("[CAL] Klick auf gewaehlten Encoder = speichern");
 
   while (true) {
@@ -332,7 +329,7 @@ void encCalUi() {
     }
 
     // 2) Drehen: Encoder 2 (Index 1) verschiebt X, Encoder 3 (Index 2) Y
-    //    des gewaehlten Encoders. Schnelles Drehen = groesserer Schritt.
+    //    des gewaehlten Encoders, je fix ENC_CAL_STEP px.
     //    Encoder 1 und 4 bewegen nichts.
     if (sel != 0xFF) {
       for (int k = 0; k < 4; k++) {
@@ -349,11 +346,7 @@ void encCalUi() {
         } else {
           continue;
         }
-        uint32_t now = micros();
-        uint32_t dt = now - lastStepUs[k];
-        lastStepUs[k] = now;
-        int32_t step = (dt < ENC_CAL_FAST_US) ? ENC_CAL_STEP_FAST : ENC_CAL_STEP_SLOW;
-        int32_t delta = (dir == DIR_CW) ? step : -step;
+        int32_t delta = (dir == DIR_CW) ? ENC_CAL_STEP : -ENC_CAL_STEP;
         int32_t v = (int32_t)(*target) + delta;
         if (v < 0) v = 0;
         if (v > ENC_COORD_MAX) v = ENC_COORD_MAX;

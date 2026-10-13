@@ -84,15 +84,15 @@ automatically. The mouse cursor follows the selected encoder, so you can see wha
 | Action | Function |
 |--------|----------|
 | **Click encoder *i*** | select encoder *i* (cursor jumps to its stored position) — LED flashes **once** in that encoder's colour |
-| **Turn encoder 2** | selected encoder: move **X** (slow = ±50, fast = ±500 per detent) |
-| **Turn encoder 3** | selected encoder: move **Y** (slow = ±50, fast = ±500 per detent) |
+| **Turn encoder 2** | selected encoder: move **X** (±250 px per detent) |
+| **Turn encoder 3** | selected encoder: move **Y** (±250 px per detent) |
 | **Click encoder *i* again** | **save** that encoder's position — LED flashes **twice** in that encoder's colour |
 | **all 4 saved** | the four encoder colours flash in sequence, `/ecal.bin` is written and the module **restarts automatically** — this is the only way out of calibration |
 
 Turn clockwise = plus (right / down). While calibrating, **encoder 2 adjusts X** and **encoder 3
-adjusts Y** of the selected encoder: turn slowly for fine steps (±50), quickly for coarse steps
-(±500). Encoders 1 and 4 are not used for movement. The target positions always come from the
-encoder SW clicks. `[CAL] …` on the serial console reports every selection, adjustment and save.
+adjusts Y** of the selected encoder in fixed steps of **±250** per detent. Encoders 1 and 4 are not
+used for movement. The target positions always come from the encoder SW clicks. `[CAL] …` on the
+serial console reports every selection, adjustment and save.
 
 **LED colours:** encoder 1 = **red**, encoder 2 = **green**, encoder 3 = **blue**,
 encoder 4 = **orange**. The same colour is used for the short action flash during normal
