@@ -168,7 +168,7 @@ cd Enncoder
 pio run -e pico-left                # -DENC_SIDE=0  (on-screen encoders 1–4)
 pio run -e pico-right               # -DENC_SIDE=1  (on-screen encoders 5–8)
 
-# Compile + upload (hold BOOTSEL before plugging in the first time)
+# Compile + upload (both modules)
 pio run -e pico-left  -t upload     # left module
 pio run -e pico-right -t upload     # right module
 
@@ -176,8 +176,14 @@ pio run -e pico-right -t upload     # right module
 pio device monitor
 ```
 
-**Important:** The **first flash** of each Pico requires bootloader mode via **BOOTSEL**
-(hold, plug in USB, release). Later uploads work directly over USB.
+**Important:** Uploads use the RP2040's native **1200-bps CDC touch** (core `SerialUSB` +
+`use_1200bps_touch` in the `rpipico` board): `pio run -t upload` reboots the running device into
+BOOTSEL by itself, so **no BOOTSEL button** is needed after the first flash. Only the **first
+flash** of each Pico requires bootloader mode via **BOOTSEL** (hold, plug in USB, release).
+
+`-DENABLE_PICOTOOL_USB` must **not** be set: it makes the running firmware advertise the Raspberry
+Pi USB reset interface, but on this composite HID stack it broke USB enumeration on macOS (no
+`/dev/cu.usb*` port, no HID mouse).
 
 `ENC_SIDE` only sets the compiled-in **default** target positions. After the per-module
 calibration (section 1.2) both modules behave correctly regardless of the side you flashed —

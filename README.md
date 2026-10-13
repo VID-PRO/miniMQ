@@ -74,17 +74,24 @@ cd Wing           # or Enncoder / ArtNet-USB
 # Compile the firmware
 pio run
 
-# Compile + upload to the Pico (hold the BOOTSEL button before plugging in)
+# Compile + upload to the Pico
 pio run -t upload
 
 # Serial console (debug output)
 pio device monitor
 ```
 
-**Important:** For upload with the earlephilhower core, the Pico normally only needs to be put
-into bootloader mode via **BOOTSEL** (hold, plug in USB, release) the first time. Later uploads
-work directly over USB. The resulting file is at `.pio/build/pico/firmware.uf2` and can also be
-dragged onto the `RPI-RP2` drive.
+**Important:** Uploads use the RP2040's native **1200-bps CDC touch** (the core's `SerialUSB`
+plus `use_1200bps_touch` in the `rpipico` board): `pio run -t upload` reboots the running device
+into BOOTSEL by itself, so **no BOOTSEL button is needed** after the very first flash. Only the
+first flash of each Pico needs **BOOTSEL** (hold while plugging in USB, then release). The
+resulting file is at `.pio/build/pico/firmware.uf2` and can also be dragged onto the `RPI-RP2`
+drive.
+
+> **Do not set `-DENABLE_PICOTOOL_USB`.** It makes the running firmware advertise the Raspberry Pi
+> USB reset interface, but on this custom composite-USB stack it broke USB enumeration on macOS
+> (no `/dev/cu.usb*` port at all, and no HID keyboard/mouse). The 1200-bps touch is the supported
+> path.
 
 > **Note:** the Enncoder project builds **both** modules from the same source — the left module
 > (`pio run -d Enncoder -e pico-left`) and the right module (`pio run -d Enncoder -e pico-right`).

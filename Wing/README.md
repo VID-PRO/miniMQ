@@ -71,7 +71,8 @@ The mapping is defined in `src/main.cpp` as `KEYMAP[5][13]` and checked via the 
 
 * **Flash (F1–F10):** MagicQ "Test" keys toggle the playback to 100% – the firmware therefore sends a key press (**on**) when pressed and again (**off**) when released. Result: a **momentary** flash while your finger is on the key.
 * **S + GO (same playback) = PAUSE/STOP:** While S_n and GO_n are held together, the firmware sends the **STOP key** (`a s d f g h j k l ;`). STOP is a toggle in MagicQ – every press pauses/starts. To avoid a "ws" ghost key press, each S/GO key is delayed ~40 ms; the chord detection decides whether STOP or the individual key is sent.
-* **Hold keys (ALT, GROUP, INT, POS, COL, BEAM, FX, SHIFT, GO MASTER):** pressed like modifiers (`Ctrl+Alt+0`, `Ctrl+<key>`, `Shift`) until released. Held keys are re-typed every ~500 ms (keep-alive loop) because MagicQ's front-stop interrupts HID key presses mid-hold.
+* **Single keystroke (tap):** NEXT PAGE, PREV PAGE, REL, ADD/SWAP, GO MASTER, PAUSE MASTER and the window keys GROUP/INT/POS/COL/BEAM/FX send **one press+release** as soon as the button goes down — nothing is sent while held or on release.
+* **Hold keys (ALT, SHIFT):** pressed like modifiers (`Ctrl+Alt+0`, `Shift`) until released. Held keys are re-typed every ~500 ms (keep-alive loop) because MagicQ's front-stop interrupts HID key presses mid-hold.
 * **GO MASTER / PAUSE MASTER** sit on the **middle row** right (GO) / **row 2** right (PAUSE) instead of being stacked vertically.
 * **Row 4 = attribute keys:** the graphical windows (GROUP/INT/POS/COL/BEAM/FX) and SHIFT now live on the wing (they used to be hardware buttons on the encoder module).
 
@@ -143,7 +144,7 @@ PB2–PB9 are interpolated automatically between X(PB1) and X(PB10). Values are 
 The Pico has only 3 analog inputs (ADC), but we need 11 inputs for 10 playbacks + 1 grand master. The multiplexer switches these extremely quickly onto a single pin.
 
 * **Fader power**: connect the left pin of all 11 faders to **3V3(OUT)** (Pico pin 36) and the right pin of all faders to **GND** (e.g. Pico pin 38).
-* **Fader signal lines**: the middle pin (wiper) of faders 1 to 10 goes to inputs **C1 to C10** of the multiplexer. The grand master fader goes to the first input **C0**.
+* **Fader signal lines**: the middle pin (wiper) of playbacks **PB1 to PB10** goes to inputs **C0 to C9** of the multiplexer. The grand master fader goes to input **C10**.
 * **Multiplexer to Raspberry Pi Pico**:
   * **VCC** -> 3V3 (Pico pin 36)
   * **GND** -> GND (Pico pin 38)
@@ -225,9 +226,19 @@ The firmware is **latency-optimized** C++ (compiled to native ARM code) and uses
 cd Wing
 pio run           # builds firmware.uf2
 
-# Flash to the Pico (BOOTSEL hold-state required):
+# Flash to the Pico:
 pio run -t upload
 ```
+
+Uploads use the RP2040's native **1200-bps CDC touch** (core `SerialUSB` + `use_1200bps_touch` in
+the `rpipico` board): `pio run -t upload` reboots the running device into BOOTSEL by itself, so
+**no BOOTSEL button** is needed after the first flash. Only the very first flash of the Pico
+requires **BOOTSEL** (hold while plugging in USB, then release).
+
+`-DENABLE_PICOTOOL_USB` must **not** be set: it makes the running firmware advertise the Raspberry
+Pi USB reset interface, but on this composite HID stack it broke USB enumeration on macOS (no
+`/dev/cu.usb*` port, no HID keyboard). Pin the touch port via `upload_port` (the `usbmodem` name
+can change after replugging — check with `pio device list`).
 
 The generated file is at `.pio/build/pico/firmware.uf2` (alternatively by drag & drop onto the `RPI-RP2` drive after starting the Pico in BOOTSEL mode).
 

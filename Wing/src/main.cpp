@@ -39,7 +39,8 @@
 // nach, driften ±2 %). Auch f07 (physisch ch3) lädt nach 5s auf ~70 % hoch und
 // togglt als Phantom. Solche Kanäle spucken im Leerlauf Wheel-Events.
 // Auf 0 setzen, sobald diese Fader wirklich angelötet sind.
-#define FADER_FORCE_LOCK ((1u<<3)|(1u<<4)|(1u<<5)|(1u<<6)|(1u<<7))
+//#define FADER_FORCE_LOCK ((1u<<3)|(1u<<4)|(1u<<5)|(1u<<6)|(1u<<7))
+#define FADER_FORCE_LOCK 0  // Bitmaske gesperrter Kanäle (Bit f = Fader f, 0 = alles aktiv)
 
 // Temporärer HID-Selbsttest: auf 1 setzen, flashen, Cursor in TextEdit setzen,
 // Pico neu einstecken. Die Firmware tippt nach 5 s "HID-OK" in den fokussierten
@@ -49,7 +50,7 @@
 // Matrix-Polarität: 0 = active-high (Zeilentreiber HIGH beim Scannen, Spalten
 // mit INPUT_PULLDOWN, Taste = HIGH), 1 = active-low (Zeilentreiber LOW, Spalten
 // mit INPUT_PULLUP, Taste = LOW). Gut fuer getauschte Diodenrichtung.
-#define MATRIX_POL 0
+#define MATRIX_POL 1 
 
 #if MATRIX_POL == 0
 #define MATRIX_ACTIVE    HIGH
@@ -335,7 +336,7 @@ const int16_t FADER_TARGET_Y[] = { 29000, 29000, 29000, 29000, 29000, 29000, 290
 void absMouseBegin() {
   if (absMouseRunning) return;
   USB.disconnect();
-  absMouseLocalID = USB.registerHIDDevice(desc_abs_mouse, sizeof(desc_abs_mouse), 8, 0x0002);
+  absMouseLocalID = USB.registerHIDDevice(desc_abs_mouse, sizeof(desc_abs_mouse), 21, 0x0002);
   USB.connect();
   absMouseRunning = true;
 }
@@ -387,11 +388,15 @@ constexpr uint8_t NUM_FADERS = 11;   // 0 = Grand Master, 1-10 = Playbacks
 
 // Fader-Polarität: 0 = normal (hoch = hoher ADC-Wert), 1 = invertiert
 // (physikalisch nach oben schieben = höherer %). Passend zur Poti-Verdrahtung.
-#define FADER_INVERT 1
+// Aktuelle Verdrahtung: unten = Wiper auf GND (raw ~0) => 0 = normal.
+#define FADER_INVERT 0
 
-// Fader-Kanalreihenfolge: 0 = Fader f an Mux-Kanal f (0=GM, 1..10=PB1..10).
-// 1 = gespiegelt an der Mux-Halfte (0=GM an ch10, 1=PB1 an ch9, ... 10=PB10 an ch0).
-#define FADER_CH_REVERSE 1
+// Fader-Kanalreihenfolge (physische Verdrahtung des 74HC4067):
+//   Playbacks PB1..PB10 -> Kanal C0..C9, Grand Master -> Kanal C10.
+// Logischer Index f: 0 = Grand Master, 1..10 = PB1..PB10.
+static inline uint8_t faderChannel(uint8_t f) {
+    return (f == 0) ? (uint8_t)(NUM_FADERS - 1) : (uint8_t)(f - 1);
+}
 
 // Endanschlag-Kalibrierung der Poti-Widerstaende: ein 10k-Slide-Poti belegt
 // den ADC-Bereich NICHT vollstaendig (Fabrik-Toleranz, Anschlagkappen,
@@ -443,6 +448,8 @@ enum KeyType : uint8_t {
     KT_GO    = 5,   // GO1..GO10: nimmt an der S+GO-Akkordlogik teil
     KT_CKEY  = 6,   // Ctrl+<code>: GROUP/INT/POS/COL/BEAM/FX (MagicQ-Fenster)
     KT_MOD   = 7,   // reiner Modifier (SHIFT): press/release halten
+    KT_TAP   = 8,   // Einzel-Tastendruck: press+release sofort, kein Halten
+    KT_CTAP  = 9,   // Ctrl+<code> als Einzel-Tastendruck (kein Halten)
 };
 
 struct KeyCell { unsigned char code; uint8_t type; };
@@ -456,24 +463,24 @@ struct KeyCell { unsigned char code; uint8_t type; };
 // (X = nicht belegt, KT_NONE)
 constexpr KeyCell KEYMAP[5][13] = {
     // Row0  DBO                 NEXT PAGE       S1    S2    S3    S4    S5    S6    S7    S8    S9    S10   REL
-    { {KEY_F11, KT_KEY},         {'[', KT_KEY},
+    { {KEY_F11, KT_KEY},         {'[', KT_TAP},
       {'1', KT_SEL}, {'2', KT_SEL}, {'3', KT_SEL}, {'4', KT_SEL}, {'5', KT_SEL},
       {'6', KT_SEL}, {'7', KT_SEL}, {'8', KT_SEL}, {'9', KT_SEL}, {'0', KT_SEL},
-      {'-', KT_KEY} },
+      {'-', KT_TAP} },
     // Row1  ADD/SWAP            PREV PAGE       GO1   GO2   GO3   GO4   GO5   GO6   GO7   GO8   GO9   GO10  PAUSE MASTER
-    { {'`', KT_KEY},             {']', KT_KEY},
+    { {'`', KT_TAP},             {']', KT_TAP},
       {'q', KT_GO}, {'w', KT_GO}, {'e', KT_GO}, {'r', KT_GO}, {'t', KT_GO},
       {'y', KT_GO}, {'u', KT_GO}, {'i', KT_GO}, {'o', KT_GO}, {'p', KT_GO},
-      {'#', KT_KEY} },
+      {'#', KT_TAP} },
     // Row2  ALT                 X              F1    F2    F3    F4    F5    F6    F7    F8    F9    F10   GO MASTER
     { {0, KT_DBO},               {0, KT_NONE},
       {'\\', KT_FLASH}, {'z', KT_FLASH}, {'x', KT_FLASH}, {'c', KT_FLASH},
       {'v', KT_FLASH}, {'b', KT_FLASH}, {'n', KT_FLASH}, {'m', KT_FLASH},
-      {',', KT_FLASH}, {'.', KT_FLASH}, {' ', KT_KEY} },
+      {',', KT_FLASH}, {'.', KT_FLASH}, {' ', KT_TAP} },
     // Row3  X    X    GROUP INT  POS  COL  BEAM FX   SHIFT X    X    X    X
     { {0, KT_NONE},              {0, KT_NONE},
-      {'g', KT_CKEY}, {'i', KT_CKEY}, {'p', KT_CKEY}, {'k', KT_CKEY},
-      {'j', KT_CKEY}, {'f', KT_CKEY}, {KEY_LEFT_SHIFT, KT_MOD},
+      {'g', KT_CTAP}, {'i', KT_CTAP}, {'p', KT_CTAP}, {'k', KT_CTAP},
+      {'j', KT_CTAP}, {'f', KT_CTAP}, {KEY_LEFT_SHIFT, KT_MOD},
       {0, KT_NONE},   {0, KT_NONE},   {0, KT_NONE},   {0, KT_NONE} },
     // Row4  alle X (frei belegbar)
     { {0, KT_NONE},              {0, KT_NONE},      {0, KT_NONE},      {0, KT_NONE},
@@ -592,11 +599,7 @@ void dumpFaderText() {
 constexpr uint16_t FADER_SETTLE_US = 1500;
 constexpr uint8_t FADER_SKIP_READS = 5;  // erst so viele ADC-Reads verwerfen (Settling)
 int32_t readFaderRaw(uint8_t f) {
-#if FADER_CH_REVERSE
-    uint8_t ch = (uint8_t)(NUM_FADERS - 1 - f);
-#else
-    uint8_t ch = f;
-#endif
+    uint8_t ch = faderChannel(f);
     digitalWrite(MUX_S0, (ch & 1) ? HIGH : LOW);
     digitalWrite(MUX_S1, (ch & 2) ? HIGH : LOW);
     digitalWrite(MUX_S2, (ch & 4) ? HIGH : LOW);
@@ -654,11 +657,7 @@ int readFaderPct(uint8_t f) {
 // readFaderPct übereinstimmen), ein schwebender Mux-Eingang füllt den ADC nicht
 // und driftet je nach Settle-Zeit weit auseinander.
 int readFaderPctShort(uint8_t f) {
-#if FADER_CH_REVERSE
-    uint8_t ch = (uint8_t)(NUM_FADERS - 1 - f);
-#else
-    uint8_t ch = f;
-#endif
+    uint8_t ch = faderChannel(f);
     digitalWrite(MUX_S0, (ch & 1) ? HIGH : LOW);
     digitalWrite(MUX_S1, (ch & 2) ? HIGH : LOW);
     digitalWrite(MUX_S2, (ch & 4) ? HIGH : LOW);
@@ -1397,11 +1396,7 @@ void setup() {
     delay(1500);
     Serial.println("Fader ADC scan (ch raw%):");
     for (uint8_t f = 0; f < NUM_FADERS; f++) {
-#if FADER_CH_REVERSE
-        uint8_t ch = (uint8_t)(NUM_FADERS - 1 - f);
-#else
-        uint8_t ch = f;
-#endif
+        uint8_t ch = faderChannel(f);
         digitalWrite(MUX_S0, (ch & 1) ? HIGH : LOW);
         digitalWrite(MUX_S1, (ch & 2) ? HIGH : LOW);
         digitalWrite(MUX_S2, (ch & 4) ? HIGH : LOW);
@@ -1417,7 +1412,7 @@ void setup() {
 #endif
 #endif
 
-#if FADER_IDLE_GUARD
+#if ENABLE_FADERS && FADER_IDLE_GUARD
     // Idle-Guard (läuft NACH dem Boot-Scan/dem 1.5s-Warm-Up): kurzer vs.
     // langer Settle. Echter Poti antwortet in us und liest bei beiden gleich.
     // Schwimmende Mux-Eingänge sind nach dem Warm-Up noch niedrig (short ~1%)
@@ -1465,9 +1460,10 @@ void setup() {
     }
 
     // Start USB HID (Keyboard + Absolute-Mouse als Composite).
-    // Die Absolut-Maus wird als erster HID-Report registriert (ordering 8),
-    // das Keyboard folgt (10/11) - macOS verlangt Maus-Reports VOR den
-    // Keyboard-Reports im Composite (gleiche Lösung wie beim Encoder-Wing).
+    // Reihenfolge der HID-Reports nach `ordering`: Keyboard 10, Consumer 11,
+    // Absolute-Maus 21 - wie im Core (MouseAbsolute). macOS bindet die Tastatur
+    // nur korrekt, wenn der Keyboard-Report der erste ist; beim Encoder-Wing
+    // (ohne Tastatur) war die Maus-Reihenfolge dagegen irrelevant.
     Keyboard.begin();
     absMouseBegin();
 
@@ -1484,7 +1480,7 @@ void setup() {
     }
 #endif
 
-#if FADER_LINUX_NUMLOCK
+#if ENABLE_FADERS && FADER_LINUX_NUMLOCK
     // NumLock-Zustand UEber den LED-Report verfolgen (Linux), damit die
     // Numpad-Wert-Eingabe auch bei ausgeschaltetem NumLock Ziffern liefert.
     Keyboard.onLED(kbdLedCb, nullptr);
@@ -1514,10 +1510,10 @@ void setup() {
     Serial.println("NUDGE-CAL S05 done");
 #endif
 
-#if FADER_CALIBRATE == 2
+#if ENABLE_FADERS && FADER_CALIBRATE == 2
     // Interaktive Kalibrierung fest einkompiliert (siehe faderCalUi).
     faderCalUi(false);
-#elif FADER_CALIBRATE == 1
+#elif ENABLE_FADERS && FADER_CALIBRATE == 1
     // Kalibrier-Modus: Cursor wandert nacheinander auf jeden der 11 Zielpunkte
     // und blinkt dabei seinen Index (i+1 mal) - so die X-Position der
     // Full-Panel-Faderbahn uebernehmen.
@@ -1590,7 +1586,7 @@ void processKey(uint8_t r, uint8_t c) {
             Keyboard.press(KEY_LEFT_CTRL);
             Keyboard.press(KEY_LEFT_ALT);
             Keyboard.press('0');
-            debugKey("PRESS DBO", cell.code);
+            debugKey("PRESS ALT", cell.code);
         } else if (cell.type == KT_FLASH) {
             // Test-Taste AN toggeln; sofort wieder loslassen, damit
             // macOS kein Auto-Repeat (,,,,) und MagicQ kein Flackern bekommt.
@@ -1606,6 +1602,18 @@ void processKey(uint8_t r, uint8_t c) {
             // Reiner Modifier (Shift) - press/release halten.
             Keyboard.press(cell.code);
             debugKey("PRESS MOD", cell.code);
+        } else if (cell.type == KT_TAP) {
+            // Einzel-Tastendruck: sofort press+release, kein Halten.
+            Keyboard.press(cell.code);
+            Keyboard.release(cell.code);
+            debugKey("TAP", cell.code);
+        } else if (cell.type == KT_CTAP) {
+            // Ctrl+<code> als Einzel-Tastendruck (MagicQ-Fenster oeffnen).
+            Keyboard.press(KEY_LEFT_CTRL);
+            Keyboard.press(cell.code);
+            Keyboard.release(cell.code);
+            Keyboard.release(KEY_LEFT_CTRL);
+            debugKey("TAP CTRL+", cell.code);
         } else if (!isChord) {
             Keyboard.press(cell.code);
             debugKey("PRESS", cell.code);
@@ -1619,7 +1627,7 @@ void processKey(uint8_t r, uint8_t c) {
             Keyboard.release(KEY_LEFT_CTRL);
             Keyboard.release(KEY_LEFT_ALT);
             Keyboard.release('0');
-            debugKey("RELEASE DBO", cell.code);
+            debugKey("RELEASE ALT", cell.code);
         } else if (cell.type == KT_FLASH) {
             // Test-Taste AUS toggeln; sofort loslassen (kein Auto-Repeat).
             Keyboard.press(cell.code);
@@ -1632,7 +1640,7 @@ void processKey(uint8_t r, uint8_t c) {
         } else if (cell.type == KT_MOD) {
             Keyboard.release(cell.code);
             debugKey("RELEASE MOD", cell.code);
-        } else if (!isChord) {
+        } else if (cell.type == KT_KEY) {
             Keyboard.release(cell.code);
             debugKey("RELEASE", cell.code);
         }
@@ -1643,7 +1651,7 @@ void processKey(uint8_t r, uint8_t c) {
 void loop() {
     uint32_t now = millis();
 
-#if FADER_LINUX_NUMLOCK
+#if ENABLE_FADERS && FADER_LINUX_NUMLOCK
     ensureNumlock();
 #endif
 
