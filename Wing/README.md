@@ -92,6 +92,8 @@ The mapping is defined in `src/main.cpp` as `KEYMAP[5][13]` and checked via the 
 
 **Restart the Pico while holding the DBO button** → calibration mode starts automatically (4 LED blinks). The cursor is steered with the wing buttons, and **NEXT Page saves** the values permanently in the Pico's LittleFS flash (`/fcal.bin`).
 
+**Clear the stored calibration:** restart the Pico while holding **REL**. The firmware deletes `/fcal.bin`, so the next boot uses the full-range defaults (useful after re-wiring, since stale endstop values would otherwise make every fader look `LOCKED`).
+
 | Key | Function |
 |-----|----------|
 | S1 | X position of PB1 |

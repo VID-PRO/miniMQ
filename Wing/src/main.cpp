@@ -268,8 +268,10 @@ struct FaderCal {
 static const FaderCal FADER_CAL_DEFAULT = {
     { 400, 2800, 5300, 7800, 10300, 12800, 15300, 17800, 20300, 22800, 25300 },
     26800, 29300, 26850, 29400,
-    { 64756, 65220, 65220, 65204, 65220, 65220, 64772, 65220, 65172, 65220, 65204 },
-    { 348, 396, 348, 380, 396, 380, 380, 380, 364, 380, 396 }
+    // rawLo = 0 % (unten), rawHi = 100 % (oben). Aktuelle Verdrahtung:
+    // unten = Wiper auf GND (niedriger ADC), oben = 3V3 (hoher ADC).
+    { 348, 396, 348, 380, 396, 380, 380, 380, 364, 380, 396 },
+    { 64756, 65220, 65220, 65204, 65220, 65220, 64772, 65220, 65172, 65220, 65204 }
 };
 static FaderCal fcal = FADER_CAL_DEFAULT;
 
@@ -1352,6 +1354,20 @@ bool dboHeldAtBoot(void) {
     }
     return true;
 }
+
+// REL beim Boot gedrueckt? Zwei Abfragen im Abstand (Entprellung).
+// Loescht /fcal.bin, damit die veraltete Kalibrierung verworfen wird.
+bool relHeldAtBoot(void) {
+    for (uint8_t i = 0; i < 2; i++) {
+        digitalWrite(ROW_PINS[0], MATRIX_ACTIVE);   // REL sitzt in Row0 (GP2), Spalte 13 (GP19)
+        delayMicroseconds(50);
+        bool on = (digitalRead(COL_PINS[12]) == MATRIX_PRESSED(true));
+        digitalWrite(ROW_PINS[0], MATRIX_IDLE);
+        if (!on) return false;
+        delay(30);
+    }
+    return true;
+}
 #endif
 
 void setup() {
@@ -1445,6 +1461,15 @@ void setup() {
 
     // Matrix-Selbsttest beim Boot: zeigt pro Reihe den Rohzustand aller Spalten.
     // Aktiv = gedrückt/kurzgeschlossen, sonst offen (normal ohne Tastendruck)
+    // Referenz zuerst: ALLE Reihen inaktiv -> jede Spalte muss HIGH (offen) sein.
+    // Ein '1' hier = Spalte haengt dauerhaft auf LOW (Short nach GND, externer
+    // Pulldown oder beschaedigter GPIO) - unabhaengig von der Reihenwahl.
+    delay(2);   // Pull-ups die Spaltenkapazitaet laden lassen
+    Serial.print("idle cols: ");
+    for (uint8_t c = 0; c < 13; c++) {
+        Serial.print(MATRIX_PRESSED(digitalRead(COL_PINS[c])) ? "1" : "0");
+    }
+    Serial.println();
     for (uint8_t r = 0; r < 5; r++) {
         digitalWrite(ROW_PINS[r], MATRIX_ACTIVE);
         delayMicroseconds(10);
@@ -1468,6 +1493,19 @@ void setup() {
     absMouseBegin();
 
 #if ENABLE_FADERS && FADER_OUT_MODE == 2
+    // Kalibrierung loeschen: REL beim Boot gedrueckt halten -> /fcal.bin weg,
+    // danach gelten die Vollbereichs-Defaults (kein LOCKED durch Alt-Daten).
+    if (relHeldAtBoot()) {
+        Serial.println("[CAL] REL beim Boot gedrueckt -> /fcal.bin loeschen");
+        if (LittleFS.begin()) {
+            bool removed = LittleFS.remove(FADER_CAL_FILE);
+            LittleFS.end();
+            Serial.println(removed ? "[CAL] /fcal.bin geloescht"
+                                   : "[CAL] /fcal.bin war nicht vorhanden");
+        } else {
+            Serial.println("[CAL] WARN LittleFS nicht verfuegbar");
+        }
+    }
     // Kalibrierdaten: aus LittleFS laden, sonst Defaults. Mit gedrueckter
     // DBO-Taste starten -> Kalibrier-UI (NEXT Page speichert und beendet).
     bool calFromFlash = loadFaderCal();
