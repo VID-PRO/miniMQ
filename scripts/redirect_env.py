@@ -7,6 +7,7 @@ PROJECT_BY_ENV = {
     "wing": "Wing",
     "encoder": "Enncoder",
     "artnet": "ArtNet-USB",
+    "dmxrouter": "DMX-Router",
 }
 
 

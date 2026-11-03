@@ -1,10 +1,11 @@
 ## Installation
 
-All three controllers communicate with your PC over USB with **no drivers to install**:
+All four boards connect over USB with **no drivers to install**:
 
 - **miniMQ Wing** presents itself as a USB keyboard (+ an absolute mouse for the fader drags).
 - **miniMQ Encoder** (two modules) presents itself as a USB mouse (absolute + relative composite).
 - **miniMQ ArtNet-USB** presents itself as a USB Ethernet adapter (NCM) and drives up to four Art-Net ↔ DMX universes.
+- **miniMQ DMX-Router** is a 4 → 16 DMX/RDM matrix splitter and appears as a USB serial console (115200 baud).
 
 ### Flashing a Raspberry Pi Pico (any variant, first time)
 
@@ -51,6 +52,15 @@ Two Raspberry Pi Pico (RP2040 Zero) modules — **left** and **right** — each 
 
 Defaults: all four ports output, universes `0/0/0`–`0/0/3` (net/sub/universe) on DMX GPIO2–GPIO5.
 
+### 4. DMX-Router — `miniMQ-dmxrouter.uf2`
+
+4 DMX/RDM inputs → 16 DMX outputs with per-output routing and HTP merge. Intended as a matrix splitter/merger between consoles and fixtures.
+
+1. Flash `miniMQ-dmxrouter.uf2` to the router's Pico. **Important:** the firmware uses a fixed pin map — wire the board exactly as documented in `DMX-Router/README.md` (section "Pin-Belegung").
+2. The default routing sends IN1 → OUT1–4, IN2 → OUT5–8, IN3 → OUT9–12, IN4 → OUT13–16.
+3. Configure either on the optional OLED + 4-button UI or from the USB serial console (115200 baud). Type `help` for the command list; `save` persists the routing in `/router.cfg` on the Pico.
+4. RDM is a best-effort store-and-forward relay. Concurrent RDM traffic on multiple inputs and full E1.20 discovery are limited by the shared direction/multiplexer hardware; see the project README for details.
+
 ---
 
-Verify the download integrity with `SHA256SUMS`. A combined archive of all firmwares is in `miniMQ-all-firmwares.zip`. Wiring, setup details and MagicQ mapping tables are in each project's README (`Wing/`, `Enncoder/`, `ArtNet-USB/`).
+Verify the download integrity with `SHA256SUMS`. A combined archive of all firmwares is in `miniMQ-all-firmwares.zip`. Wiring, setup details and MagicQ mapping tables are in each project's README (`Wing/`, `Enncoder/`, `ArtNet-USB/`, `DMX-Router/`).

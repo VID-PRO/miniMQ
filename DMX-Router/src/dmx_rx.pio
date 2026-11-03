@@ -1,0 +1,41 @@
+; ------------------------------------------------------------------
+; DMX/RDM UART receiver (250 kbaud, 8N2), one pin per state machine.
+;
+; The state machine runs at 2 MHz => 8 PIO cycles per 4 us bit. The
+; classic pico-examples UART receiver timing is used:
+;
+;   wait 0          -> start bit edge
+;   set x,7 [10]    -> 12 cycles => middle of data bit 0
+;   loop 8x         -> 8 data bits, LSB first, 8 cycles per bit
+;   in pins,1       -> first stop bit
+;   jmp pin         -> framing check
+;
+; The receiver samples 9 bits per character (8 data + first stop bit).
+; With the right-shifting ISR they land in bits 31..23 of the pushed
+; word. DmxInput::poll() extracts them as:
+;   bit 8 = stop bit (1 => valid character, 0 => break/framing error)
+;   bits 7..0 = data
+;
+; A BREAK therefore produces a marker with stop bit 0 and the driver
+; uses it to delimit DMX frames. A normal 0x00 data byte has stop bit 1
+; and can never be confused with a break.
+; ------------------------------------------------------------------
+.program dmx_rx
+
+.wrap_target
+start:
+    wait 0 pin 0            ; wait for the start bit (falling edge)
+    set x, 7 [10]           ; 12 cycles -> centre of data bit 0
+    mov isr, ::null         ; fresh shift register
+bitloop:
+    in pins, 1              ; sample one data bit
+    jmp x-- bitloop [6]     ; 8 cycles per bit
+    in pins, 1              ; sample the first stop bit into bit 8
+    jmp pin good_stop       ; high => valid character
+    wait 1 pin 0            ; break/framing error: wait for line idle
+    mov isr, ::null
+    push                    ; 0x000 = break marker
+    jmp start
+good_stop:
+    push                    ; 0x100 | data byte
+.wrap

@@ -1,0 +1,29 @@
+; ------------------------------------------------------------------
+; DMX512 transmitter, 8 output pins in parallel.
+;
+; One state machine drives eight consecutive GPIO pins. The DMA stream
+; contains "bit slices": each byte of the stream holds one bit for every
+; one of the eight ports (bit 0 -> base pin, bit 7 -> base pin + 7).
+; Four slices are packed into one 32-bit word; each `out pins, 8` takes
+; 4 us at a 1 MHz state-machine clock, so a word is 16 us.
+;
+; Frame layout (built by DmxTxGroup::buildPlanes):
+;   48 slices of 0x00   -> BREAK on active ports only (~192 us,
+;                          E1.11 >= 88 us, E1.20 176..352 us);
+;                          idle ports stay at 0xFF (no spurious break)
+;    4 slices of 0xFF   -> MAB   (~16 us, E1.11 minimum 8 us)
+;   513 bytes x 11 bits -> start code + 512 slots,
+;                          1 start + 8 data + 2 stop bits
+;
+; The transmitter is restarted for every frame, so exactly one BREAK is
+; emitted per frame. The preamble is part of the DMA buffer, which keeps
+; the timing independent of CPU load.
+; ------------------------------------------------------------------
+.program dmx_tx
+
+.wrap_target
+    out pins, 8 [3]     ; slice 0, 4 us
+    out pins, 8 [3]     ; slice 1, 4 us
+    out pins, 8 [3]     ; slice 2, 4 us
+    out pins, 8 [3]     ; slice 3, 4 us (then autopull the next word)
+.wrap

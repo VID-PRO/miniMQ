@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-${{ hashFiles('Wing/platformio.ini', 'Enncoder/platformio.ini', 'ArtNet-USB/platformio.ini') }}
+          key: pio-${{ hashFiles('Wing/platformio.ini', 'Enncoder/platformio.ini', 'ArtNet-USB/platformio.ini', 'DMX-Router/platformio.ini') }}
           restore-keys: |
             pio-
 
@@ -37,6 +37,7 @@ jobs:
           python -m platformio run -d Wing
           python -m platformio run -d Enncoder
           python -m platformio run -d ArtNet-USB
+          python -m platformio run -d DMX-Router
 
       - name: Stage release assets
         run: |
@@ -45,6 +46,7 @@ jobs:
           cp Wing/.pio/build/pico/firmware.uf2     dist/miniMQ-fader.uf2
           cp Enncoder/.pio/build/pico/firmware.uf2   dist/miniMQ-encoder.uf2
           cp ArtNet-USB/.pio/build/pico/firmware.uf2 dist/miniMQ-artnet.uf2
+          cp DMX-Router/.pio/build/pico/firmware.uf2 dist/miniMQ-dmxrouter.uf2
           (cd dist && sha256sum *.uf2 > SHA256SUMS)
           (cd dist && zip -j miniMQ-all-firmwares.zip *.uf2 SHA256SUMS)
 
