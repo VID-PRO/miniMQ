@@ -6,8 +6,8 @@
 #include "config.h"
 #include "dmx_in.h"
 #include "dmx_out.h"
-#include "hardware/gpio.h"
 #include "hardware/uart.h"
+#include "ioexp.h"
 
 RdmManager rdm;
 
@@ -44,13 +44,10 @@ void RdmManager::begin(DmxTxGroup *tx0, DmxTxGroup *tx1, DmxInput *muxLow,
   _mux[0] = muxLow;
   _mux[1] = muxHigh;
 
-  // Multiplexer select lines and the common output direction.
-  for (uint8_t i = 0; i < 3; i++) {
-    pinMode(board::MUX_SEL[i], OUTPUT);
-    digitalWrite(board::MUX_SEL[i], LOW);
-  }
-  pinMode(board::DIR_OUT, OUTPUT);
-  digitalWrite(board::DIR_OUT, HIGH);  // default: transmit DMX
+  // Multiplexer select lines and the common output direction are on
+  // the PCF8574 (P1..P3 and P0) and buffered by a 74HC125.
+  ioexp::selectMux(0);
+  ioexp::setDirOut(true);  // default: transmit DMX
 
   pinMode(board::DIR_IN, OUTPUT);
   digitalWrite(board::DIR_IN, LOW);    // default: receive from console
@@ -61,10 +58,7 @@ void RdmManager::begin(DmxTxGroup *tx0, DmxTxGroup *tx1, DmxInput *muxLow,
 }
 
 void RdmManager::selectMux(uint8_t channel) {
-  channel &= 0x07;
-  for (uint8_t i = 0; i < 3; i++) {
-    digitalWrite(board::MUX_SEL[i], (channel & (1u << i)) ? HIGH : LOW);
-  }
+  ioexp::selectMux(channel & 0x07);
 }
 
 void RdmManager::startJob(uint8_t input, const uint8_t *wire, uint16_t len) {
@@ -232,7 +226,7 @@ bool RdmManager::transact(uint8_t out, DmxInput *inputs, uint8_t count,
 
   // Release the line: all output transceivers switch to receive, but
   // only the selected 74HC151 channel is actually decoded.
-  gpio_put(board::DIR_OUT, 0);
+  ioexp::setDirOut(false);
 
   uint32_t t0 = micros();
   uint32_t act0 = mux->activity();
@@ -260,7 +254,7 @@ bool RdmManager::transact(uint8_t out, DmxInput *inputs, uint8_t count,
     tight_loop_contents();
   }
 
-  gpio_put(board::DIR_OUT, 1);  // back to DMX transmit / idle
+  ioexp::setDirOut(true);  // back to DMX transmit / idle
 
   if (got && !rdmValidate(_resp, respLen)) {
     got = false;

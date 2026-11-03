@@ -9,7 +9,7 @@ Die Firmware bietet:
 * 16 DMX-Ausgänge, parallel über zwei PIO-Bitplane-Sender + DMA
 * HTP-Merge (Highest Takes Precedence) pro Ausgang
 * best-effort RDM-Store-and-Forward-Relay
-* optionale lokale Bedienung über SSD1306-OLED + PCF8574-Tasten
+* lokale Bedienung über PCF8574-Tasten, optionales SSD1306-OLED
 * Konfiguration über USB-Serial-Konsole und LittleFS (`/router.cfg`)
 * Konfiguration übersteht Reboots; `defaults` stellt den 4-fach-Splitter wieder her
 
@@ -19,58 +19,79 @@ Die Firmware bietet:
 
 ---
 
-## 1. Pin-Belegung
+## 1. Pin-Belegung und Hardware
 
-Der RP2040 stellt **30 GPIOs** (GPIO 0..29) bereit. Die Firmware nutzt alle
-30 und kommt ohne Portexpander aus:
+Der RP2040 hat 30 GPIOs, ein Standard-Pico führt aber nur **GP0..GP22
+und GP26..GP28** auf den Kopfleisten heraus (26 nutzbare Pins). `GP23`
+und `GP25` liegen nur auf Testpads; `GP24` (VBUS-Sense) und `GP29`
+(VSYS-Sense) stehen nicht zur Verfügung.
+
+Deshalb liegen `DIR_OUT` und die drei MUX-SELECT-Leitungen auf einem
+**PCF8574** (I2C1, Adresse 0x20), gepuffert durch einen **74HC125**. Der
+PCF8574 ist Pflicht: Ohne ihn können die Ausgänge nicht senden und der
+RDM-Multiplexer nicht schalten. Das OLED ist optional, die vier Tasten
+hängen an P4..P7 des PCF8574.
+
+Die vollständigen Schaltbilder, Steckerbelegungen und Stücklisten stehen
+in [`Hardware/README.md`](Hardware/README.md).
 
 * Die 16 Ausgänge liegen als zwei zusammenhängende 8-Pin-Gruppen, weil
   eine PIO-State-Machine mit `out pins, 8` nur einen zusammenhängenden
   Pin-Bereich treiben kann.
-* Die vier Eingangs-Transceiver teilen sich `TXD` und `DIR`; die 16
-  Ausgangs-Transceiver teilen sich `DIR_OUT`.
-* Die vier Tasten liegen am PCF8574 auf dem I2C-Bus und belegen keine
-  eigenen GPIOs.
+* Die vier Eingangs-Transceiver teilen sich `TXD_IN` und `DIR_IN`; die
+  16 Ausgangs-Transceiver teilen sich `DIR_OUT`.
+* Die RDM-Rückleitungen laufen über zwei 74HC151; die Auswahl kommt
+  über PCF8574 P1..P3.
 
-### 1.1 Belegung (alle 30 GPIO genutzt)
+### 1.1 Belegung
 
-| GPIO | Funktion | Richtung / Hinweis |
-| ---: | :--- | :--- |
-| 0..7 | **OUT 1..8** (`TX_OUT`) | Ausgang, PIO-Bitplane-Gruppe 0 |
-| 8..15 | **OUT 9..16** (`TX_OUT`) | Ausgang, PIO-Bitplane-Gruppe 1 |
-| 16..19 | **RX_IN 1..4** | Eingang, je ein PIO-UART-Empfänger |
-| 20 | **TX_IN gemeinsam** | UART1-TX, 250 kbaud 8N2, RDM-Antworten |
-| 21 | **DIR_IN gemeinsam** | low = Empfang vom Pult, high = RDM-Antwort senden |
-| 22..24 | **MUX_SEL A/B/C** | Ausgang, gemeinsam für beide 74HC151 |
-| 25 | **DIR_OUT gemeinsam** | high = DMX senden, low = RDM empfangen |
-| 26 | **MUX_Y1** | Eingang, RDM-Rückkanal OUT 1..8 |
-| 27 | **MUX_Y2** | Eingang, RDM-Rückkanal OUT 9..16 |
-| 28 | **I2C SDA** | OLED + PCF8574 |
-| 29 | **I2C SCL** | OLED + PCF8574 |
+| GPIO / PCF | Funktion | Richtung / Hinweis |
+| :--- | :--- | :--- |
+| GP0..GP7 | **OUT 1..8** (`TX_OUT`) | Ausgang, PIO-Bitplane-Gruppe 0 |
+| GP8..GP15 | **OUT 9..16** (`TX_OUT`) | Ausgang, PIO-Bitplane-Gruppe 1 |
+| GP16..GP19 | **RXI1..RXI4** | Eingang, je ein PIO-UART-Empfänger |
+| GP20 | **TXD_IN gemeinsam** | UART1-TX, 250 kbaud 8N2, RDM-Antworten |
+| GP21 | **DIR_IN gemeinsam** | low = Empfang vom Pult, high = RDM-Antwort senden |
+| GP22 | **MUX_Y1** | Eingang, 74HC151 #1 (RDM1..8) |
+| GP26 | **I2C1 SDA** | PCF8574 + OLED |
+| GP27 | **I2C1 SCL** | PCF8574 + OLED |
+| GP28 | **MUX_Y2** | Eingang, 74HC151 #2 (RDM9..16) |
+| PCF P0 | **DIR_OUT gemeinsam** | high = DMX senden, low = RDM empfangen |
+| PCF P1..P3 | **MUX A/B/C** | A = LSB, gemeinsam für beide 74HC151 |
+| PCF P4..P7 | **UP/DOWN/OK/BACK** | Eingang, active-low gegen GND |
 
 Hinweise:
 
-* **GP25** ist bei einem normalen Pico mit der Onboard-LED verbunden. Die LED
-  hängt hier am gemeinsamen `DIR_OUT` und leuchtet daher im DMX-Sendebetrieb
-  (bei RDM-Empfang kurz aus). Das ist elektrisch unkritisch; wer die LED
-  nicht möchte, kann sie auf der Platine entfernen.
+* **GP25 wird nicht verwendet.** Die Onboard-LED ist nicht mit `DIR_OUT`
+  verbunden; `DIR_OUT` kommt aus dem PCF8574.
 * Die vier Eingangs-`TXD`-Leitungen werden **zusammengefasst** auf GP20
-  geführt. Eine RDM-Antwort geht damit an alle Pulte; fremde Pulte ignorieren
-  sie anhand der Destination-UID.
+  geführt. Eine RDM-Antwort geht damit an alle Pulte; fremde Pulte
+  ignorieren sie anhand der Destination-UID.
 * Die vier `DIR_IN`-Leitungen werden **zusammengefasst** auf GP21 geführt.
   Siehe Abschnitt 5 für die daraus folgenden RDM-Einschränkungen.
+* Der Pico führt I2C0 auf GP4/GP5 und I2C1 auf GP26/GP27 heraus. Die
+  Firmware verwendet deshalb für PCF8574 und OLED `Wire1` (I2C1), nicht
+  `Wire` (I2C0).
 * `DIR_OUT` ist ebenfalls gemeinsam. Während eines RDM-Fensters sind daher
   **alle 16 Ausgänge** im Empfangsmodus und treiben kein DMX.
+* PCF8574 P0..P3 haben 10-kΩ-Pull-ups (RN3) und gehen über den 74HC125
+  auf `DIR_OUT` bzw. die MUX-Eingänge. P4..P7 werden im Read-Modify-Write
+  immer auf 1 gehalten.
+* Die 3,3-V-Schiene kommt aus dem Pico-Regler und wird über die
+  Flachbandkabel verteilt. Die 5-V-Einspeisung erfolgt über J8
+  (5 V / 3 A).
 
 ### 1.2 Anschluss der 74HC151
 
-Beide Multiplexer teilen sich `A/B/C` (GP22/23/24). Kanal 0..7 wählt
-innerhalb einer Gruppe den Ausgang 1..8 bzw. 9..16:
+Beide Multiplexer teilen sich `MUX_A/B/C` (PCF8574 P1..P3, gepuffert
+durch den 74HC125). Kanal 0..7 wählt innerhalb einer Gruppe den Ausgang
+1..8 bzw. 9..16:
 
 ```
-OUT 1..8   -> 74HC151 #1 Eingänge D0..D7, Y1 -> GP26
-OUT 9..16  -> 74HC151 #2 Eingänge D0..D7, Y2 -> GP27
-A/B/C      -> GP22/GP23/GP24 (beide)
+OUT 1..8   -> 74HC151 #1 (U4) D0..D7, Y1 -> GP22
+OUT 9..16  -> 74HC151 #2 (U5) D0..D7, Y2 -> GP28
+MUX A/B/C  -> PCF8574 P1/P2/P3 über 74HC125 (A = LSB)
+DIR_OUT    -> PCF8574 P0 über 74HC125
 ```
 
 Die RDM-Rückleitungen der Ausgangs-Transceiver müssen auf die jeweiligen
@@ -82,19 +103,25 @@ Pegel, sofern die Logikseite mit 3,3 V versorgt wird.
 
 Die Transceiver-Beschaltung:
 
-* **Eingangskarte:** 120 Ω fest zwischen A/B, keine Biasing-Widerstände,
+* **Eingangskarte:** 120 Ω zwischen A/B (Lötbrücke JP1..JP4
+  **werksseitig geschlossen**), keine Biasing-Widerstände,
   `RE`/`DE` zusammen auf `DIR_IN`, `TXD` auf GP20 (alle vier parallel).
-* **Ausgangskarte:** keine feste Terminierung, 560 Ω Fail-Safe-Biasing,
+* **Ausgangskarte:** **keine feste Terminierung**, 560 Ω Fail-Safe-Bias
+  an A/B, optionaler 120-Ω-Abschluss (JP1..JP4 standardmäßig offen),
   `RE`/`DE` zusammen auf `DIR_OUT`, `RXD` über den 74HC151 zurück.
 * **Logikpegel:** Der ADM2483-Logikteil (`VDD1`) muss mit **3,3 V**
   betrieben werden, wenn `TxD`, `RxD` und `DIR` direkt an den RP2040
   gehen. Bei `VDD1 = 5 V` liefert `RxD` 5-V-Pegel; der RP2040 ist nicht
   5-V-tolerant. Die Busseite (`VDD2`) bleibt bei 5 V. Alternativ
   Pegelwandler vorsehen.
+* `PV` wird mit VDD1 (3,3 V) verbunden. Der Pin ist ein Power-Valid-
+  Eingang; für strengere Einschaltbedingungen kann ein Supervisor oder
+  ein RC-Glied ergänzt werden.
 * SM712 an A/B, 10 Ω-Schutzwiderstände zu den XLR-Pins, isolierte
-  B0505S-1W-Versorgung je Port.
+  B0505S-1W-Versorgung je Kanal.
 
 Alle 16 Ausgangskarten teilen sich **einen** gemeinsamen `DIR_OUT`.
+Details, Pinbelegungen und Stücklisten: [`Hardware/README.md`](Hardware/README.md).
 
 ---
 
@@ -105,14 +132,21 @@ TX-Frame (513 Byte) ──> DmxRouter (HTP-Merge) ──> DmxTxGroup 0 (OUT 1..8
                                               └─> DmxTxGroup 1 (OUT 9..16)
 
 GP16..19 ──> DmxInput 0..3 ──> DmxRouter
-GP26/27 ──> DmxInput 4/5 (MUX) ──> RdmManager
+GP22/GP28 ──> DmxInput 4/5 (RDM-MUX) ──> RdmManager
 ```
 
 ### 2.1 Ausgänge: Bitplane statt 16 State Machines
 
-Der RP2040 hat nur 8 PIO-State-Machines. Vier davon werden für die
-Eingänge benötigt, zwei für die RDM-Multiplexer. Für die 16 Ausgänge
-bleiben zwei SMs. Jede SM treibt acht **aufeinanderfolgende** GPIOs.
+Der RP2040 hat **zwei PIO-Blöcke mit je vier State Machines**, insgesamt
+also 8 SMs. Sie werden gleichmäßig aufgeteilt, damit kein Block
+überbucht wird:
+
+* **PIO0:** 2 × TX-Gruppe, IN1, IN2
+* **PIO1:** IN3, IN4, 2 × RDM-Multiplexer-Empfänger
+
+Für die 16 Ausgänge werden zwei SMs benötigt. Jede SM treibt acht
+**aufeinanderfolgende** GPIOs. Das RX-Programm wird pro PIO-Block einmal
+geladen; die Offsets beider Blöcke werden getrennt verwaltet.
 
 Ein DMA-Wort enthält vier „Bit-Slices“. Ein Slice ist ein Byte, in dem
 Bit *p* den Wert von Ausgang *p* zu einem Zeitpunkt enthält. Die PIO gibt
@@ -216,7 +250,10 @@ Der Root-Build verwendet `scripts/redirect_env.py`, um die Quellen aus
 ### 4.1 USB-Serial-Konsole (115200 Baud)
 
 Nach dem Boot meldet sich die Firmware mit einer kurzen Zusammenfassung.
-`help` zeigt alle Befehle:
+`help` zeigt alle Befehle. Der Serial Monitor sollte `LF` oder `CRLF` als
+Zeilenende senden; falls er ohne Zeilenende sendet (z. B. VS Code Serial
+Monitor mit „Line ending = none“), führt die Firmware die Eingabe nach
+500 ms ohne weiteres Zeichen automatisch aus.
 
 ```
 help                     this text
@@ -266,13 +303,14 @@ Der Frame wird zuerst mit `rdmValidate()` geprüft. Die Prüfsumme ist die
 **16-Bit-Summe aller Wire-Bytes einschließlich `0xCC`, ohne die beiden
 Prüfsummen-Bytes** (siehe Abschnitt 5).
 
-### 4.2 OLED / Tasten (optional)
+### 4.2 OLED / Tasten
 
 Verdrahtung:
 
-* SSD1306 128×64 an I2C (0x3C, Fallback 0x3D)
-* PCF8574 an I2C (0x20..0x27), Tasten P0..P3 gegen GND
-* P0 = UP, P1 = DOWN, P2 = OK, P3 = BACK, active-low, 25 ms Entprellung
+* SSD1306 128×64 an I2C1 (0x3C, Fallback 0x3D) — **optional**
+* PCF8574 an I2C1 (0x20) — **Pflicht**
+* P0 = `DIR_OUT`, P1..P3 = `MUX A/B/C` (über 74HC125)
+* P4 = UP, P5 = DOWN, P6 = OK, P7 = BACK, active-low, 25 ms Entprellung
 
 Bedienung:
 
@@ -286,8 +324,12 @@ Die Statusseite zeigt aktive Eingänge, RDM-Status, Refresh-Rate und die
 Routings der acht Ausgänge der aktuellen Seite. Die Anzeige wird alle
 300 ms oder bei Änderungen neu gezeichnet.
 
-Sind OLED oder PCF8574 nicht vorhanden, läuft der Router normal weiter;
-die Konfiguration erfolgt dann ausschließlich über die Serial-Konsole.
+Ohne OLED läuft der Router normal weiter. Ohne PCF8574 meldet die
+Firmware `[err] PCF8574 not found - DIR_OUT/MUX are fixed`; `DIR_OUT` und
+die MUX-Auswahl lassen sich dann nicht steuern. Die 10-kΩ-Pull-ups (RN3)
+halten `DIR_OUT` auf Senden, sodass die DMX-Ausgabe weiterläuft, der
+RDM-Rückkanal aber auf Kanal 7 festsitzt. Die Konfiguration ist in beiden
+Fällen über die Serial-Konsole möglich.
 
 ---
 
@@ -299,8 +341,8 @@ sein. Die Firmware implementiert deshalb ein Store-and-Forward-Relay:
 1. Auf einem Eingang kommt ein RDM-Request an (`0xCC 0x01 ...`).
 2. Der Request wird an alle Ausgänge gesendet, deren Routing-Maske den
    Eingang enthält.
-3. `DIR_OUT` wird auf Empfang geschaltet, der 74HC151 wählt den Ausgang,
-   und der Rückkanal wird von einer PIO-UART gelesen.
+3. `DIR_OUT` wird über den PCF8574 auf Empfang geschaltet, der 74HC151
+   wählt den Ausgang, und der Rückkanal wird von einer PIO-UART gelesen.
 4. Die erste gültige Antwort wird an den anfragenden Eingang
    weitergeleitet (UART1-TX mit 192-µs-Break).
 
@@ -390,15 +432,18 @@ Prüfsumme werden die Defaults geladen. Die Datei wird nur bei `save`,
 | `src/ssd1306.*` | eigener SSD1306-Treiber |
 | `src/font5x7.h` | 5×7-Font |
 | `src/ui.*` | Status-/Auswahl-/Edit-Seiten, PCF8574-Tasten |
+| `src/ioexp.*` | PCF8574-Treiber (DIR_OUT, MUX-SELECT, Tasten) |
+| `Hardware/` | Schaltbilder, Generator und Hardware-Dokumentation |
 
 ---
 
 ## 8. Test-Checkliste für den Aufbau
 
 1. **Spannungsversorgung:** 3,3 V Logik, 5 V isolierte Ports prüfen,
-   keine Kurzschlüsse zwischen Logik- und Isolationsmasse.
+   keine Kurzschlüsse zwischen Logik- und Isolationsmasse. Nach dem Boot
+   muss die Konsole `[ui] PCF8574 at 0x20` melden.
 2. **Ausgänge:** Oszilloskop an OUT1; Break ≈ 192 µs, MAB ≈ 16 µs,
-   danach 513 Byte mit 44 µs/Bit. Bei 40 Hz erscheint alle 25 ms ein Frame.
+   danach 513 Byte mit 44 µs/Byte. Bei 40 Hz erscheint alle 25 ms ein Frame.
 3. **Eingänge:** Pult an IN1; `status` muss `frames` hochzählen und
    `active yes` zeigen.
 4. **Routing:** `route 5 1`, `save`; OUT5 muss die Daten von IN1 ausgeben.
@@ -420,4 +465,3 @@ Bekannte offene Punkte:
   verloren; der Parser resynchronisiert beim nächsten Break. Das ist
   nötig, weil die Halbduplex-Transceiver die eigene Antwort auf allen
   Eingängen mithören und sonst als neuen Request interpretieren würden.
-* Die Onboard-LED an GP25 wird als `DIR_OUT` mitbenutzt.

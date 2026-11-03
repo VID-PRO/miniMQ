@@ -4,21 +4,23 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 
-// All input ports share one copy of the RX program (12 instructions).
-static PIO s_rxPio = nullptr;
-static uint s_rxOffset = 0;
+// The RX program is loaded once per PIO block.  The two blocks have
+// separate instruction memories, so their program offsets can differ.
+static uint s_rxOffset[2] = {0, 0};
+static bool s_rxLoaded[2] = {false, false};
 
 bool DmxInput::begin(PIO pio, uint8_t pin, uint8_t index) {
   _pio = pio;
   _pin = pin;
   _index = index;
 
-  if (s_rxPio != pio) {
+  uint block = pio_get_index(pio);
+  if (!s_rxLoaded[block]) {
     if (!pio_can_add_program(pio, &dmx_rx_program)) return false;
-    s_rxOffset = pio_add_program(pio, &dmx_rx_program);
-    s_rxPio = pio;
+    s_rxOffset[block] = pio_add_program(pio, &dmx_rx_program);
+    s_rxLoaded[block] = true;
   }
-  _offset = s_rxOffset;
+  _offset = s_rxOffset[block];
 
   int sm = pio_claim_unused_sm(pio, false);
   if (sm < 0) return false;

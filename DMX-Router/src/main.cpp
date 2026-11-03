@@ -2,14 +2,15 @@
 //  DMX-Router 4 -> 16
 //
 //  4 DMX/RDM inputs, 16 DMX outputs, HTP merge, best-effort RDM
-//  relay, optional SSD1306/PCF8574 user interface and a USB serial
-//  configuration console.
+//  relay, PCF8574 for direction/mux/buttons, optional SSD1306 UI and
+//  a USB serial configuration console.
 //
 //  Hardware and pin map: see README.md and board.h.
 // ------------------------------------------------------------------
 
 #include <Arduino.h>
 #include <RP2040Support.h>
+#include <Wire.h>
 #include <cstdlib>
 #include <cstring>
 
@@ -17,6 +18,7 @@
 #include "config.h"
 #include "dmx_in.h"
 #include "dmx_out.h"
+#include "ioexp.h"
 #include "rdm.h"
 #include "router.h"
 #include "ui.h"
@@ -35,6 +37,7 @@ static uint32_t s_lastRebuildMs = 0;
 // --- Serial console ------------------------------------------------
 static char s_line[96];
 static uint8_t s_lineLen = 0;
+static uint32_t s_lastInputMs = 0;
 
 // ------------------------------------------------------------------
 //  Output frame scheduling
@@ -406,9 +409,11 @@ static void handleCommand(char *line) {
 }
 
 static void pollSerial() {
+  bool received = false;
   while (Serial.available() > 0) {
     int c = Serial.read();
     if (c < 0) break;
+    received = true;
     if (c == '\r' || c == '\n') {
       if (s_lineLen) {
         s_line[s_lineLen] = 0;
@@ -420,6 +425,16 @@ static void pollSerial() {
     } else if (s_lineLen + 1 < sizeof(s_line)) {
       s_line[s_lineLen++] = (char)c;
     }
+  }
+  if (received) s_lastInputMs = millis();
+
+  // Some serial monitors (including the VS Code Serial Monitor with
+  // "line ending = none") send the text without CR/LF.  Execute the
+  // buffered line after a short idle period as a fallback.
+  if (s_lineLen && (uint32_t)(millis() - s_lastInputMs) >= 500) {
+    s_line[s_lineLen] = 0;
+    s_lineLen = 0;
+    handleCommand(s_line);
   }
 }
 
@@ -447,23 +462,36 @@ void setup() {
   Serial2.setRX(255);  // UART_PIN_NOT_DEFINED, nothing to receive
   Serial2.begin(250000, SERIAL_8N2);
 
+  // I2C1 for the PCF8574 and the optional SSD1306.  GP26/27 are the
+  // only complete I2C pair that is still free after the 16 outputs,
+  // the four inputs and the two RDM return pins.  On the Pico variant
+  // `Wire` is I2C0 (GP4/GP5), so the I2C1 instance `Wire1` is used.
+  Wire1.setSDA(board::UI_SDA);
+  Wire1.setSCL(board::UI_SCL);
+  Wire1.begin();
+  Wire1.setClock(400000);
+
+  if (!ioexp::begin(board::UI_PCF_ADDR)) {
+    Serial.println("[err] PCF8574 not found - DIR_OUT/MUX are fixed");
+    s_hardwareOk = false;
+  }
+
   // Safe bus state before the PIO takes over: input cards receive,
   // output cards transmit an idle mark, multiplexers select channel 0.
   pinMode(board::DIR_IN, OUTPUT);
   digitalWrite(board::DIR_IN, LOW);
-  pinMode(board::DIR_OUT, OUTPUT);
-  digitalWrite(board::DIR_OUT, HIGH);
-  for (uint8_t i = 0; i < 3; i++) {
-    pinMode(board::MUX_SEL[i], OUTPUT);
-    digitalWrite(board::MUX_SEL[i], LOW);
-  }
+  ioexp::setDirOut(true);
+  ioexp::selectMux(0);
   for (uint8_t pin = 0; pin < 16; pin++) {
     pinMode(pin, OUTPUT);
     digitalWrite(pin, HIGH);
   }
 
-  // Claim the PIO resources in a deterministic order:
-  //   2 x TX groups, 4 x console RX, 2 x RDM multiplexer RX.
+  // The RP2040 has two PIO blocks with four state machines each.
+  // Distribute the eight state machines evenly:
+  //   PIO0: 2 x TX groups, IN1, IN2
+  //   PIO1: IN3, IN4, 2 x RDM multiplexer RX
+  // No block is asked for more than its four SMs.
   for (uint8_t g = 0; g < 2; g++) {
     uint8_t base = g ? board::TX_GROUP1_PIN : board::TX_GROUP0_PIN;
     if (!txGroups[g].begin(pio0, base)) {
@@ -473,14 +501,15 @@ void setup() {
   }
 
   for (uint8_t i = 0; i < board::NUM_INPUTS; i++) {
-    if (!inputs[i].begin(pio0, board::RX_IN[i], i)) {
+    PIO pio = (i < 2) ? pio0 : pio1;
+    if (!inputs[i].begin(pio, board::RX_IN[i], i)) {
       Serial.printf("[err] input %u init failed\n", i + 1);
       s_hardwareOk = false;
     }
   }
 
   for (uint8_t m = 0; m < 2; m++) {
-    if (!muxInputs[m].begin(pio0, board::MUX_Y[m], (uint8_t)(8 + m))) {
+    if (!muxInputs[m].begin(pio1, board::MUX_Y[m], (uint8_t)(8 + m))) {
       Serial.printf("[err] RDM mux %u init failed\n", m);
       s_hardwareOk = false;
     }

@@ -6,8 +6,11 @@
 //  Pin map of the DMX-Router (RP2040 / Raspberry Pi Pico)
 // ==================================================================
 //
-//  The RP2040 has 30 GPIOs.  This map fits the complete router into
-//  them without port expanders:
+//  The RP2040 has 30 GPIOs, but a standard Pico only brings out
+//  GP0..GP22 and GP26..GP28 (26 usable pins).  GP23/GP25 are test
+//  pads only; GP24 (VBUS sense) and GP29 (VSYS sense) are not
+//  available.  The fast signals therefore stay on the Pico and the
+//  slow control and UI signals move to a PCF8574:
 //
 //    - 16 outputs are driven as two contiguous 8-pin PIO groups
 //      (one state machine + one DMA channel per group).
@@ -15,13 +18,15 @@
 //      pin.  RDM responses are only sent to the console that asked;
 //      the other consoles simply ignore a response for a foreign UID.
 //    - DIR_IN is common to all four input ports (see README).
-//    - The two 74HC151 outputs share three select lines and are read
-//      by two PIO receivers.
-//    - The local UI (SSD1306 + PCF8574) uses the I2C bus; the four
-//      buttons live on the PCF8574, so no GPIO is wasted.
+//    - The two 74HC151 outputs are read by two PIO receivers; their
+//      select lines and the common output direction come from the
+//      PCF8574 and are buffered by a 74HC125.
+//    - PCF8574 P4..P7 read the four buttons; the OLED is optional.
 //
-//  Everything is still configurable through the USB serial console if
-//  the OLED/key board is not populated.
+//  The PCF8574 is mandatory: without it DIR_OUT and the mux select
+//  lines cannot be controlled.  RN3 pulls them high, so the outputs
+//  keep transmitting but the RDM return path sticks on channel 7.
+//  Configuration is always available through the USB serial console.
 // ------------------------------------------------------------------
 
 namespace board {
@@ -45,20 +50,30 @@ constexpr uint8_t TX_IN  = 20;
 constexpr uint8_t DIR_IN = 21;
 
 // --- Output-card RDM return multiplexer (2x 74HC151) -------------
-constexpr uint8_t MUX_SEL[3] = {22, 23, 24};  // A, B, C (shared)
-constexpr uint8_t MUX_Y[2]   = {26, 27};      // Y1 = OUT 1..8, Y2 = OUT 9..16
+// Only the two multiplexer outputs need a PIO receiver.  A standard
+// Raspberry Pi Pico does not bring out GP23..GP25 or GP29 on its
+// headers, so the three select lines and the common output direction
+// are driven through a PCF8574 I/O expander (see below).
+constexpr uint8_t MUX_Y[2] = {22, 28};  // Y1 = OUT 1..8, Y2 = OUT 9..16
 
-// --- Common output direction -------------------------------------
-// GP25 also carries the on-board LED of a Pico.  Using the direction
-// signal here keeps the LED mostly steady (on = DMX transmit) and
-// avoids putting a switching DMX line on the LED pin.
-constexpr uint8_t DIR_OUT = 25;  // high = transmit DMX, low = receive RDM
-
-// --- Local UI (optional hardware) --------------------------------
-constexpr uint8_t UI_SDA = 28;
-constexpr uint8_t UI_SCL = 29;
+// --- PCF8574 I/O expander / local UI ------------------------------
+// I2C1: GP26 = SDA, GP27 = SCL.  GP28 is free for MUX_Y2.
+constexpr uint8_t UI_SDA = 26;
+constexpr uint8_t UI_SCL = 27;
 constexpr uint8_t UI_OLED_ADDR = 0x3C;  // 0x3D is probed as a fallback
-constexpr uint8_t UI_PCF_ADDR  = 0x20;  // 0x20..0x27 are probed
+constexpr uint8_t UI_PCF_ADDR  = 0x20;
+
+// PCF8574 pin assignment.  P0..P3 are buffered by a 74HC125 and drive
+// the output direction and the shared 74HC151 select lines.  P4..P7
+// are inputs with the four UI buttons to GND.
+constexpr uint8_t PCF_DIR_OUT  = 0;  // P0: high = transmit, low = receive
+constexpr uint8_t PCF_MUX_A    = 1;  // P1: 74HC151 A (LSB)
+constexpr uint8_t PCF_MUX_B    = 2;  // P2: 74HC151 B
+constexpr uint8_t PCF_MUX_C    = 3;  // P3: 74HC151 C (MSB)
+constexpr uint8_t PCF_BTN_UP   = 4;  // P4: UP
+constexpr uint8_t PCF_BTN_DOWN = 5;  // P5: DOWN
+constexpr uint8_t PCF_BTN_OK   = 6;  // P6: OK
+constexpr uint8_t PCF_BTN_BACK = 7;  // P7: BACK
 
 // --- Fixed protocol constants ------------------------------------
 constexpr uint8_t  NUM_OUTPUTS = 16;

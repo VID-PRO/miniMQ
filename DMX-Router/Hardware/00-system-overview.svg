@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1150" viewBox="0 0 1700 1150">
+<style>
+.w   { stroke:#1565c0; stroke-width:2.0; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.wt  { stroke:#1565c0; stroke-width:1.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.c   { stroke:#a61b1b; stroke-width:2.0; fill:#fffdfd; }
+.p   { stroke:#a61b1b; stroke-width:1.5; fill:none; stroke-linecap:round; }
+.j   { fill:#1565c0; }
+.t   { font-family:'Segoe UI', Arial, sans-serif; fill:#1c1c1c; }
+.m   { font-family:Consolas, 'Courier New', monospace; fill:#1c1c1c; }
+.net { fill:#00695c; font-weight:600; }
+.note{ fill:#5f6368; }
+.pwr { fill:#c62828; font-weight:600; }
+.gnd { fill:#37474f; font-weight:600; }
+.ref { fill:#a61b1b; font-weight:700; }
+.val { fill:#7a2e2e; }
+.frm { stroke:#263238; stroke-width:1.4; fill:none; }
+.tb  { stroke:#263238; stroke-width:1.2; fill:#ffffff; }
+</style>
+<rect x="0" y="0" width="1700" height="1150" fill="#ffffff"/>
+<rect x="18.0" y="18.0" width="1664.0" height="1114.0" class="frm"/>
+<rect x="26.0" y="26.0" width="1648.0" height="1098.0" class="frm"/>
+<text x="46.0" y="58.0" font-size="25" class="t" text-anchor="start" font-weight="700">DMX-Router 4 → 16 — Systemübersicht</text>
+<text x="46.0" y="82.0" font-size="12.5" class="note" text-anchor="start">4 DMX/RDM-Eingänge · 16 DMX-Ausgänge · HTP-Merge · best-effort RDM-Relay</text>
+<line x1="40.0" y1="96.0" x2="1660.0" y2="96.0" class="wt"/>
+<rect x="1160.0" y="1038.0" width="500.0" height="92.0" class="tb"/>
+<line x1="1160.0" y1="1068.0" x2="1660.0" y2="1068.0" class="frm"/>
+<line x1="1160.0" y1="1096.0" x2="1660.0" y2="1096.0" class="frm"/>
+<line x1="1460.0" y1="1068.0" x2="1460.0" y2="1130.0" class="frm"/>
+<text x="1172.0" y="1059.0" font-size="15" class="t" text-anchor="start" font-weight="700">DMX-Router 4 → 16</text>
+<text x="1172.0" y="1087.0" font-size="12" class="t" text-anchor="start" font-weight="700">Blatt 0 / 4</text>
+<text x="1172.0" y="1116.0" font-size="10" class="note" text-anchor="start">Rev. A  ·  2026-11-03</text>
+<text x="1472.0" y="1087.0" font-size="12" class="t" text-anchor="start" font-weight="700">Schaltbild</text>
+<text x="1472.0" y="1116.0" font-size="9.5" class="note" text-anchor="start">nicht maßstäblich</text>
+<text x="46.0" y="1116.0" font-size="9" class="note" text-anchor="start">Blockschaltbild; Details auf Blatt 1 (Eingang), 2 (Ausgang) und 3 (Controller).</text>
+<text x="70.0" y="152.0" font-size="9.5" class="t" text-anchor="start" font-weight="700">DMX/RDM-Eingänge</text>
+<rect x="70.0" y="170.0" width="80.0" height="48.0" class="c" rx="3"/>
+<text x="110.0" y="191.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN1</text>
+<text x="110.0" y="206.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<line x1="150.0" y1="194.0" x2="250.0" y2="194.0" class="w"/>
+<line x1="250.0" y1="194.0" x2="239.2" y2="201.2" class="w"/>
+<line x1="250.0" y1="194.0" x2="239.2" y2="186.8" class="w"/>
+<rect x="70.0" y="232.0" width="80.0" height="48.0" class="c" rx="3"/>
+<text x="110.0" y="253.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN2</text>
+<text x="110.0" y="268.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<line x1="150.0" y1="256.0" x2="250.0" y2="256.0" class="w"/>
+<line x1="250.0" y1="256.0" x2="239.2" y2="263.2" class="w"/>
+<line x1="250.0" y1="256.0" x2="239.2" y2="248.8" class="w"/>
+<rect x="70.0" y="294.0" width="80.0" height="48.0" class="c" rx="3"/>
+<text x="110.0" y="315.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN3</text>
+<text x="110.0" y="330.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<line x1="150.0" y1="318.0" x2="250.0" y2="318.0" class="w"/>
+<line x1="250.0" y1="318.0" x2="239.2" y2="325.2" class="w"/>
+<line x1="250.0" y1="318.0" x2="239.2" y2="310.8" class="w"/>
+<rect x="70.0" y="356.0" width="80.0" height="48.0" class="c" rx="3"/>
+<text x="110.0" y="377.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN4</text>
+<text x="110.0" y="392.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<line x1="150.0" y1="380.0" x2="250.0" y2="380.0" class="w"/>
+<line x1="250.0" y1="380.0" x2="239.2" y2="387.2" class="w"/>
+<line x1="250.0" y1="380.0" x2="239.2" y2="372.8" class="w"/>
+<rect x="250.0" y="150.0" width="190.0" height="350.0" class="c" rx="5"/>
+<text x="345.0" y="172.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Eingangsplatine</text>
+<text x="345.0" y="190.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="345.0" y="202.5" font-size="7.6" class="note" text-anchor="middle">4 × B0505S-1W</text>
+<text x="345.0" y="215.0" font-size="7.6" class="note" text-anchor="middle">SM712 + 10 Ω</text>
+<text x="345.0" y="227.5" font-size="7.6" class="note" text-anchor="middle">120 Ω Abschluss</text>
+<text x="345.0" y="240.0" font-size="7.6" class="note" text-anchor="middle"></text>
+<text x="345.0" y="252.5" font-size="7.6" class="note" text-anchor="middle">TXD_IN gemeinsam</text>
+<text x="345.0" y="265.0" font-size="7.6" class="note" text-anchor="middle">DIR_IN gemeinsam</text>
+<text x="345.0" y="277.5" font-size="7.6" class="note" text-anchor="middle">RXI1..4 getrennt</text>
+<rect x="520.0" y="130.0" width="380.0" height="480.0" class="c" rx="6"/>
+<text x="710.0" y="156.0" font-size="11.5" class="t" text-anchor="middle" font-weight="700">Controllerplatine</text>
+<rect x="540.0" y="180.0" width="140.0" height="175.0" class="c" rx="5"/>
+<text x="610.0" y="202.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Pico</text>
+<text x="610.0" y="220.0" font-size="7.6" class="note" text-anchor="middle">RP2040</text>
+<text x="610.0" y="232.5" font-size="7.6" class="note" text-anchor="middle">USB-Konsole</text>
+<text x="610.0" y="245.0" font-size="7.6" class="note" text-anchor="middle">16 OUT / 4 IN</text>
+<text x="610.0" y="257.5" font-size="7.6" class="note" text-anchor="middle">I²C1</text>
+<rect x="700.0" y="180.0" width="180.0" height="90.0" class="c" rx="5"/>
+<text x="790.0" y="202.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">PCF8574</text>
+<text x="790.0" y="220.0" font-size="7.6" class="note" text-anchor="middle">DIR_OUT</text>
+<text x="790.0" y="232.5" font-size="7.6" class="note" text-anchor="middle">MUX A/B/C (74HC125)</text>
+<text x="790.0" y="245.0" font-size="7.6" class="note" text-anchor="middle">4 Tasten</text>
+<rect x="700.0" y="290.0" width="180.0" height="120.0" class="c" rx="5"/>
+<text x="790.0" y="312.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">2 × 74HC151</text>
+<text x="790.0" y="330.0" font-size="7.6" class="note" text-anchor="middle">RDM-Rückkanal</text>
+<text x="790.0" y="342.5" font-size="7.6" class="note" text-anchor="middle">U4: OUT1..8</text>
+<text x="790.0" y="355.0" font-size="7.6" class="note" text-anchor="middle">U5: OUT9..16</text>
+<text x="710.0" y="450.0" font-size="8" class="note" text-anchor="middle">J1: Eingangsplatine</text>
+<text x="710.0" y="466.0" font-size="8" class="note" text-anchor="middle">J2..J5: Ausgangsplatinen</text>
+<text x="710.0" y="482.0" font-size="8" class="note" text-anchor="middle">J6: OLED · J7: Tasten</text>
+<text x="710.0" y="500.0" font-size="8" class="note" text-anchor="middle">J8: 5 V / 3 A</text>
+<line x1="440.0" y1="325.0" x2="520.0" y2="325.0" class="w"/>
+<line x1="520.0" y1="325.0" x2="509.2" y2="332.2" class="w"/>
+<line x1="520.0" y1="325.0" x2="509.2" y2="317.8" class="w"/>
+<text x="480.0" y="317.0" font-size="8" class="net" text-anchor="middle">J1</text>
+<text x="1000.0" y="132.0" font-size="9.5" class="t" text-anchor="start" font-weight="700">Ausgangsplatinen (4× identisch)</text>
+<rect x="1000.0" y="140.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1085.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #1</text>
+<text x="1085.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="192.5" font-size="7.6" class="note" text-anchor="middle">OUT1..OUT4</text>
+<rect x="1240.0" y="140.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1325.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">OUT1..OUT4</text>
+<text x="1325.0" y="192.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
+<line x1="1170.0" y1="185.0" x2="1240.0" y2="185.0" class="w"/>
+<line x1="1240.0" y1="185.0" x2="1229.2" y2="192.2" class="w"/>
+<line x1="1240.0" y1="185.0" x2="1229.2" y2="177.8" class="w"/>
+<line x1="900.0" y1="185.0" x2="1000.0" y2="185.0" class="w"/>
+<line x1="1000.0" y1="185.0" x2="989.2" y2="192.2" class="w"/>
+<line x1="1000.0" y1="185.0" x2="989.2" y2="177.8" class="w"/>
+<text x="950.0" y="177.0" font-size="8" class="net" text-anchor="middle">J2</text>
+<rect x="1000.0" y="265.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1085.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #2</text>
+<text x="1085.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="317.5" font-size="7.6" class="note" text-anchor="middle">OUT5..OUT8</text>
+<rect x="1240.0" y="265.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1325.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">OUT5..OUT8</text>
+<text x="1325.0" y="317.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
+<line x1="1170.0" y1="310.0" x2="1240.0" y2="310.0" class="w"/>
+<line x1="1240.0" y1="310.0" x2="1229.2" y2="317.2" class="w"/>
+<line x1="1240.0" y1="310.0" x2="1229.2" y2="302.8" class="w"/>
+<line x1="900.0" y1="310.0" x2="1000.0" y2="310.0" class="w"/>
+<line x1="1000.0" y1="310.0" x2="989.2" y2="317.2" class="w"/>
+<line x1="1000.0" y1="310.0" x2="989.2" y2="302.8" class="w"/>
+<text x="950.0" y="302.0" font-size="8" class="net" text-anchor="middle">J3</text>
+<rect x="1000.0" y="390.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1085.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #3</text>
+<text x="1085.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="442.5" font-size="7.6" class="note" text-anchor="middle">OUT9..OUT12</text>
+<rect x="1240.0" y="390.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1325.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">OUT9..OUT12</text>
+<text x="1325.0" y="442.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
+<line x1="1170.0" y1="435.0" x2="1240.0" y2="435.0" class="w"/>
+<line x1="1240.0" y1="435.0" x2="1229.2" y2="442.2" class="w"/>
+<line x1="1240.0" y1="435.0" x2="1229.2" y2="427.8" class="w"/>
+<line x1="900.0" y1="435.0" x2="1000.0" y2="435.0" class="w"/>
+<line x1="1000.0" y1="435.0" x2="989.2" y2="442.2" class="w"/>
+<line x1="1000.0" y1="435.0" x2="989.2" y2="427.8" class="w"/>
+<text x="950.0" y="427.0" font-size="8" class="net" text-anchor="middle">J4</text>
+<rect x="1000.0" y="515.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1085.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #4</text>
+<text x="1085.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="567.5" font-size="7.6" class="note" text-anchor="middle">OUT13..OUT16</text>
+<rect x="1240.0" y="515.0" width="170.0" height="90.0" class="c" rx="5"/>
+<text x="1325.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">OUT13..OUT16</text>
+<text x="1325.0" y="567.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
+<line x1="1170.0" y1="560.0" x2="1240.0" y2="560.0" class="w"/>
+<line x1="1240.0" y1="560.0" x2="1229.2" y2="567.2" class="w"/>
+<line x1="1240.0" y1="560.0" x2="1229.2" y2="552.8" class="w"/>
+<line x1="900.0" y1="560.0" x2="1000.0" y2="560.0" class="w"/>
+<line x1="1000.0" y1="560.0" x2="989.2" y2="567.2" class="w"/>
+<line x1="1000.0" y1="560.0" x2="989.2" y2="552.8" class="w"/>
+<text x="950.0" y="552.0" font-size="8" class="net" text-anchor="middle">J5</text>
+<rect x="250.0" y="560.0" width="190.0" height="80.0" class="c" rx="5"/>
+<text x="345.0" y="582.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">5 V / 3 A</text>
+<text x="345.0" y="600.0" font-size="7.6" class="note" text-anchor="middle">Pico VSYS</text>
+<text x="345.0" y="612.5" font-size="7.6" class="note" text-anchor="middle">B0505S über J1..J5</text>
+<line x1="345.0" y1="560.0" x2="345.0" y2="500.0" class="w"/>
+<line x1="345.0" y1="500.0" x2="352.2" y2="510.8" class="w"/>
+<line x1="345.0" y1="500.0" x2="337.8" y2="510.8" class="w"/>
+<text x="352.0" y="535.0" font-size="8" class="pwr" text-anchor="start" font-weight="700">5 V</text>
+<rect x="60.0" y="700.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="720.0" font-size="8.6" class="t" text-anchor="start" font-weight="700">Platine / Stecker</text>
+<line x1="290.0" y1="700.0" x2="290.0" y2="734.0" class="frm"/>
+<text x="298.0" y="720.0" font-size="8.6" class="t" text-anchor="start" font-weight="700">Datenleitungen</text>
+<line x1="540.0" y1="700.0" x2="540.0" y2="734.0" class="frm"/>
+<text x="548.0" y="720.0" font-size="8.6" class="t" text-anchor="start" font-weight="700">RDM-Rückkanal</text>
+<line x1="870.0" y1="700.0" x2="870.0" y2="734.0" class="frm"/>
+<text x="878.0" y="720.0" font-size="8.6" class="t" text-anchor="start" font-weight="700">DMX-Ports</text>
+<line x1="1050.0" y1="700.0" x2="1050.0" y2="734.0" class="frm"/>
+<text x="1058.0" y="720.0" font-size="8.6" class="t" text-anchor="start" font-weight="700">Bemerkung</text>
+<rect x="60.0" y="734.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="754.0" font-size="8.2" class="note" text-anchor="start">Eingangsplatine J1</text>
+<line x1="290.0" y1="734.0" x2="290.0" y2="768.0" class="frm"/>
+<text x="298.0" y="754.0" font-size="8.2" class="note" text-anchor="start">TXD_IN Pin 7..10</text>
+<line x1="540.0" y1="734.0" x2="540.0" y2="768.0" class="frm"/>
+<text x="548.0" y="754.0" font-size="8.2" class="note" text-anchor="start">RXI1..4 Pin 12..15</text>
+<line x1="870.0" y1="734.0" x2="870.0" y2="768.0" class="frm"/>
+<text x="878.0" y="754.0" font-size="8.2" class="note" text-anchor="start">IN1..4</text>
+<line x1="1050.0" y1="734.0" x2="1050.0" y2="768.0" class="frm"/>
+<text x="1058.0" y="754.0" font-size="8.2" class="note" text-anchor="start">4 × XLR5 female</text>
+<rect x="60.0" y="768.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="788.0" font-size="8.2" class="note" text-anchor="start">Ausgang #1 J2</text>
+<line x1="290.0" y1="768.0" x2="290.0" y2="802.0" class="frm"/>
+<text x="298.0" y="788.0" font-size="8.2" class="note" text-anchor="start">OUT1..4 Pin 7..10</text>
+<line x1="540.0" y1="768.0" x2="540.0" y2="802.0" class="frm"/>
+<text x="548.0" y="788.0" font-size="8.2" class="note" text-anchor="start">RDM1..4 → MUX1 D0..D3</text>
+<line x1="870.0" y1="768.0" x2="870.0" y2="802.0" class="frm"/>
+<text x="878.0" y="788.0" font-size="8.2" class="note" text-anchor="start">OUT1..4</text>
+<line x1="1050.0" y1="768.0" x2="1050.0" y2="802.0" class="frm"/>
+<text x="1058.0" y="788.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<rect x="60.0" y="802.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="822.0" font-size="8.2" class="note" text-anchor="start">Ausgang #2 J3</text>
+<line x1="290.0" y1="802.0" x2="290.0" y2="836.0" class="frm"/>
+<text x="298.0" y="822.0" font-size="8.2" class="note" text-anchor="start">OUT5..8 Pin 7..10</text>
+<line x1="540.0" y1="802.0" x2="540.0" y2="836.0" class="frm"/>
+<text x="548.0" y="822.0" font-size="8.2" class="note" text-anchor="start">RDM5..8 → MUX1 D4..D7</text>
+<line x1="870.0" y1="802.0" x2="870.0" y2="836.0" class="frm"/>
+<text x="878.0" y="822.0" font-size="8.2" class="note" text-anchor="start">OUT5..8</text>
+<line x1="1050.0" y1="802.0" x2="1050.0" y2="836.0" class="frm"/>
+<text x="1058.0" y="822.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<rect x="60.0" y="836.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="856.0" font-size="8.2" class="note" text-anchor="start">Ausgang #3 J4</text>
+<line x1="290.0" y1="836.0" x2="290.0" y2="870.0" class="frm"/>
+<text x="298.0" y="856.0" font-size="8.2" class="note" text-anchor="start">OUT9..12 Pin 7..10</text>
+<line x1="540.0" y1="836.0" x2="540.0" y2="870.0" class="frm"/>
+<text x="548.0" y="856.0" font-size="8.2" class="note" text-anchor="start">RDM9..12 → MUX2 D0..D3</text>
+<line x1="870.0" y1="836.0" x2="870.0" y2="870.0" class="frm"/>
+<text x="878.0" y="856.0" font-size="8.2" class="note" text-anchor="start">OUT9..12</text>
+<line x1="1050.0" y1="836.0" x2="1050.0" y2="870.0" class="frm"/>
+<text x="1058.0" y="856.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<rect x="60.0" y="870.0" width="1490.0" height="34.0" class="tb"/>
+<text x="68.0" y="890.0" font-size="8.2" class="note" text-anchor="start">Ausgang #4 J5</text>
+<line x1="290.0" y1="870.0" x2="290.0" y2="904.0" class="frm"/>
+<text x="298.0" y="890.0" font-size="8.2" class="note" text-anchor="start">OUT13..16 Pin 7..10</text>
+<line x1="540.0" y1="870.0" x2="540.0" y2="904.0" class="frm"/>
+<text x="548.0" y="890.0" font-size="8.2" class="note" text-anchor="start">RDM13..16 → MUX2 D4..D7</text>
+<line x1="870.0" y1="870.0" x2="870.0" y2="904.0" class="frm"/>
+<text x="878.0" y="890.0" font-size="8.2" class="note" text-anchor="start">OUT13..16</text>
+<line x1="1050.0" y1="870.0" x2="1050.0" y2="904.0" class="frm"/>
+<text x="1058.0" y="890.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<rect x="60.0" y="920.0" width="1060.0" height="190.0" class="tb" rx="4"/>
+<text x="72.0" y="940.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">Systemhinweise</text>
+<line x1="70.0" y1="947.0" x2="1110.0" y2="947.0" class="wt"/>
+<text x="72.0" y="963.0" font-size="8.0" class="note" text-anchor="start">Alle Platinen teilen GND und 3,3 V. Die DMX-Busseiten sind je Kanal über ADM2483 und B0505S galvanisch getrennt.</text>
+<text x="72.0" y="976.0" font-size="8.0" class="note" text-anchor="start">J1..J5 sind 2×8-Wannenstecker mit 2,54 mm Raster; Flachbandkabel kurz halten und abwechselnd GND führen.</text>
+<text x="72.0" y="989.0" font-size="8.0" class="note" text-anchor="start">Eingang: 120 Ω fest am Router (Strangende). Ausgang: 560 Ω Fail-Safe-Bias je Port, 120 Ω nur am letzten Gerät des Strangs.</text>
+<text x="72.0" y="1002.0" font-size="8.0" class="note" text-anchor="start">RDM ist best-effort: ein gemeinsamer DIR_OUT und ein Rückkanal je Ausgang; Discovery findet pro Zweig nur den ersten Responder.</text>
+<text x="72.0" y="1015.0" font-size="8.0" class="note" text-anchor="start">Bestückung: 1 × Eingangsplatine, 4 × Ausgangsplatine, 1 × Controllerplatine. 5-V-Netzteil mindestens 3 A.</text>
+</svg>

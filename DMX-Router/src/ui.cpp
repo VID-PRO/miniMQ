@@ -1,52 +1,32 @@
 #include "ui.h"
 
-#include <Wire.h>
 #include <cstdio>
 #include <cstring>
 
 #include "board.h"
 #include "config.h"
 #include "dmx_in.h"
+#include "ioexp.h"
 #include "rdm.h"
 
-void RouterUi::begin() {
-  Wire.setSDA(board::UI_SDA);
-  Wire.setSCL(board::UI_SCL);
-  Wire.begin();
-  Wire.setClock(400000);
+bool RouterUi::buttons() const { return ioexp::present(); }
 
+void RouterUi::begin() {
+  // Wire1 and the PCF8574 are initialised in main.cpp before this call.
   if (_oled.begin(board::UI_OLED_ADDR)) {
     Serial.printf("[ui] SSD1306 at 0x%02X\n", _oled.address());
   } else {
     Serial.println("[ui] no SSD1306 found - display disabled");
   }
 
-  probePcf();
-  if (_pcfReady) {
-    Serial.printf("[ui] PCF8574 at 0x%02X\n", _pcfAddr);
+  if (ioexp::present()) {
+    Serial.printf("[ui] PCF8574 at 0x%02X\n", board::UI_PCF_ADDR);
   } else {
     Serial.println("[ui] no PCF8574 found - buttons disabled");
   }
 
   _lastDrawMs = millis() - 1000;
   _dirty = true;
-}
-
-void RouterUi::probePcf() {
-  for (uint8_t addr = board::UI_PCF_ADDR; addr <= board::UI_PCF_ADDR + 7;
-       addr++) {
-    Wire.beginTransmission(addr);
-    Wire.write(0xFF);  // all pins high = inputs with weak pull-ups
-    if (Wire.endTransmission() != 0) continue;
-
-    if (Wire.requestFrom(addr, (uint8_t)1) == 1) {
-      while (Wire.available()) (void)Wire.read();
-      _pcfAddr = addr;
-      _pcfReady = true;
-      _lastRaw = 0x0F;
-      return;
-    }
-  }
 }
 
 const char *RouterUi::maskText(uint8_t mask, char *buf, size_t len) {
@@ -66,12 +46,10 @@ const char *RouterUi::maskText(uint8_t mask, char *buf, size_t len) {
 }
 
 void RouterUi::readButtons() {
-  if (!_pcfReady) return;
+  if (!ioexp::present()) return;
 
-  uint8_t raw = 0x0F;
-  if (Wire.requestFrom(_pcfAddr, (uint8_t)1) == 1) {
-    if (Wire.available()) raw = (uint8_t)(Wire.read() & 0x0F);
-  }
+  // Active-high pressed mask: bit0=UP, bit1=DOWN, bit2=OK, bit3=BACK.
+  uint8_t raw = ioexp::buttons();
 
   uint32_t now = millis();
   if (raw != _lastRaw) {
@@ -81,7 +59,7 @@ void RouterUi::readButtons() {
   }
   if ((uint32_t)(now - _lastChangeMs) < 25) return;
 
-  uint8_t pressed = (uint8_t)((~raw) & 0x0F);
+  uint8_t pressed = raw;
   uint8_t edge = (uint8_t)(pressed & ~_prevPressed);
   _prevPressed = pressed;
   if (!edge) return;
@@ -233,7 +211,7 @@ void RouterUi::draw(const DmxInput *inputs, uint8_t count) {
 }
 
 void RouterUi::update(const DmxInput *inputs, uint8_t count) {
-  if (!_oled.ready() && !_pcfReady) return;
+  if (!_oled.ready() && !ioexp::present()) return;
 
   readButtons();
 

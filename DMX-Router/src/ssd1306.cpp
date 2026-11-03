@@ -29,8 +29,8 @@ static const uint8_t SSD1306_INIT[] = {
 };
 
 bool Ssd1306::probe(uint8_t addr) {
-  Wire.beginTransmission(addr);
-  return Wire.endTransmission() == 0;
+  Wire1.beginTransmission(addr);
+  return Wire1.endTransmission() == 0;
 }
 
 bool Ssd1306::begin(uint8_t preferredAddr) {
@@ -54,17 +54,17 @@ bool Ssd1306::begin(uint8_t preferredAddr) {
 }
 
 void Ssd1306::cmd(uint8_t c) {
-  Wire.beginTransmission(_addr);
-  Wire.write(0x00);  // command stream
-  Wire.write(c);
-  Wire.endTransmission();
+  Wire1.beginTransmission(_addr);
+  Wire1.write(0x00);  // command stream
+  Wire1.write(c);
+  Wire1.endTransmission();
 }
 
 void Ssd1306::cmdList(const uint8_t *cmds, size_t n) {
-  Wire.beginTransmission(_addr);
-  Wire.write(0x00);
-  for (size_t i = 0; i < n; i++) Wire.write(cmds[i]);
-  Wire.endTransmission();
+  Wire1.beginTransmission(_addr);
+  Wire1.write(0x00);
+  for (size_t i = 0; i < n; i++) Wire1.write(cmds[i]);
+  Wire1.endTransmission();
 }
 
 bool Ssd1306::init() {
@@ -171,10 +171,10 @@ bool Ssd1306::showStep() {
   size_t n = sizeof(_buf) - _txOffset;
   if (n > chunk) n = chunk;
 
-  Wire.beginTransmission(_addr);
-  Wire.write(0x40);  // data stream
-  Wire.write(&_buf[_txOffset], n);
-  Wire.endTransmission();
+  Wire1.beginTransmission(_addr);
+  Wire1.write(0x40);  // data stream
+  Wire1.write(&_buf[_txOffset], n);
+  Wire1.endTransmission();
 
   _txOffset += n;
   if (_txOffset >= sizeof(_buf)) {
