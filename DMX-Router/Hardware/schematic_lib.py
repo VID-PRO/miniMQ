@@ -284,18 +284,20 @@ def sm712_v(d: D, x, y1, y2, ref):
     return (x, y1), (x, y2), (x + 46, mid)
 
 
-def adm2483(d: D, x, y, ref):
-    """ADM2483.
+def iso1410(d: D, x, y, ref):
+    """ISO1410DWR, half-duplex isolated RS-485 transceiver.
 
-    Left:  A (12), B (13)
-    Right: VDD1 (1), GND1 (2), GND1 (8), RXD (3), /RE (4), DE (5),
-           TXD (6), PV (7)
-    Bottom: VDD2 (16), GND2 (15), GND2 (9)
+    Left:   A (12), B (13)
+    Right:  VCC1 (1), GND1 (2), GND1 (8), R (3), /RE (4), DE (5),
+            D (6), NC (7)
+    Bottom: VCC2 (16), GND2 (15), GND2 (9)
     """
     bw, bh = 150, 200
     d.rect(x, y, bw, bh, "c", rx=3)
     d.text(x + bw / 2, y - 7, ref, size=9, cls="ref", anchor="middle")
-    d.text(x + bw / 2, y + 17, "ADM2483", size=8, cls="val",
+    d.text(x + bw / 2, y + 17, "ISO1410DWR", size=8, cls="val",
+           anchor="middle")
+    d.text(x + bw / 2, y + 31, "500 kbps · 5 kV", size=6.8, cls="val",
            anchor="middle")
 
     pins = {}
@@ -308,9 +310,9 @@ def adm2483(d: D, x, y, ref):
         d.text(x + 6, py + 3, name, size=8, cls="m")
         pins[num] = (x - 30, py)
 
-    right = [(1, "VDD1", 22), (2, "GND1", 44), (8, "GND1", 66),
-             (3, "RXD", 88), (4, "/RE", 110), (5, "DE", 132),
-             (6, "TXD", 154), (7, "PV", 176)]
+    right = [(1, "VCC1", 22), (2, "GND1", 44), (8, "GND1", 66),
+             (3, "R", 88), (4, "/RE", 110), (5, "DE", 132),
+             (6, "D", 154), (7, "NC", 176)]
     for num, name, dy in right:
         py = y + dy
         d.line(x + bw, py, x + bw + 30, py, "p")
@@ -318,8 +320,9 @@ def adm2483(d: D, x, y, ref):
                anchor="middle")
         d.text(x + bw - 6, py + 3, name, size=8, cls="m", anchor="end")
         pins[num] = (x + bw + 30, py)
+    d.nc(x + bw + 30, y + 176, 5)
 
-    bottom = [(16, "VDD2", 40), (15, "GND2", 75), (9, "GND2", 110)]
+    bottom = [(16, "VCC2", 40), (15, "GND2", 75), (9, "GND2", 110)]
     for num, name, dx in bottom:
         px = x + dx
         d.line(px, y + bh, px, y + bh + 24, "p")
@@ -519,7 +522,7 @@ def term2(d: D, x, y, ref, l1="+5V", l2="GND"):
     h = 84
     d.rect(x, y, 62, h, "c", rx=3)
     d.text(x + 31, y - 6, ref, size=8.5, cls="ref", anchor="middle")
-    d.text(x + 31, y + h + 12, "5 V / 3 A", size=7.5, cls="val",
+    d.text(x + 31, y + h + 12, "5 V / 5 A", size=7.5, cls="val",
            anchor="middle")
     for i, lab in enumerate((l1, l2)):
         py = y + 25 + i * 34
@@ -532,7 +535,7 @@ def term2(d: D, x, y, ref, l1="+5V", l2="GND"):
     return (x + 84, y + 25), (x + 84, y + 59)
 
 
-def fuse_h(d: D, x, y, ref, val="3 A"):
+def fuse_h(d: D, x, y, ref, val="5 A"):
     d.rect(x, y - 8, 50, 16, "c", rx=2)
     d.line(x, y, x + 50, y, "p")
     d.text(x + 25, y - 12, ref, size=7, cls="ref", anchor="middle")

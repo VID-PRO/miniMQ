@@ -114,7 +114,7 @@ def sheet_controller(path: str):
     # --------------------------------------------------------------
     t = term2(d, 500, 180, "J8", "+5V_IN", "GND")
     d.wire(t[0], (595, t[0][1]))
-    fuse_h(d, 595, t[0][1], "F1", "3 A")
+    fuse_h(d, 595, t[0][1], "F1", "5 A")
     d.wire((645, t[0][1]), (660, t[0][1]))
     diode_h(d, 660, t[0][1], "D1", "SS34")
     d.wire((704, t[0][1]), (760, t[0][1]))
@@ -134,8 +134,8 @@ def sheet_controller(path: str):
     d.gnd(760, t[0][1] + 48)
 
     note_box(d, 60, 110, 370, 96, "5-V-Versorgung", [
-        "5 V / 3 A (20 × B0505S-1W).",
-        "F1 3 A, D1 SS34 verpolsicher, D2 SMBJ5.0A, C1 470 µF/10 V.",
+        "5 V / 5 A (20 × B0505S-1W).",
+        "F1 5 A, D1 SS34 verpolsicher, D2 SMBJ5.0A, C1 470 µF/10 V.",
         "Pico VSYS = +5 V; 3,3 V kommen aus dem Pico-Regler.",
     ], size=7.4, line_gap=12)
 
@@ -342,7 +342,7 @@ def sheet_controller(path: str):
     note_box(d, 1180, 1225, 660, 105, "Hinweise", [
         "GP23/24/25/29 sind beim Pico nicht herausgeführt; DIR_OUT und MUX_SEL liegen deshalb am PCF8574.",
         "I²C1: GP26 = SDA, GP27 = SCL, 400 kHz; Adressen 0x20 (PCF8574) und 0x3C/0x3D (OLED).",
-        "5 V / 3 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.",
+        "5 V / 5 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.",
         "Alle GND-Pins des Pico und aller Steckverbinder sind miteinander verbunden.",
     ], size=7.8, line_gap=13)
 

@@ -49,7 +49,7 @@ IN1..IN4 (XLR5 female)
 
 Der Controller erzeugt alle 16 DMX-Signale parallel. Jede Ausgangsplatine
 erhält vier davon und treibt sie über vier galvanisch getrennte
-ADM2483 auf XLR5 male. Die RDM-Rückleitungen aller 16 Ausgänge laufen
+ISO1410DWR auf XLR5 male. Die RDM-Rückleitungen aller 16 Ausgänge laufen
 über zwei 8:1-Multiplexer (74HC151) zurück zum Pico.
 
 ---
@@ -147,8 +147,8 @@ oder abgeschaltete Rückleitungen einen definierten DMX-Idle-Pegel haben.
 
 | Bauteil | Funktion |
 | :--- | :--- |
-| J8 | 2-pol. Schraubklemme, 5 V / 3 A |
-| F1 | Feinsicherung 3 A (träge) |
+| J8 | 2-pol. Schraubklemme, 5 V / 5 A |
+| F1 | Feinsicherung 5 A (träge) |
 | D1 | SS34, Verpolschutz in Reihe |
 | D2 | SMBJ5.0A, Transientenschutz |
 | C1 | 470 µF / 10 V, Bulk-Kapazität |
@@ -175,7 +175,7 @@ darunter (siehe Abschnitt 7).
 | J5 | 2×8, 2,54 mm | Ausgangsplatine #4 (OUT13..16) |
 | J6 | 1×4, 2,54 mm | OLED (GND, +3V3, SDA, SCL) |
 | J7 | 1×5, 2,54 mm | Tasten (UP, DOWN, OK, BACK, GND) |
-| J8 | 2-pol. Schraubklemme | 5 V / 3 A |
+| J8 | 2-pol. Schraubklemme | 5 V / 5 A |
 
 ### 2.6 Stückliste Controller
 
@@ -191,7 +191,7 @@ darunter (siehe Abschnitt 7).
 | 2 | R1, R2 | 4,7 kΩ (I2C-Pull-ups) |
 | 4 | C2..C5 | 100 nF (Entkopplung U2..U5) |
 | 1 | C1 | 470 µF / 10 V |
-| 1 | F1 | 3 A, träge, mit Halter |
+| 1 | F1 | 5 A, träge, mit Halter |
 | 1 | D1 | SS34 |
 | 1 | D2 | SMBJ5.0A |
 | 5 | J1..J5 | 2×8 Wannenstecker, 2,54 mm |
@@ -215,21 +215,21 @@ Empfangskanäle. Jeder Kanal besteht aus:
 * zwei 10-Ω-Schutzwiderstände in den Datenleitungen
 * 120-Ω-Abschlusswiderstand, über eine Lötbrücke **werksseitig
   geschlossen**
-* ADM2483 (VDD1 = 3,3 V, VDD2 = 5 V isoliert)
+* ISO1410DWR (VCC1 = 3,3 V, VCC2 = 5 V isoliert)
 * B0505S-1W für die isolierte 5-V-Versorgung
 
 ### 3.1 Kanäle
 
-| Kanal | XLR | ADM2483 | RXI | 10 Ω | 120 Ω | Brücke | B0505S |
+| Kanal | XLR | ISO1410DWR | RXI | 10 Ω | 120 Ω | Brücke | B0505S |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | IN1 | J2 | U1 | RXI1 | R1/R2 | R3 | JP1 | U5 |
 | IN2 | J3 | U2 | RXI2 | R4/R5 | R6 | JP2 | U6 |
 | IN3 | J4 | U3 | RXI3 | R7/R8 | R9 | JP3 | U7 |
 | IN4 | J5 | U4 | RXI4 | R10/R11 | R12 | JP4 | U8 |
 
-Alle vier ADM2483 teilen sich:
+Alle vier ISO1410DWR teilen sich:
 
-* `TXD_IN` (Pico GP20) — alle vier `TXD`-Pins parallel
+* `TXD_IN` (Pico GP20) — alle vier `D`-Pins parallel
 * `DIR_IN` (Pico GP21) — alle vier `DE`/`/RE`-Paare parallel
 
 Die Empfangsleitungen `RXI1..RXI4` sind getrennt und gehen auf
@@ -249,7 +249,7 @@ HF-Störungen abzuleiten, ohne die galvanische Trennung aufzugeben.
 
 | Anzahl | Bezeichnung | Wert / Typ |
 | ---: | :--- | :--- |
-| 4 | U1..U4 | ADM2483BRWZ (SOIC-16) |
+| 4 | U1..U4 | ISO1410DWR (SOIC-16 DW) |
 | 4 | U5..U8 | B0505S-1W |
 | 4 | D1..D4 | SM712 (SOT-23) |
 | 4 | J2..J5 | XLR5 female, PCB |
@@ -257,7 +257,7 @@ HF-Störungen abzuleiten, ohne die galvanische Trennung aufzugeben.
 | 8 | R1, R2, R4, R5, R7, R8, R10, R11 | 10 Ω |
 | 4 | R3, R6, R9, R12 | 120 Ω |
 | 4 | JP1..JP4 | Lötbrücke, geschlossen |
-| 12 | C1..C8 + 4× Modul | 100 nF (8× VDD1/VDD2, 4× Modulausgang) |
+| 12 | C1..C8 + 4× Modul | 100 nF (8× VCC1/VCC2, 4× Modulausgang) |
 | 4 | — | 10 µF / 25 V (5-V-Eingang) |
 | 4 | — | 10 µF / 16 V (isolierte Seite) |
 | optional | — | 4 × 1 MΩ + 4 × 4,7 nF / 1 kV (Schirm an PE) |
@@ -274,7 +274,7 @@ mit **XLR5 male**, **560-Ω-Fail-Safe-Bias** und einem **optionalen**
 
 ### 4.1 Kanäle
 
-| Kanal | XLR | ADM2483 | TXD | RDM | 10 Ω | Bias | 120 Ω | Brücke | B0505S |
+| Kanal | XLR | ISO1410DWR | TXD | RDM | 10 Ω | Bias | 120 Ω | Brücke | B0505S |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | J2 | U1 | TXD1 | RDM1 | R1/R2 | R13/R14 | R3 | JP1 | U5 |
 | 2 | J3 | U2 | TXD2 | RDM2 | R4/R5 | R15/R16 | R6 | JP2 | U6 |
@@ -317,7 +317,7 @@ DMX-Ports und welche RDM-Multiplexer-Eingänge daraus werden.
 
 | Anzahl | Bezeichnung | Wert / Typ |
 | ---: | :--- | :--- |
-| 4 | U1..U4 | ADM2483BRWZ (SOIC-16) |
+| 4 | U1..U4 | ISO1410DWR (SOIC-16 DW) |
 | 4 | U5..U8 | B0505S-1W |
 | 4 | D1..D4 | SM712 (SOT-23) |
 | 4 | J2..J5 | XLR5 male, PCB |
@@ -326,7 +326,7 @@ DMX-Ports und welche RDM-Multiplexer-Eingänge daraus werden.
 | 8 | R13..R20 | 560 Ω, 1 % |
 | 4 | R3, R6, R9, R12 | 120 Ω (optional) |
 | 4 | JP1..JP4 | Lötbrücke, offen |
-| 12 | C1..C8 + 4× Modul | 100 nF (8× VDD1/VDD2, 4× Modulausgang) |
+| 12 | C1..C8 + 4× Modul | 100 nF (8× VCC1/VCC2, 4× Modulausgang) |
 | 4 | — | 10 µF / 25 V (5-V-Eingang) |
 | 4 | — | 10 µF / 16 V (isolierte Seite) |
 | optional | — | 4 × 1 MΩ + 4 × 4,7 nF / 1 kV (Schirm an PE) |
@@ -369,19 +369,19 @@ zwischen die Signale legen.
 
 ---
 
-## 6. ADM2483-Beschaltung
+## 6. ISO1410DWR-Beschaltung
 
 ### 6.1 Pinbelegung
 
 | Pin | Name | Funktion |
 | ---: | :--- | :--- |
-| 1 | VDD1 | Logikversorgung, **3,3 V** |
+| 1 | VCC1 | Logikversorgung, **3,3 V** |
 | 2 | GND1 | Logikmasse |
-| 3 | RXD | Empfangsdaten zur Logik |
+| 3 | R | Empfangsdaten zur Logik |
 | 4 | /RE | Receiver Enable, low aktiv |
 | 5 | DE | Driver Enable, high aktiv |
-| 6 | TXD | Sendedaten von der Logik |
-| 7 | PV | Power Valid, mit VDD1 verbunden |
+| 6 | D | Sendedaten von der Logik |
+| 7 | NC | nicht angeschlossen |
 | 8 | GND1 | Logikmasse |
 | 9 | GND2 | isolierte Masse |
 | 10 | NC | — |
@@ -390,33 +390,37 @@ zwischen die Signale legen.
 | 13 | B | Bus B (DMX D−) |
 | 14 | NC | — |
 | 15 | GND2 | isolierte Masse |
-| 16 | VDD2 | isolierte Versorgung, **5 V** |
+| 16 | VCC2 | isolierte Versorgung, **5 V** |
 
 ### 6.2 Beschaltung
 
-* **VDD1 = 3,3 V**, damit `RXD`, `TXD`, `DE` und `/RE` direkt mit dem
-  RP2040 verbunden werden können. Bei 5 V an VDD1 würden 5-V-Pegel am
+* **VCC1 = 3,3 V**, damit `R`, `D`, `DE` und `/RE` direkt mit dem
+  RP2040 verbunden werden können. Bei 5 V an VCC1 würden 5-V-Pegel am
   Pico anliegen; der RP2040 ist nicht 5-V-tolerant.
-* **VDD2 = 5 V isoliert** aus dem B0505S-1W. Zwischen VDD2 und GND2
+* **VCC2 = 5 V isoliert** aus dem B0505S-1W. Zwischen VCC2 und GND2
   sitzt ein 100-nF-Kondensator; am Modulausgang zusätzlich 10 µF.
 * **`/RE` und `DE` sind zusammengefasst** und gehen auf `DIR`:
   * `DIR` = low → Empfang
   * `DIR` = high → Senden
-* **`PV`** ist mit VDD1 verbunden. Der Pin soll während des Einschaltens
-  low sein, bis VDD1 > 2,0 V erreicht. Für besonders strenge
-  Einschaltbedingungen kann ein Power-Good-Supervisor (z. B. ADM809)
-  oder ein RC-Glied (100 kΩ / 100 nF) ergänzt werden; für den normalen
-  Aufbau ist die direkte Verbindung ausreichend.
+* **Pin 7 ist NC** und bleibt offen (im Schaltbild mit X markiert). Der
+  ISO1410DWR hat keinen `PV`-Pin. Ein Anschluss an VCC1 oder GND wäre
+  laut Datenblatt zulässig, ist aber nicht erforderlich.
 * **`A`/`B`** gehen über 10 Ω an XLR Pin 3/2. Der SM712 schützt beide
   Leitungen gegen ESD und Surge.
 * **XLR Pin 1** liegt auf GND2 (`GND_ISO`), nicht auf der Logikmasse.
+* Der ISO1410DWR ist die **500-kbps-Variante** und damit für DMX mit
+  250 kbps ausreichend. Er hat einen Failsafe-Empfänger für offenen,
+  kurzgeschlossenen und ruhenden Bus sowie eine Last von 1/8 Unit Load
+  (bis 256 Knoten). Der 560-Ω-Bias auf der Ausgangsplatine ist deshalb
+  nicht zwingend, bleibt aber für Kompatibilität bestückt.
 
 ### 6.3 Isolation
 
-Der ADM2483 ist für 2,5 kV rms ausgelegt, das B0505S-1W für 1 kV. Die
-**Systemisolation wird damit vom B0505S auf 1 kV begrenzt**. Für DMX
-ist das mehr als ausreichend. Logikmasse (`GND`) und isolierte Masse
-(`GND_ISO`) dürfen nirgends verbunden werden.
+Der ISO1410DWR ist nach UL für **5 kV rms** (7071 V<sub>PK</sub>
+VIOTM) ausgelegt, das B0505S-1W für 1 kV. Die **Systemisolation wird
+damit vom B0505S auf 1 kV begrenzt**. Für DMX ist das mehr als
+ausreichend. Logikmasse (`GND`) und isolierte Masse (`GND_ISO`) dürfen
+nirgends verbunden werden.
 
 ---
 
@@ -426,10 +430,10 @@ ist das mehr als ausreichend. Logikmasse (`GND`) und isolierte Masse
 
 | Verbraucher | Strom (Richtwert) |
 | :--- | ---: |
-| 20 × ADM2483, VDD1 (3,3 V) | ca. 60 mA |
+| 20 × ISO1410DWR, VCC1 (3,3 V, ca. 3,2 mA) | ca. 65 mA |
 | Pico + PCF8574 + 74HC125 + 2 × 74HC151 | ca. 80 mA |
 | OLED (optional) | ca. 20 mA |
-| **3,3-V-Summe** | **ca. 160 mA** |
+| **3,3-V-Summe** | **ca. 165 mA (max. ca. 200 mA)** |
 
 Die 3,3-V-Last liegt unter den ca. 300 mA des Pico-Reglers. Sie wird
 über die 2×8-Kabel verteilt; pro Platine sind zwei +3V3-Pins
@@ -437,21 +441,30 @@ parallelgeschaltet.
 
 | Verbraucher | Strom (Richtwert) |
 | :--- | ---: |
-| 16 × Ausgangs-B0505S (je ca. 30 mA) | ca. 480 mA |
-| 4 × Eingangs-B0505S (je ca. 5 mA) | ca. 20 mA |
+| 16 × Ausgangs-B0505S (je ca. 130 mA Eingangsstrom) | ca. 2,1 A |
+| 4 × Eingangs-B0505S (je ca. 10 mA Eingangsstrom) | ca. 40 mA |
 | 16 × 560-Ω-Bias (isoliert, im obigen Wert enthalten) | — |
 | Pico + Logik über VSYS | ca. 100 mA |
-| **5-V-Summe** | **ca. 0,6 A** |
+| **5-V-Summe typisch** | **ca. 2,2 A** |
+| **5-V-Summe Worst-Case** (16 × 160 mA isoliert, ca. 200 mA Eingang) | **ca. 3,3 A** |
 
-Ein **5-V-Netzteil mit 3 A** bietet reichlich Reserve für
-Einschaltströme und Worst-Case-Buslast. 1 A würde im Normalfall
-ebenfalls genügen.
+Ein **5-V-Netzteil mit 5 A** ist für den Dauerbetrieb und die
+Einschaltströme ausgelegt. 3 A wären im typischen Fall knapp, im
+Worst-Case aber zu wenig. Die 1-W-B0505S-Module sind mit ca. 130 mA
+Eingangsstrom pro Ausgangskanal etwa zur Hälfte belastet; bei 160 mA
+isolierter Last (Datenblatt-Maximum des ISO1410DWR) erreichen sie
+80 % ihrer Nennlast.
+
+J8, F1 und die 5-V-Leiterbahnen auf der Controllerplatine sind für
+**5 A** auszulegen (breite Leiterbahnen, idealerweise 70-µm-Kupfer).
+Die 2×8-Verbindungen zu den Ausgangsplatinen führen maximal ca. 0,8 A
+pro Platine; dafür genügen die beiden parallelen +5V-Pins.
 
 ### 7.2 Einschaltreihenfolge
 
 Die 5-V-Versorgung speist gleichzeitig den Pico und alle B0505S-Module.
 Die 3,3-V-Schiene kommt aus dem Pico. Es gibt keine besondere
-Einschaltreihenfolge; die ADM2483 sind auf beiden Seiten entkoppelt.
+Einschaltreihenfolge; die ISO1410DWR sind auf beiden Seiten entkoppelt.
 Wird nur USB gesteckt, läuft die Logik; über die interne Diode des Pico
 werden auch die 5-V-Schiene und die B0505S-Module mitversorgt. Wegen des
 USB-Stromlimits ist das nur für Tests geeignet — für den vollen Betrieb
@@ -470,6 +483,9 @@ Regeln:
 
 * Ein DMX-Strang wird an **beiden Enden** mit 120 Ω abgeschlossen.
 * Bias (Fail-Safe) nur an **einer** Stelle im Strang; hier im Router.
+  Der ISO1410DWR bringt bereits einen Failsafe-Empfänger mit, der
+  560-Ω-Bias ist daher eine zusätzliche Absicherung und kann entfallen,
+  wenn alle Empfänger im Strang failsafe sind.
 * Der Schirm (XLR Pin 1) wird auf `GND_ISO` geführt und nicht mit der
   Logikmasse verbunden.
 * Optional kann `GND_ISO` über 1 MΩ || 4,7 nF / 1 kV an PE gelegt
@@ -547,7 +563,7 @@ Die SVG-Dateien sind die maßgebliche Quelle. Nach Änderungen immer
 
 | Bauteil | Eingang | Ausgang (4×) | Controller | Gesamt |
 | :--- | ---: | ---: | ---: | ---: |
-| ADM2483BRWZ | 4 | 16 | — | 20 |
+| ISO1410DWR | 4 | 16 | — | 20 |
 | B0505S-1W | 4 | 16 | — | 20 |
 | SM712 | 4 | 16 | — | 20 |
 | XLR5 female | 4 | — | — | 4 |
@@ -569,7 +585,7 @@ Die SVG-Dateien sind die maßgebliche Quelle. Nach Änderungen immer
 | 10 kΩ-Netzwerk (4×) | — | — | 1 | 1 |
 | SS34 | — | — | 1 | 1 |
 | SMBJ5.0A | — | — | 1 | 1 |
-| Feinsicherung 3 A | — | — | 1 | 1 |
+| Feinsicherung 5 A | — | — | 1 | 1 |
 
 Hinzu kommen Schraubklemme J8, Stiftleisten für OLED/Tasten, optional
 SSD1306 und vier Taster.

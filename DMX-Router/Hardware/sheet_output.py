@@ -6,7 +6,7 @@
 #  OUT(4n-3)..OUT(4n) and RDM1..4 return the RDM receive lines.
 # ------------------------------------------------------------------
 
-from schematic_lib import (D, frame, note_box, xlr, sm712_v, adm2483,
+from schematic_lib import (D, frame, note_box, xlr, sm712_v, iso1410,
                            b0505s, conn)
 
 
@@ -65,7 +65,7 @@ def channel(d: D, y0: float, ch: int):
     d.net(440, p3[1], f"GND_ISO{ch}", size=7.5)
 
     # transceiver
-    p = adm2483(d, 520, y0 + 40, ux)
+    p = iso1410(d, 520, y0 + 40, ux)
 
     d.wire(p[1], (750, p[1][1]))
     d.pwr(730, p[1][1], "+3V3")
@@ -93,8 +93,7 @@ def channel(d: D, y0: float, ch: int):
     d.wire(p[6], (750, p[6][1]))
     d.net(754, p[6][1], f"TXD{ch}", size=9)
 
-    d.wire(p[7], (750, p[7][1]))
-    d.text(754, p[7][1] + 3, "+3V3", size=9, cls="pwr", weight=700)
+    # pin 7 is NC on the ISO1410DWR (X is drawn by the symbol)
 
     # isolated supply + decoupling
     d.dot(p[16][0], p[16][1])
@@ -117,7 +116,7 @@ def sheet_output(path: str):
     d = D()
     frame(d, W, H,
           "Ausgangsplatine 4 × DMX (4× identisch)",
-          "4 × isolierter ADM2483-Treiber · XLR5 male · 560 Ω Fail-Safe-Bias · optionaler 120-Ω-Abschluss",
+          "4 × isolierter ISO1410DWR-Treiber · XLR5 male · 560 Ω Fail-Safe-Bias · optionaler 120-Ω-Abschluss",
           2, 4,
           "Diese Platine wird viermal gebaut. Tabelle rechts: Zuordnung der Platine zu OUT1..OUT16.")
 
@@ -195,7 +194,7 @@ def sheet_output(path: str):
     ], size=7.8)
 
     note_box(d, 1400, 990, 340, 320, "Stückliste (1 Platine)", [
-        "4 × U1..U4    ADM2483BRWZ (SOIC-16)",
+        "4 × U1..U4    ISO1410DWR (SOIC-16 DW)",
         "4 × U5..U8    B0505S-1W",
         "4 × D1..D4    SM712 (SOT-23)",
         "4 × J2..J5    XLR5 male, PCB",
@@ -204,12 +203,12 @@ def sheet_output(path: str):
         "8 × R13..R20  560 Ω 1 % (Bias)",
         "4 × R3,R6,R9,R12  120 Ω (optional)",
         "4 × JP1..JP4  Lötbrücke, offen",
-        "8 × 100 nF    VDD1 + VDD2 je Kanal",
+        "8 × 100 nF    VCC1 + VCC2 je Kanal",
         "4 × 100 nF    B0505S-Ausgang",
         "4 × 10 µF/25 V  5-V-Eingang",
         "4 × 10 µF/16 V  isolierte Seite",
         "",
-        "VDD1 immer 3,3 V; VDD2 = 5 V isoliert.",
+        "VCC1 immer 3,3 V; VCC2 = 5 V isoliert.",
         "Alle vier Kanäle sind galvanisch getrennt.",
     ], size=7.5)
 

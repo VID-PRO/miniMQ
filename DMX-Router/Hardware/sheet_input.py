@@ -3,14 +3,14 @@
 #  Sheet 1: input board (4 identical DMX/RDM input channels)
 # ------------------------------------------------------------------
 
-from schematic_lib import (D, frame, note_box, xlr, sm712_v, adm2483,
+from schematic_lib import (D, frame, note_box, xlr, sm712_v, iso1410,
                            b0505s, conn, NET)
 
 
 def channel(d: D, y0: float, ch: int):
     """One isolated DMX/RDM input channel."""
     xlr_ref = f"J{ch + 1}"
-    adm_ref = f"U{ch}"
+    iso_ref = f"U{ch}"
     tvs_ref = f"D{ch}"
     r_sig = 3 * (ch - 1) + 1
     r_term = 3 * (ch - 1) + 3
@@ -51,7 +51,7 @@ def channel(d: D, y0: float, ch: int):
     d.net(420, p3[1], f"GND_ISO{ch}", size=7.5)
 
     # --- transceiver ------------------------------------------------
-    p = adm2483(d, 520, y0 + 40, adm_ref)
+    p = iso1410(d, 520, y0 + 40, iso_ref)
 
     # logic supply and ground
     d.wire(p[1], (750, p[1][1]))
@@ -81,9 +81,7 @@ def channel(d: D, y0: float, ch: int):
     d.wire(p[6], (750, p[6][1]))
     d.net(754, p[6][1], "TXD_IN", size=9)
 
-    # PV is tied to VDD1 (3.3 V)
-    d.wire(p[7], (750, p[7][1]))
-    d.text(754, p[7][1] + 3, "+3V3", size=9, cls="pwr", weight=700)
+    # pin 7 is NC on the ISO1410DWR (X is drawn by the symbol)
 
     # isolated bus supply + decoupling
     d.dot(p[16][0], p[16][1])
@@ -106,7 +104,7 @@ def sheet_input(path: str):
     d = D()
     frame(d, W, H,
           "Eingangsplatine 4 × DMX/RDM",
-          "4 × isolierter ADM2483-Empfänger · XLR5 female · 120 Ω Abschluss · 5 V über B0505S-1W",
+          "4 × isolierter ISO1410DWR-Empfänger · XLR5 female · 120 Ω Abschluss · 5 V über B0505S-1W",
           1, 4,
           "Eine Platine. Alle vier Kanäle sind identisch; J1 verbindet die Platine mit dem Controller.")
 
@@ -180,7 +178,7 @@ def sheet_input(path: str):
     ], size=8.0)
 
     note_box(d, 1400, 970, 340, 340, "Stückliste (1 Platine)", [
-        "4 × U1..U4    ADM2483BRWZ (SOIC-16)",
+        "4 × U1..U4    ISO1410DWR (SOIC-16 DW)",
         "4 × U5..U8    B0505S-1W",
         "4 × D1..D4    SM712 (SOT-23)",
         "4 × J2..J5    XLR5 female, PCB",
@@ -188,13 +186,13 @@ def sheet_input(path: str):
         "8 × R1,R2,R4,R5,R7,R8,R10,R11   10 Ω",
         "4 × R3,R6,R9,R12                120 Ω",
         "4 × JP1..JP4  Lötbrücke, geschlossen",
-        "8 × 100 nF    VDD1 + VDD2 je Kanal",
+        "8 × 100 nF    VCC1 + VCC2 je Kanal",
         "4 × 100 nF    B0505S-Ausgang",
         "4 × 10 µF/25 V  5-V-Eingang",
         "4 × 10 µF/16 V  isolierte Seite",
         "optional je Kanal: 1 MΩ + 4,7 nF/1 kV",
         "",
-        "VDD1 immer 3,3 V. Bei 5 V an VDD1",
+        "VCC1 immer 3,3 V. Bei 5 V an VCC1",
         "liegen 5 V an den RP2040-Eingängen.",
     ], size=7.6)
 

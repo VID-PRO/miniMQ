@@ -244,7 +244,7 @@
 <line x1="467.0" y1="494.0" x2="477.0" y2="484.0" class="p"/>
 <rect x="500.0" y="180.0" width="62.0" height="84.0" class="c" rx="3"/>
 <text x="531.0" y="174.0" font-size="8.5" class="ref" text-anchor="middle">J8</text>
-<text x="531.0" y="276.0" font-size="7.5" class="val" text-anchor="middle">5 V / 3 A</text>
+<text x="531.0" y="276.0" font-size="7.5" class="val" text-anchor="middle">5 V / 5 A</text>
 <circle cx="522.0" cy="205.0" r="8.0" class="c"/>
 <line x1="517.0" y1="205.0" x2="527.0" y2="205.0" class="p"/>
 <line x1="562.0" y1="205.0" x2="584.0" y2="205.0" class="p"/>
@@ -259,7 +259,7 @@
 <rect x="595.0" y="197.0" width="50.0" height="16.0" class="c" rx="2"/>
 <line x1="595.0" y1="205.0" x2="645.0" y2="205.0" class="p"/>
 <text x="620.0" y="193.0" font-size="7" class="ref" text-anchor="middle">F1</text>
-<text x="620.0" y="224.0" font-size="7" class="val" text-anchor="middle">3 A</text>
+<text x="620.0" y="224.0" font-size="7" class="val" text-anchor="middle">5 A</text>
 <polyline points="645.0,205.0 660.0,205.0" class="w"/>
 <line x1="660.0" y1="205.0" x2="672.0" y2="205.0" class="p"/>
 <polyline points="672.0,196.0 672.0,214.0 692.0,205.0" class="p"/>
@@ -304,8 +304,8 @@
 <rect x="60.0" y="110.0" width="370.0" height="96.0" class="tb" rx="4"/>
 <text x="72.0" y="130.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">5-V-Versorgung</text>
 <line x1="70.0" y1="137.0" x2="420.0" y2="137.0" class="wt"/>
-<text x="72.0" y="153.0" font-size="7.4" class="note" text-anchor="start">5 V / 3 A (20 × B0505S-1W).</text>
-<text x="72.0" y="165.0" font-size="7.4" class="note" text-anchor="start">F1 3 A, D1 SS34 verpolsicher, D2 SMBJ5.0A, C1 470 µF/10 V.</text>
+<text x="72.0" y="153.0" font-size="7.4" class="note" text-anchor="start">5 V / 5 A (20 × B0505S-1W).</text>
+<text x="72.0" y="165.0" font-size="7.4" class="note" text-anchor="start">F1 5 A, D1 SS34 verpolsicher, D2 SMBJ5.0A, C1 470 µF/10 V.</text>
 <text x="72.0" y="177.0" font-size="7.4" class="note" text-anchor="start">Pico VSYS = +5 V; 3,3 V kommen aus dem Pico-Regler.</text>
 <rect x="820.0" y="190.0" width="170.0" height="240.0" class="c" rx="3"/>
 <text x="905.0" y="183.0" font-size="9" class="ref" text-anchor="middle">U2</text>
@@ -1221,7 +1221,7 @@
 <line x1="1190.0" y1="1252.0" x2="1830.0" y2="1252.0" class="wt"/>
 <text x="1192.0" y="1268.0" font-size="7.8" class="note" text-anchor="start">GP23/24/25/29 sind beim Pico nicht herausgeführt; DIR_OUT und MUX_SEL liegen deshalb am PCF8574.</text>
 <text x="1192.0" y="1281.0" font-size="7.8" class="note" text-anchor="start">I²C1: GP26 = SDA, GP27 = SCL, 400 kHz; Adressen 0x20 (PCF8574) und 0x3C/0x3D (OLED).</text>
-<text x="1192.0" y="1294.0" font-size="7.8" class="note" text-anchor="start">5 V / 3 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.</text>
+<text x="1192.0" y="1294.0" font-size="7.8" class="note" text-anchor="start">5 V / 5 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.</text>
 <text x="1192.0" y="1307.0" font-size="7.8" class="note" text-anchor="start">Alle GND-Pins des Pico und aller Steckverbinder sind miteinander verbunden.</text>
 <text x="1180.0" y="500.0" font-size="8" class="note" text-anchor="start">J2..J5: OUT1..16, DIR_OUT, RDM1..16</text>
 <text x="1180.0" y="514.0" font-size="8" class="note" text-anchor="start">J1: gemeinsame TXD_IN/DIR_IN-Leitungen</text>

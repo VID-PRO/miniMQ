@@ -60,7 +60,7 @@
 <line x1="250.0" y1="380.0" x2="239.2" y2="372.8" class="w"/>
 <rect x="250.0" y="150.0" width="190.0" height="350.0" class="c" rx="5"/>
 <text x="345.0" y="172.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Eingangsplatine</text>
-<text x="345.0" y="190.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="345.0" y="190.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="345.0" y="202.5" font-size="7.6" class="note" text-anchor="middle">4 × B0505S-1W</text>
 <text x="345.0" y="215.0" font-size="7.6" class="note" text-anchor="middle">SM712 + 10 Ω</text>
 <text x="345.0" y="227.5" font-size="7.6" class="note" text-anchor="middle">120 Ω Abschluss</text>
@@ -89,7 +89,7 @@
 <text x="710.0" y="450.0" font-size="8" class="note" text-anchor="middle">J1: Eingangsplatine</text>
 <text x="710.0" y="466.0" font-size="8" class="note" text-anchor="middle">J2..J5: Ausgangsplatinen</text>
 <text x="710.0" y="482.0" font-size="8" class="note" text-anchor="middle">J6: OLED · J7: Tasten</text>
-<text x="710.0" y="500.0" font-size="8" class="note" text-anchor="middle">J8: 5 V / 3 A</text>
+<text x="710.0" y="500.0" font-size="8" class="note" text-anchor="middle">J8: 5 V / 5 A</text>
 <line x1="440.0" y1="325.0" x2="520.0" y2="325.0" class="w"/>
 <line x1="520.0" y1="325.0" x2="509.2" y2="332.2" class="w"/>
 <line x1="520.0" y1="325.0" x2="509.2" y2="317.8" class="w"/>
@@ -97,7 +97,7 @@
 <text x="1000.0" y="132.0" font-size="9.5" class="t" text-anchor="start" font-weight="700">Ausgangsplatinen (4× identisch)</text>
 <rect x="1000.0" y="140.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1085.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #1</text>
-<text x="1085.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="192.5" font-size="7.6" class="note" text-anchor="middle">OUT1..OUT4</text>
 <rect x="1240.0" y="140.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1325.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
@@ -112,7 +112,7 @@
 <text x="950.0" y="177.0" font-size="8" class="net" text-anchor="middle">J2</text>
 <rect x="1000.0" y="265.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1085.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #2</text>
-<text x="1085.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="317.5" font-size="7.6" class="note" text-anchor="middle">OUT5..OUT8</text>
 <rect x="1240.0" y="265.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1325.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
@@ -127,7 +127,7 @@
 <text x="950.0" y="302.0" font-size="8" class="net" text-anchor="middle">J3</text>
 <rect x="1000.0" y="390.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1085.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #3</text>
-<text x="1085.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="442.5" font-size="7.6" class="note" text-anchor="middle">OUT9..OUT12</text>
 <rect x="1240.0" y="390.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1325.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
@@ -142,7 +142,7 @@
 <text x="950.0" y="427.0" font-size="8" class="net" text-anchor="middle">J4</text>
 <rect x="1000.0" y="515.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1085.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">Platine #4</text>
-<text x="1085.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">4 × ADM2483</text>
+<text x="1085.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="567.5" font-size="7.6" class="note" text-anchor="middle">OUT13..OUT16</text>
 <rect x="1240.0" y="515.0" width="170.0" height="90.0" class="c" rx="5"/>
 <text x="1325.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
@@ -156,7 +156,7 @@
 <line x1="1000.0" y1="560.0" x2="989.2" y2="552.8" class="w"/>
 <text x="950.0" y="552.0" font-size="8" class="net" text-anchor="middle">J5</text>
 <rect x="250.0" y="560.0" width="190.0" height="80.0" class="c" rx="5"/>
-<text x="345.0" y="582.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">5 V / 3 A</text>
+<text x="345.0" y="582.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">5 V / 5 A</text>
 <text x="345.0" y="600.0" font-size="7.6" class="note" text-anchor="middle">Pico VSYS</text>
 <text x="345.0" y="612.5" font-size="7.6" class="note" text-anchor="middle">B0505S über J1..J5</text>
 <line x1="345.0" y1="560.0" x2="345.0" y2="500.0" class="w"/>
@@ -226,9 +226,9 @@
 <rect x="60.0" y="920.0" width="1060.0" height="190.0" class="tb" rx="4"/>
 <text x="72.0" y="940.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">Systemhinweise</text>
 <line x1="70.0" y1="947.0" x2="1110.0" y2="947.0" class="wt"/>
-<text x="72.0" y="963.0" font-size="8.0" class="note" text-anchor="start">Alle Platinen teilen GND und 3,3 V. Die DMX-Busseiten sind je Kanal über ADM2483 und B0505S galvanisch getrennt.</text>
+<text x="72.0" y="963.0" font-size="8.0" class="note" text-anchor="start">Alle Platinen teilen GND und 3,3 V. Die DMX-Busseiten sind je Kanal über ISO1410DWR und B0505S galvanisch getrennt.</text>
 <text x="72.0" y="976.0" font-size="8.0" class="note" text-anchor="start">J1..J5 sind 2×8-Wannenstecker mit 2,54 mm Raster; Flachbandkabel kurz halten und abwechselnd GND führen.</text>
 <text x="72.0" y="989.0" font-size="8.0" class="note" text-anchor="start">Eingang: 120 Ω fest am Router (Strangende). Ausgang: 560 Ω Fail-Safe-Bias je Port, 120 Ω nur am letzten Gerät des Strangs.</text>
 <text x="72.0" y="1002.0" font-size="8.0" class="note" text-anchor="start">RDM ist best-effort: ein gemeinsamer DIR_OUT und ein Rückkanal je Ausgang; Discovery findet pro Zweig nur den ersten Responder.</text>
-<text x="72.0" y="1015.0" font-size="8.0" class="note" text-anchor="start">Bestückung: 1 × Eingangsplatine, 4 × Ausgangsplatine, 1 × Controllerplatine. 5-V-Netzteil mindestens 3 A.</text>
+<text x="72.0" y="1015.0" font-size="8.0" class="note" text-anchor="start">Bestückung: 1 × Eingangsplatine, 4 × Ausgangsplatine, 1 × Controllerplatine. 5-V-Netzteil mindestens 5 A.</text>
 </svg>

@@ -55,7 +55,7 @@ def sheet_overview(path: str):
         d.arrow(150, y + 24, 250, y + 24)
 
     block(d, 250, 150, 190, 350, "Eingangsplatine", [
-        "4 × ADM2483",
+        "4 × ISO1410DWR",
         "4 × B0505S-1W",
         "SM712 + 10 Ω",
         "120 Ω Abschluss",
@@ -92,7 +92,7 @@ def sheet_overview(path: str):
            anchor="middle")
     d.text(710, 482, "J6: OLED · J7: Tasten", size=8, cls="note",
            anchor="middle")
-    d.text(710, 500, "J8: 5 V / 3 A", size=8, cls="note",
+    d.text(710, 500, "J8: 5 V / 5 A", size=8, cls="note",
            anchor="middle")
 
     d.arrow(440, 325, 520, 325)
@@ -104,7 +104,7 @@ def sheet_overview(path: str):
     for i in range(4):
         y = 140 + i * 125
         block(d, 1000, y, 170, 90, f"Platine #{i + 1}", [
-            "4 × ADM2483",
+            "4 × ISO1410DWR",
             f"OUT{4 * i + 1}..OUT{4 * i + 4}",
         ])
         block(d, 1240, y, 170, 90, "4 × XLR5 male", [
@@ -117,7 +117,7 @@ def sheet_overview(path: str):
                anchor="middle")
 
     # --- power -----------------------------------------------------
-    block(d, 250, 560, 190, 80, "5 V / 3 A", [
+    block(d, 250, 560, 190, 80, "5 V / 5 A", [
         "Pico VSYS",
         "B0505S über J1..J5",
     ])
@@ -142,11 +142,11 @@ def sheet_overview(path: str):
     table(d, 60, 700, [230, 250, 330, 180, 500], rows)
 
     note_box(d, 60, 920, 1060, 190, "Systemhinweise", [
-        "Alle Platinen teilen GND und 3,3 V. Die DMX-Busseiten sind je Kanal über ADM2483 und B0505S galvanisch getrennt.",
+        "Alle Platinen teilen GND und 3,3 V. Die DMX-Busseiten sind je Kanal über ISO1410DWR und B0505S galvanisch getrennt.",
         "J1..J5 sind 2×8-Wannenstecker mit 2,54 mm Raster; Flachbandkabel kurz halten und abwechselnd GND führen.",
         "Eingang: 120 Ω fest am Router (Strangende). Ausgang: 560 Ω Fail-Safe-Bias je Port, 120 Ω nur am letzten Gerät des Strangs.",
         "RDM ist best-effort: ein gemeinsamer DIR_OUT und ein Rückkanal je Ausgang; Discovery findet pro Zweig nur den ersten Responder.",
-        "Bestückung: 1 × Eingangsplatine, 4 × Ausgangsplatine, 1 × Controllerplatine. 5-V-Netzteil mindestens 3 A.",
+        "Bestückung: 1 × Eingangsplatine, 4 × Ausgangsplatine, 1 × Controllerplatine. 5-V-Netzteil mindestens 5 A.",
     ], size=8.0, line_gap=13)
 
     d.save(path, W, H)

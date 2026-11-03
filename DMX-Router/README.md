@@ -79,7 +79,7 @@ Hinweise:
   immer auf 1 gehalten.
 * Die 3,3-V-Schiene kommt aus dem Pico-Regler und wird über die
   Flachbandkabel verteilt. Die 5-V-Einspeisung erfolgt über J8
-  (5 V / 3 A).
+  (5 V / 5 A).
 
 ### 1.2 Anschluss der 74HC151
 
@@ -96,27 +96,28 @@ DIR_OUT    -> PCF8574 P0 über 74HC125
 
 Die RDM-Rückleitungen der Ausgangs-Transceiver müssen auf die jeweiligen
 `D0..D7`-Eingänge gelegt werden. Die 74HC151-Ausgänge sind reine
-Logikpegel (3,3 V); die ADM2483-Ausgänge liefern bereits 3,3-V-kompatible
+Logikpegel (3,3 V); die ISO1410DWR-Ausgänge liefern bereits 3,3-V-kompatible
 Pegel, sofern die Logikseite mit 3,3 V versorgt wird.
 
-### 1.3 ADM2483-Beschaltung
+### 1.3 ISO1410DWR-Beschaltung
 
 Die Transceiver-Beschaltung:
 
 * **Eingangskarte:** 120 Ω zwischen A/B (Lötbrücke JP1..JP4
   **werksseitig geschlossen**), keine Biasing-Widerstände,
-  `RE`/`DE` zusammen auf `DIR_IN`, `TXD` auf GP20 (alle vier parallel).
+  `RE`/`DE` zusammen auf `DIR_IN`, `D` (TXD_IN) auf GP20 (alle vier
+  parallel).
 * **Ausgangskarte:** **keine feste Terminierung**, 560 Ω Fail-Safe-Bias
   an A/B, optionaler 120-Ω-Abschluss (JP1..JP4 standardmäßig offen),
-  `RE`/`DE` zusammen auf `DIR_OUT`, `RXD` über den 74HC151 zurück.
-* **Logikpegel:** Der ADM2483-Logikteil (`VDD1`) muss mit **3,3 V**
-  betrieben werden, wenn `TxD`, `RxD` und `DIR` direkt an den RP2040
-  gehen. Bei `VDD1 = 5 V` liefert `RxD` 5-V-Pegel; der RP2040 ist nicht
-  5-V-tolerant. Die Busseite (`VDD2`) bleibt bei 5 V. Alternativ
+  `RE`/`DE` zusammen auf `DIR_OUT`, `R` (RDM) über den 74HC151 zurück.
+* **Logikpegel:** Der ISO1410DWR-Logikteil (`VCC1`) muss mit **3,3 V**
+  betrieben werden, wenn `D`, `R` und `DIR` direkt an den RP2040
+  gehen. Bei `VCC1 = 5 V` liefert `R` 5-V-Pegel; der RP2040 ist nicht
+  5-V-tolerant. Die Busseite (`VCC2`) bleibt bei 5 V. Alternativ
   Pegelwandler vorsehen.
-* `PV` wird mit VDD1 (3,3 V) verbunden. Der Pin ist ein Power-Valid-
-  Eingang; für strengere Einschaltbedingungen kann ein Supervisor oder
-  ein RC-Glied ergänzt werden.
+* **Pin 7 ist NC** und bleibt offen; der ISO1410DWR hat keinen
+  `PV`-Pin. Der Baustein ist die 500-kbps-Variante mit Failsafe-
+  Empfänger und 1/8 Unit Load und damit für DMX mit 250 kbps geeignet.
 * SM712 an A/B, 10 Ω-Schutzwiderstände zu den XLR-Pins, isolierte
   B0505S-1W-Versorgung je Kanal.
 
