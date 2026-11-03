@@ -225,7 +225,7 @@ def sheet_controller(path: str):
     # --------------------------------------------------------------
     #  pull-ups on the PCF port pins that drive the buffer
     # --------------------------------------------------------------
-    rnet(d, 850, 900, "RN3", ["PCF_P0", "PCF_P1", "PCF_P2", "PCF_P3"],
+    rnet(d, 760, 920, "RN3", ["PCF_P0", "PCF_P1", "PCF_P2", "PCF_P3"],
          val="10 kΩ")
 
     # --------------------------------------------------------------
@@ -303,10 +303,10 @@ def sheet_controller(path: str):
     conn(d, 1500, 140, "J1", "Eingangsplatine", j1_rows, pitch=18)
 
     out_conn = [
-        ("J2", 1320, 520, 1, 4, 1),
-        ("J3", 1720, 520, 5, 8, 5),
-        ("J4", 1320, 880, 9, 12, 9),
-        ("J5", 1720, 880, 13, 16, 13),
+        ("J2", 1340, 520, 1, 4, 1),
+        ("J3", 1740, 520, 5, 8, 5),
+        ("J4", 1340, 980, 9, 12, 9),
+        ("J5", 1740, 980, 13, 16, 13),
     ]
     for ref, x, y, g0, g1, r0 in out_conn:
         rows = [
@@ -320,7 +320,7 @@ def sheet_controller(path: str):
             (14, f"RDM{r0 + 2}", "sig"), (15, f"RDM{r0 + 3}", "sig"),
             (16, "GND", "gnd"),
         ]
-        conn(d, x, y, ref, "Ausgangsplatine", rows, pitch=18)
+        conn(d, x, y, ref, "Ausg.-Platine", rows, pitch=18)
 
     # --------------------------------------------------------------
     #  optional UI connectors
@@ -339,17 +339,17 @@ def sheet_controller(path: str):
     # --------------------------------------------------------------
     #  notes
     # --------------------------------------------------------------
-    note_box(d, 1180, 1225, 660, 105, "Hinweise", [
-        "GP23/24/25/29 sind beim Pico nicht herausgeführt; DIR_OUT und MUX_SEL liegen deshalb am PCF8574.",
-        "I²C1: GP26 = SDA, GP27 = SCL, 400 kHz; Adressen 0x20 (PCF8574) und 0x3C/0x3D (OLED).",
-        "5 V / 5 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.",
-        "Alle GND-Pins des Pico und aller Steckverbinder sind miteinander verbunden.",
-    ], size=7.8, line_gap=13)
+    note_box(d, 1605, 870, 295, 125, "Hinweise", [
+        "GP23/24/25/29 nicht herausgef.; DIR_OUT/MUX_SEL am PCF8574.",
+        "I²C1: GP26=SDA, GP27=SCL, 400 kHz; 0x20/0x3C/0x3D.",
+        "5 V / 5 A einspeisen; 3,3 V aus Pico (max. ca. 300 mA).",
+        "Alle GND-Pins von Pico/Steckverbindern verbunden.",
+    ], size=6.7, line_gap=8.2)
 
     # connector description
-    d.text(1180, 500, "J2..J5: OUT1..16, DIR_OUT, RDM1..16", size=8,
+    d.text(1290, 455, "J2..J5: OUT1..16, DIR_OUT, RDM1..16", size=8,
            cls="note")
-    d.text(1180, 514, "J1: gemeinsame TXD_IN/DIR_IN-Leitungen", size=8,
+    d.text(1290, 469, "J1: gemeinsame TXD_IN/DIR_IN-Leitungen", size=8,
            cls="note")
 
     d.save(path, W, H)

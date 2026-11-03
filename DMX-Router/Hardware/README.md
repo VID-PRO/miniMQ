@@ -1,4 +1,4 @@
-# DMX-Router 4 → 16 — Hardware
+﻿# DMX-Router 4 → 16 — Hardware
 
 Diese Dokumentation beschreibt den kompletten Aufbau des DMX-Routers:
 **eine Eingangsplatine**, **vier identische Ausgangsplatinen** und **eine
@@ -23,7 +23,7 @@ Die SVGs sind die Quelldateien; die PNGs sind nur zur Ansicht gerendert.
 | Platine | Anzahl | Aufgabe |
 | :--- | ---: | :--- |
 | Eingangsplatine | 1 | 4 × isolierter DMX/RDM-Empfänger, XLR5 female, 120 Ω Abschluss |
-| Ausgangsplatine | 4 | 4 × isolierter DMX/RDM-Treiber, XLR5 male, 560 Ω Bias |
+| Ausgangsplatine | 4 | 4 × isolierter DMX/RDM-Treiber, XLR5 female, 560 Ω Bias |
 | Controllerplatine | 1 | Raspberry Pi Pico, PCF8574, 74HC125, 2 × 74HC151, 5-V-Eingang |
 
 Die Ausgangsplatinen sind **elektrisch und im Layout identisch**. Welche
@@ -209,7 +209,7 @@ darunter (siehe Abschnitt 7).
 Die Eingangsplatine enthält vier **identische, galvanisch getrennte**
 Empfangskanäle. Jeder Kanal besteht aus:
 
-* XLR5 **female** (J2..J5), Pin 1 = Schirm, Pin 2 = D−, Pin 3 = D+,
+* XLR5 **male** (J2..J5), Pin 1 = Schirm, Pin 2 = D−, Pin 3 = D+,
   Pin 4/5 = NC
 * SM712-TVSDiode an A/B
 * zwei 10-Ω-Schutzwiderstände in den Datenleitungen
@@ -252,7 +252,7 @@ HF-Störungen abzuleiten, ohne die galvanische Trennung aufzugeben.
 | 4 | U1..U4 | ISO1410DWR (SOIC-16 DW) |
 | 4 | U5..U8 | B0505S-1W |
 | 4 | D1..D4 | SM712 (SOT-23) |
-| 4 | J2..J5 | XLR5 female, PCB |
+| 4 | J2..J5 | XLR5 male, PCB |
 | 1 | J1 | 2×8 Wannenstecker, 2,54 mm |
 | 8 | R1, R2, R4, R5, R7, R8, R10, R11 | 10 Ω |
 | 4 | R3, R6, R9, R12 | 120 Ω |
@@ -566,7 +566,7 @@ Die SVG-Dateien sind die maßgebliche Quelle. Nach Änderungen immer
 | ISO1410DWR | 4 | 16 | — | 20 |
 | B0505S-1W | 4 | 16 | — | 20 |
 | SM712 | 4 | 16 | — | 20 |
-| XLR5 female | 4 | — | — | 4 |
+| XLR5 male | 4 | — | — | 4 |
 | XLR5 male | — | 16 | — | 16 |
 | PCF8574 | — | — | 1 | 1 |
 | 74HC125 | — | — | 1 | 1 |
@@ -589,3 +589,8 @@ Die SVG-Dateien sind die maßgebliche Quelle. Nach Änderungen immer
 
 Hinzu kommen Schraubklemme J8, Stiftleisten für OLED/Tasten, optional
 SSD1306 und vier Taster.
+
+
+
+
+

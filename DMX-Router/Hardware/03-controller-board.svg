@@ -546,42 +546,42 @@
 <line x1="1052.0" y1="710.0" x2="1076.7" y2="710.0" stroke="#00695c" stroke-width="1.1"/>
 <text x="1052.0" y="766.0" font-size="8.5" class="net" text-anchor="start" font-weight="600">MUX_C</text>
 <line x1="1052.0" y1="770.0" x2="1076.7" y2="770.0" stroke="#00695c" stroke-width="1.1"/>
-<rect x="850.0" y="900.0" width="150.0" height="130.0" class="c" rx="3"/>
-<text x="925.0" y="893.0" font-size="8.5" class="ref" text-anchor="middle">RN3</text>
-<text x="925.0" y="920.0" font-size="7.5" class="val" text-anchor="middle">4× 10 kΩ</text>
-<line x1="826.0" y1="938.0" x2="850.0" y2="938.0" class="p"/>
-<text x="822.0" y="941.0" font-size="6.5" class="ref" text-anchor="end">1</text>
-<text x="858.0" y="941.0" font-size="6.5" class="m" text-anchor="start">PCF_P0</text>
-<rect x="895.0" y="934.0" width="62.0" height="8.0" class="c"/>
-<line x1="957.0" y1="938.0" x2="1028.0" y2="938.0" class="wt"/>
-<text x="816.0" y="934.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P0</text>
-<line x1="788.2" y1="938.0" x2="816.0" y2="938.0" stroke="#00695c" stroke-width="1.1"/>
-<line x1="826.0" y1="960.0" x2="850.0" y2="960.0" class="p"/>
-<text x="822.0" y="963.0" font-size="6.5" class="ref" text-anchor="end">2</text>
-<text x="858.0" y="963.0" font-size="6.5" class="m" text-anchor="start">PCF_P1</text>
-<rect x="895.0" y="956.0" width="62.0" height="8.0" class="c"/>
-<line x1="957.0" y1="960.0" x2="1028.0" y2="960.0" class="wt"/>
-<text x="816.0" y="956.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P1</text>
-<line x1="788.2" y1="960.0" x2="816.0" y2="960.0" stroke="#00695c" stroke-width="1.1"/>
-<line x1="826.0" y1="982.0" x2="850.0" y2="982.0" class="p"/>
-<text x="822.0" y="985.0" font-size="6.5" class="ref" text-anchor="end">3</text>
-<text x="858.0" y="985.0" font-size="6.5" class="m" text-anchor="start">PCF_P2</text>
-<rect x="895.0" y="978.0" width="62.0" height="8.0" class="c"/>
-<line x1="957.0" y1="982.0" x2="1028.0" y2="982.0" class="wt"/>
-<text x="816.0" y="978.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P2</text>
-<line x1="788.2" y1="982.0" x2="816.0" y2="982.0" stroke="#00695c" stroke-width="1.1"/>
-<line x1="826.0" y1="1004.0" x2="850.0" y2="1004.0" class="p"/>
-<text x="822.0" y="1007.0" font-size="6.5" class="ref" text-anchor="end">4</text>
-<text x="858.0" y="1007.0" font-size="6.5" class="m" text-anchor="start">PCF_P3</text>
-<rect x="895.0" y="1000.0" width="62.0" height="8.0" class="c"/>
-<line x1="957.0" y1="1004.0" x2="1028.0" y2="1004.0" class="wt"/>
-<text x="816.0" y="1000.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P3</text>
-<line x1="788.2" y1="1004.0" x2="816.0" y2="1004.0" stroke="#00695c" stroke-width="1.1"/>
-<line x1="1028.0" y1="938.0" x2="1028.0" y2="1004.0" class="w"/>
-<line x1="1028.0" y1="938.0" x2="1028.0" y2="918.0" class="wt"/>
-<line x1="1028.0" y1="918.0" x2="1028.0" y2="906.0" class="wt"/>
-<line x1="1021.0" y1="906.0" x2="1035.0" y2="906.0" class="w"/>
-<text x="1028.0" y="901.0" font-size="9" class="pwr" text-anchor="middle" font-weight="700">+3V3</text>
+<rect x="760.0" y="920.0" width="150.0" height="130.0" class="c" rx="3"/>
+<text x="835.0" y="913.0" font-size="8.5" class="ref" text-anchor="middle">RN3</text>
+<text x="835.0" y="940.0" font-size="7.5" class="val" text-anchor="middle">4× 10 kΩ</text>
+<line x1="736.0" y1="958.0" x2="760.0" y2="958.0" class="p"/>
+<text x="732.0" y="961.0" font-size="6.5" class="ref" text-anchor="end">1</text>
+<text x="768.0" y="961.0" font-size="6.5" class="m" text-anchor="start">PCF_P0</text>
+<rect x="805.0" y="954.0" width="62.0" height="8.0" class="c"/>
+<line x1="867.0" y1="958.0" x2="938.0" y2="958.0" class="wt"/>
+<text x="726.0" y="954.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P0</text>
+<line x1="698.2" y1="958.0" x2="726.0" y2="958.0" stroke="#00695c" stroke-width="1.1"/>
+<line x1="736.0" y1="980.0" x2="760.0" y2="980.0" class="p"/>
+<text x="732.0" y="983.0" font-size="6.5" class="ref" text-anchor="end">2</text>
+<text x="768.0" y="983.0" font-size="6.5" class="m" text-anchor="start">PCF_P1</text>
+<rect x="805.0" y="976.0" width="62.0" height="8.0" class="c"/>
+<line x1="867.0" y1="980.0" x2="938.0" y2="980.0" class="wt"/>
+<text x="726.0" y="976.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P1</text>
+<line x1="698.2" y1="980.0" x2="726.0" y2="980.0" stroke="#00695c" stroke-width="1.1"/>
+<line x1="736.0" y1="1002.0" x2="760.0" y2="1002.0" class="p"/>
+<text x="732.0" y="1005.0" font-size="6.5" class="ref" text-anchor="end">3</text>
+<text x="768.0" y="1005.0" font-size="6.5" class="m" text-anchor="start">PCF_P2</text>
+<rect x="805.0" y="998.0" width="62.0" height="8.0" class="c"/>
+<line x1="867.0" y1="1002.0" x2="938.0" y2="1002.0" class="wt"/>
+<text x="726.0" y="998.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P2</text>
+<line x1="698.2" y1="1002.0" x2="726.0" y2="1002.0" stroke="#00695c" stroke-width="1.1"/>
+<line x1="736.0" y1="1024.0" x2="760.0" y2="1024.0" class="p"/>
+<text x="732.0" y="1027.0" font-size="6.5" class="ref" text-anchor="end">4</text>
+<text x="768.0" y="1027.0" font-size="6.5" class="m" text-anchor="start">PCF_P3</text>
+<rect x="805.0" y="1020.0" width="62.0" height="8.0" class="c"/>
+<line x1="867.0" y1="1024.0" x2="938.0" y2="1024.0" class="wt"/>
+<text x="726.0" y="1020.0" font-size="8" class="net" text-anchor="end" font-weight="600">PCF_P3</text>
+<line x1="698.2" y1="1024.0" x2="726.0" y2="1024.0" stroke="#00695c" stroke-width="1.1"/>
+<line x1="938.0" y1="958.0" x2="938.0" y2="1024.0" class="w"/>
+<line x1="938.0" y1="958.0" x2="938.0" y2="938.0" class="wt"/>
+<line x1="938.0" y1="938.0" x2="938.0" y2="926.0" class="wt"/>
+<line x1="931.0" y1="926.0" x2="945.0" y2="926.0" class="w"/>
+<text x="938.0" y="921.0" font-size="9" class="pwr" text-anchor="middle" font-weight="700">+3V3</text>
 <rect x="600.0" y="740.0" width="170.0" height="290.0" class="c" rx="3"/>
 <text x="685.0" y="733.0" font-size="9" class="ref" text-anchor="middle">U4</text>
 <text x="685.0" y="1044.0" font-size="8.5" class="val" text-anchor="middle">74HC151</text>
@@ -967,218 +967,218 @@
 <line x1="1466.0" y1="440.0" x2="1500.0" y2="440.0" class="p"/>
 <text x="1509.0" y="443.0" font-size="7.5" class="m" text-anchor="start">16</text>
 <text x="1460.0" y="436.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<rect x="1320.0" y="520.0" width="96.0" height="328.0" class="c" rx="3"/>
-<text x="1368.0" y="513.0" font-size="9" class="ref" text-anchor="middle">J2</text>
-<text x="1368.0" y="861.0" font-size="8" class="val" text-anchor="middle">Ausgangsplatine</text>
-<circle cx="1332.0" cy="531.0" r="3.0" class="j"/>
-<text x="1340.0" y="534.0" font-size="6.5" class="m" text-anchor="start">1</text>
-<line x1="1286.0" y1="550.0" x2="1320.0" y2="550.0" class="p"/>
-<text x="1329.0" y="553.0" font-size="7.5" class="m" text-anchor="start">1</text>
-<text x="1280.0" y="546.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1286.0" y1="568.0" x2="1320.0" y2="568.0" class="p"/>
-<text x="1329.0" y="571.0" font-size="7.5" class="m" text-anchor="start">2</text>
-<text x="1280.0" y="564.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1286.0" y1="586.0" x2="1320.0" y2="586.0" class="p"/>
-<text x="1329.0" y="589.0" font-size="7.5" class="m" text-anchor="start">3</text>
-<text x="1280.0" y="582.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1286.0" y1="604.0" x2="1320.0" y2="604.0" class="p"/>
-<text x="1329.0" y="607.0" font-size="7.5" class="m" text-anchor="start">4</text>
-<text x="1280.0" y="600.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1286.0" y1="622.0" x2="1320.0" y2="622.0" class="p"/>
-<text x="1329.0" y="625.0" font-size="7.5" class="m" text-anchor="start">5</text>
-<text x="1280.0" y="618.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1286.0" y1="640.0" x2="1320.0" y2="640.0" class="p"/>
-<text x="1329.0" y="643.0" font-size="7.5" class="m" text-anchor="start">6</text>
-<text x="1280.0" y="636.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1286.0" y1="658.0" x2="1320.0" y2="658.0" class="p"/>
-<text x="1329.0" y="661.0" font-size="7.5" class="m" text-anchor="start">7</text>
-<text x="1280.0" y="654.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT1</text>
-<line x1="1286.0" y1="676.0" x2="1320.0" y2="676.0" class="p"/>
-<text x="1329.0" y="679.0" font-size="7.5" class="m" text-anchor="start">8</text>
-<text x="1280.0" y="672.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT2</text>
-<line x1="1286.0" y1="694.0" x2="1320.0" y2="694.0" class="p"/>
-<text x="1329.0" y="697.0" font-size="7.5" class="m" text-anchor="start">9</text>
-<text x="1280.0" y="690.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT3</text>
-<line x1="1286.0" y1="712.0" x2="1320.0" y2="712.0" class="p"/>
-<text x="1329.0" y="715.0" font-size="7.5" class="m" text-anchor="start">10</text>
-<text x="1280.0" y="708.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT4</text>
-<line x1="1286.0" y1="730.0" x2="1320.0" y2="730.0" class="p"/>
-<text x="1329.0" y="733.0" font-size="7.5" class="m" text-anchor="start">11</text>
-<text x="1280.0" y="726.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
-<line x1="1286.0" y1="748.0" x2="1320.0" y2="748.0" class="p"/>
-<text x="1329.0" y="751.0" font-size="7.5" class="m" text-anchor="start">12</text>
-<text x="1280.0" y="744.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM1</text>
-<line x1="1286.0" y1="766.0" x2="1320.0" y2="766.0" class="p"/>
-<text x="1329.0" y="769.0" font-size="7.5" class="m" text-anchor="start">13</text>
-<text x="1280.0" y="762.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM2</text>
-<line x1="1286.0" y1="784.0" x2="1320.0" y2="784.0" class="p"/>
-<text x="1329.0" y="787.0" font-size="7.5" class="m" text-anchor="start">14</text>
-<text x="1280.0" y="780.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM3</text>
-<line x1="1286.0" y1="802.0" x2="1320.0" y2="802.0" class="p"/>
-<text x="1329.0" y="805.0" font-size="7.5" class="m" text-anchor="start">15</text>
-<text x="1280.0" y="798.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM4</text>
-<line x1="1286.0" y1="820.0" x2="1320.0" y2="820.0" class="p"/>
-<text x="1329.0" y="823.0" font-size="7.5" class="m" text-anchor="start">16</text>
-<text x="1280.0" y="816.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<rect x="1720.0" y="520.0" width="96.0" height="328.0" class="c" rx="3"/>
-<text x="1768.0" y="513.0" font-size="9" class="ref" text-anchor="middle">J3</text>
-<text x="1768.0" y="861.0" font-size="8" class="val" text-anchor="middle">Ausgangsplatine</text>
-<circle cx="1732.0" cy="531.0" r="3.0" class="j"/>
-<text x="1740.0" y="534.0" font-size="6.5" class="m" text-anchor="start">1</text>
-<line x1="1686.0" y1="550.0" x2="1720.0" y2="550.0" class="p"/>
-<text x="1729.0" y="553.0" font-size="7.5" class="m" text-anchor="start">1</text>
-<text x="1680.0" y="546.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1686.0" y1="568.0" x2="1720.0" y2="568.0" class="p"/>
-<text x="1729.0" y="571.0" font-size="7.5" class="m" text-anchor="start">2</text>
-<text x="1680.0" y="564.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1686.0" y1="586.0" x2="1720.0" y2="586.0" class="p"/>
-<text x="1729.0" y="589.0" font-size="7.5" class="m" text-anchor="start">3</text>
-<text x="1680.0" y="582.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1686.0" y1="604.0" x2="1720.0" y2="604.0" class="p"/>
-<text x="1729.0" y="607.0" font-size="7.5" class="m" text-anchor="start">4</text>
-<text x="1680.0" y="600.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1686.0" y1="622.0" x2="1720.0" y2="622.0" class="p"/>
-<text x="1729.0" y="625.0" font-size="7.5" class="m" text-anchor="start">5</text>
-<text x="1680.0" y="618.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1686.0" y1="640.0" x2="1720.0" y2="640.0" class="p"/>
-<text x="1729.0" y="643.0" font-size="7.5" class="m" text-anchor="start">6</text>
-<text x="1680.0" y="636.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1686.0" y1="658.0" x2="1720.0" y2="658.0" class="p"/>
-<text x="1729.0" y="661.0" font-size="7.5" class="m" text-anchor="start">7</text>
-<text x="1680.0" y="654.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT5</text>
-<line x1="1686.0" y1="676.0" x2="1720.0" y2="676.0" class="p"/>
-<text x="1729.0" y="679.0" font-size="7.5" class="m" text-anchor="start">8</text>
-<text x="1680.0" y="672.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT6</text>
-<line x1="1686.0" y1="694.0" x2="1720.0" y2="694.0" class="p"/>
-<text x="1729.0" y="697.0" font-size="7.5" class="m" text-anchor="start">9</text>
-<text x="1680.0" y="690.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT7</text>
-<line x1="1686.0" y1="712.0" x2="1720.0" y2="712.0" class="p"/>
-<text x="1729.0" y="715.0" font-size="7.5" class="m" text-anchor="start">10</text>
-<text x="1680.0" y="708.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT8</text>
-<line x1="1686.0" y1="730.0" x2="1720.0" y2="730.0" class="p"/>
-<text x="1729.0" y="733.0" font-size="7.5" class="m" text-anchor="start">11</text>
-<text x="1680.0" y="726.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
-<line x1="1686.0" y1="748.0" x2="1720.0" y2="748.0" class="p"/>
-<text x="1729.0" y="751.0" font-size="7.5" class="m" text-anchor="start">12</text>
-<text x="1680.0" y="744.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM5</text>
-<line x1="1686.0" y1="766.0" x2="1720.0" y2="766.0" class="p"/>
-<text x="1729.0" y="769.0" font-size="7.5" class="m" text-anchor="start">13</text>
-<text x="1680.0" y="762.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM6</text>
-<line x1="1686.0" y1="784.0" x2="1720.0" y2="784.0" class="p"/>
-<text x="1729.0" y="787.0" font-size="7.5" class="m" text-anchor="start">14</text>
-<text x="1680.0" y="780.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM7</text>
-<line x1="1686.0" y1="802.0" x2="1720.0" y2="802.0" class="p"/>
-<text x="1729.0" y="805.0" font-size="7.5" class="m" text-anchor="start">15</text>
-<text x="1680.0" y="798.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM8</text>
-<line x1="1686.0" y1="820.0" x2="1720.0" y2="820.0" class="p"/>
-<text x="1729.0" y="823.0" font-size="7.5" class="m" text-anchor="start">16</text>
-<text x="1680.0" y="816.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<rect x="1320.0" y="880.0" width="96.0" height="328.0" class="c" rx="3"/>
-<text x="1368.0" y="873.0" font-size="9" class="ref" text-anchor="middle">J4</text>
-<text x="1368.0" y="1221.0" font-size="8" class="val" text-anchor="middle">Ausgangsplatine</text>
-<circle cx="1332.0" cy="891.0" r="3.0" class="j"/>
-<text x="1340.0" y="894.0" font-size="6.5" class="m" text-anchor="start">1</text>
-<line x1="1286.0" y1="910.0" x2="1320.0" y2="910.0" class="p"/>
-<text x="1329.0" y="913.0" font-size="7.5" class="m" text-anchor="start">1</text>
-<text x="1280.0" y="906.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1286.0" y1="928.0" x2="1320.0" y2="928.0" class="p"/>
-<text x="1329.0" y="931.0" font-size="7.5" class="m" text-anchor="start">2</text>
-<text x="1280.0" y="924.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1286.0" y1="946.0" x2="1320.0" y2="946.0" class="p"/>
-<text x="1329.0" y="949.0" font-size="7.5" class="m" text-anchor="start">3</text>
-<text x="1280.0" y="942.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1286.0" y1="964.0" x2="1320.0" y2="964.0" class="p"/>
-<text x="1329.0" y="967.0" font-size="7.5" class="m" text-anchor="start">4</text>
-<text x="1280.0" y="960.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1286.0" y1="982.0" x2="1320.0" y2="982.0" class="p"/>
-<text x="1329.0" y="985.0" font-size="7.5" class="m" text-anchor="start">5</text>
-<text x="1280.0" y="978.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1286.0" y1="1000.0" x2="1320.0" y2="1000.0" class="p"/>
-<text x="1329.0" y="1003.0" font-size="7.5" class="m" text-anchor="start">6</text>
-<text x="1280.0" y="996.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1286.0" y1="1018.0" x2="1320.0" y2="1018.0" class="p"/>
-<text x="1329.0" y="1021.0" font-size="7.5" class="m" text-anchor="start">7</text>
-<text x="1280.0" y="1014.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT9</text>
-<line x1="1286.0" y1="1036.0" x2="1320.0" y2="1036.0" class="p"/>
-<text x="1329.0" y="1039.0" font-size="7.5" class="m" text-anchor="start">8</text>
-<text x="1280.0" y="1032.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT10</text>
-<line x1="1286.0" y1="1054.0" x2="1320.0" y2="1054.0" class="p"/>
-<text x="1329.0" y="1057.0" font-size="7.5" class="m" text-anchor="start">9</text>
-<text x="1280.0" y="1050.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT11</text>
-<line x1="1286.0" y1="1072.0" x2="1320.0" y2="1072.0" class="p"/>
-<text x="1329.0" y="1075.0" font-size="7.5" class="m" text-anchor="start">10</text>
-<text x="1280.0" y="1068.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT12</text>
-<line x1="1286.0" y1="1090.0" x2="1320.0" y2="1090.0" class="p"/>
-<text x="1329.0" y="1093.0" font-size="7.5" class="m" text-anchor="start">11</text>
-<text x="1280.0" y="1086.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
-<line x1="1286.0" y1="1108.0" x2="1320.0" y2="1108.0" class="p"/>
-<text x="1329.0" y="1111.0" font-size="7.5" class="m" text-anchor="start">12</text>
-<text x="1280.0" y="1104.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM9</text>
-<line x1="1286.0" y1="1126.0" x2="1320.0" y2="1126.0" class="p"/>
-<text x="1329.0" y="1129.0" font-size="7.5" class="m" text-anchor="start">13</text>
-<text x="1280.0" y="1122.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM10</text>
-<line x1="1286.0" y1="1144.0" x2="1320.0" y2="1144.0" class="p"/>
-<text x="1329.0" y="1147.0" font-size="7.5" class="m" text-anchor="start">14</text>
-<text x="1280.0" y="1140.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM11</text>
-<line x1="1286.0" y1="1162.0" x2="1320.0" y2="1162.0" class="p"/>
-<text x="1329.0" y="1165.0" font-size="7.5" class="m" text-anchor="start">15</text>
-<text x="1280.0" y="1158.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM12</text>
-<line x1="1286.0" y1="1180.0" x2="1320.0" y2="1180.0" class="p"/>
-<text x="1329.0" y="1183.0" font-size="7.5" class="m" text-anchor="start">16</text>
-<text x="1280.0" y="1176.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<rect x="1720.0" y="880.0" width="96.0" height="328.0" class="c" rx="3"/>
-<text x="1768.0" y="873.0" font-size="9" class="ref" text-anchor="middle">J5</text>
-<text x="1768.0" y="1221.0" font-size="8" class="val" text-anchor="middle">Ausgangsplatine</text>
-<circle cx="1732.0" cy="891.0" r="3.0" class="j"/>
-<text x="1740.0" y="894.0" font-size="6.5" class="m" text-anchor="start">1</text>
-<line x1="1686.0" y1="910.0" x2="1720.0" y2="910.0" class="p"/>
-<text x="1729.0" y="913.0" font-size="7.5" class="m" text-anchor="start">1</text>
-<text x="1680.0" y="906.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1686.0" y1="928.0" x2="1720.0" y2="928.0" class="p"/>
-<text x="1729.0" y="931.0" font-size="7.5" class="m" text-anchor="start">2</text>
-<text x="1680.0" y="924.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
-<line x1="1686.0" y1="946.0" x2="1720.0" y2="946.0" class="p"/>
-<text x="1729.0" y="949.0" font-size="7.5" class="m" text-anchor="start">3</text>
-<text x="1680.0" y="942.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1686.0" y1="964.0" x2="1720.0" y2="964.0" class="p"/>
-<text x="1729.0" y="967.0" font-size="7.5" class="m" text-anchor="start">4</text>
-<text x="1680.0" y="960.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
-<line x1="1686.0" y1="982.0" x2="1720.0" y2="982.0" class="p"/>
-<text x="1729.0" y="985.0" font-size="7.5" class="m" text-anchor="start">5</text>
-<text x="1680.0" y="978.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1686.0" y1="1000.0" x2="1720.0" y2="1000.0" class="p"/>
-<text x="1729.0" y="1003.0" font-size="7.5" class="m" text-anchor="start">6</text>
-<text x="1680.0" y="996.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<line x1="1686.0" y1="1018.0" x2="1720.0" y2="1018.0" class="p"/>
-<text x="1729.0" y="1021.0" font-size="7.5" class="m" text-anchor="start">7</text>
-<text x="1680.0" y="1014.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT13</text>
-<line x1="1686.0" y1="1036.0" x2="1720.0" y2="1036.0" class="p"/>
-<text x="1729.0" y="1039.0" font-size="7.5" class="m" text-anchor="start">8</text>
-<text x="1680.0" y="1032.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT14</text>
-<line x1="1686.0" y1="1054.0" x2="1720.0" y2="1054.0" class="p"/>
-<text x="1729.0" y="1057.0" font-size="7.5" class="m" text-anchor="start">9</text>
-<text x="1680.0" y="1050.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT15</text>
-<line x1="1686.0" y1="1072.0" x2="1720.0" y2="1072.0" class="p"/>
-<text x="1729.0" y="1075.0" font-size="7.5" class="m" text-anchor="start">10</text>
-<text x="1680.0" y="1068.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT16</text>
-<line x1="1686.0" y1="1090.0" x2="1720.0" y2="1090.0" class="p"/>
-<text x="1729.0" y="1093.0" font-size="7.5" class="m" text-anchor="start">11</text>
-<text x="1680.0" y="1086.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
-<line x1="1686.0" y1="1108.0" x2="1720.0" y2="1108.0" class="p"/>
-<text x="1729.0" y="1111.0" font-size="7.5" class="m" text-anchor="start">12</text>
-<text x="1680.0" y="1104.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM13</text>
-<line x1="1686.0" y1="1126.0" x2="1720.0" y2="1126.0" class="p"/>
-<text x="1729.0" y="1129.0" font-size="7.5" class="m" text-anchor="start">13</text>
-<text x="1680.0" y="1122.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM14</text>
-<line x1="1686.0" y1="1144.0" x2="1720.0" y2="1144.0" class="p"/>
-<text x="1729.0" y="1147.0" font-size="7.5" class="m" text-anchor="start">14</text>
-<text x="1680.0" y="1140.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM15</text>
-<line x1="1686.0" y1="1162.0" x2="1720.0" y2="1162.0" class="p"/>
-<text x="1729.0" y="1165.0" font-size="7.5" class="m" text-anchor="start">15</text>
-<text x="1680.0" y="1158.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM16</text>
-<line x1="1686.0" y1="1180.0" x2="1720.0" y2="1180.0" class="p"/>
-<text x="1729.0" y="1183.0" font-size="7.5" class="m" text-anchor="start">16</text>
-<text x="1680.0" y="1176.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<rect x="1340.0" y="520.0" width="96.0" height="328.0" class="c" rx="3"/>
+<text x="1388.0" y="513.0" font-size="9" class="ref" text-anchor="middle">J2</text>
+<text x="1388.0" y="861.0" font-size="8" class="val" text-anchor="middle">Ausg.-Platine</text>
+<circle cx="1352.0" cy="531.0" r="3.0" class="j"/>
+<text x="1360.0" y="534.0" font-size="6.5" class="m" text-anchor="start">1</text>
+<line x1="1306.0" y1="550.0" x2="1340.0" y2="550.0" class="p"/>
+<text x="1349.0" y="553.0" font-size="7.5" class="m" text-anchor="start">1</text>
+<text x="1300.0" y="546.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1306.0" y1="568.0" x2="1340.0" y2="568.0" class="p"/>
+<text x="1349.0" y="571.0" font-size="7.5" class="m" text-anchor="start">2</text>
+<text x="1300.0" y="564.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1306.0" y1="586.0" x2="1340.0" y2="586.0" class="p"/>
+<text x="1349.0" y="589.0" font-size="7.5" class="m" text-anchor="start">3</text>
+<text x="1300.0" y="582.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1306.0" y1="604.0" x2="1340.0" y2="604.0" class="p"/>
+<text x="1349.0" y="607.0" font-size="7.5" class="m" text-anchor="start">4</text>
+<text x="1300.0" y="600.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1306.0" y1="622.0" x2="1340.0" y2="622.0" class="p"/>
+<text x="1349.0" y="625.0" font-size="7.5" class="m" text-anchor="start">5</text>
+<text x="1300.0" y="618.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1306.0" y1="640.0" x2="1340.0" y2="640.0" class="p"/>
+<text x="1349.0" y="643.0" font-size="7.5" class="m" text-anchor="start">6</text>
+<text x="1300.0" y="636.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1306.0" y1="658.0" x2="1340.0" y2="658.0" class="p"/>
+<text x="1349.0" y="661.0" font-size="7.5" class="m" text-anchor="start">7</text>
+<text x="1300.0" y="654.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT1</text>
+<line x1="1306.0" y1="676.0" x2="1340.0" y2="676.0" class="p"/>
+<text x="1349.0" y="679.0" font-size="7.5" class="m" text-anchor="start">8</text>
+<text x="1300.0" y="672.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT2</text>
+<line x1="1306.0" y1="694.0" x2="1340.0" y2="694.0" class="p"/>
+<text x="1349.0" y="697.0" font-size="7.5" class="m" text-anchor="start">9</text>
+<text x="1300.0" y="690.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT3</text>
+<line x1="1306.0" y1="712.0" x2="1340.0" y2="712.0" class="p"/>
+<text x="1349.0" y="715.0" font-size="7.5" class="m" text-anchor="start">10</text>
+<text x="1300.0" y="708.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT4</text>
+<line x1="1306.0" y1="730.0" x2="1340.0" y2="730.0" class="p"/>
+<text x="1349.0" y="733.0" font-size="7.5" class="m" text-anchor="start">11</text>
+<text x="1300.0" y="726.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
+<line x1="1306.0" y1="748.0" x2="1340.0" y2="748.0" class="p"/>
+<text x="1349.0" y="751.0" font-size="7.5" class="m" text-anchor="start">12</text>
+<text x="1300.0" y="744.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM1</text>
+<line x1="1306.0" y1="766.0" x2="1340.0" y2="766.0" class="p"/>
+<text x="1349.0" y="769.0" font-size="7.5" class="m" text-anchor="start">13</text>
+<text x="1300.0" y="762.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM2</text>
+<line x1="1306.0" y1="784.0" x2="1340.0" y2="784.0" class="p"/>
+<text x="1349.0" y="787.0" font-size="7.5" class="m" text-anchor="start">14</text>
+<text x="1300.0" y="780.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM3</text>
+<line x1="1306.0" y1="802.0" x2="1340.0" y2="802.0" class="p"/>
+<text x="1349.0" y="805.0" font-size="7.5" class="m" text-anchor="start">15</text>
+<text x="1300.0" y="798.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM4</text>
+<line x1="1306.0" y1="820.0" x2="1340.0" y2="820.0" class="p"/>
+<text x="1349.0" y="823.0" font-size="7.5" class="m" text-anchor="start">16</text>
+<text x="1300.0" y="816.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<rect x="1740.0" y="520.0" width="96.0" height="328.0" class="c" rx="3"/>
+<text x="1788.0" y="513.0" font-size="9" class="ref" text-anchor="middle">J3</text>
+<text x="1788.0" y="861.0" font-size="8" class="val" text-anchor="middle">Ausg.-Platine</text>
+<circle cx="1752.0" cy="531.0" r="3.0" class="j"/>
+<text x="1760.0" y="534.0" font-size="6.5" class="m" text-anchor="start">1</text>
+<line x1="1706.0" y1="550.0" x2="1740.0" y2="550.0" class="p"/>
+<text x="1749.0" y="553.0" font-size="7.5" class="m" text-anchor="start">1</text>
+<text x="1700.0" y="546.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1706.0" y1="568.0" x2="1740.0" y2="568.0" class="p"/>
+<text x="1749.0" y="571.0" font-size="7.5" class="m" text-anchor="start">2</text>
+<text x="1700.0" y="564.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1706.0" y1="586.0" x2="1740.0" y2="586.0" class="p"/>
+<text x="1749.0" y="589.0" font-size="7.5" class="m" text-anchor="start">3</text>
+<text x="1700.0" y="582.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1706.0" y1="604.0" x2="1740.0" y2="604.0" class="p"/>
+<text x="1749.0" y="607.0" font-size="7.5" class="m" text-anchor="start">4</text>
+<text x="1700.0" y="600.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1706.0" y1="622.0" x2="1740.0" y2="622.0" class="p"/>
+<text x="1749.0" y="625.0" font-size="7.5" class="m" text-anchor="start">5</text>
+<text x="1700.0" y="618.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1706.0" y1="640.0" x2="1740.0" y2="640.0" class="p"/>
+<text x="1749.0" y="643.0" font-size="7.5" class="m" text-anchor="start">6</text>
+<text x="1700.0" y="636.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1706.0" y1="658.0" x2="1740.0" y2="658.0" class="p"/>
+<text x="1749.0" y="661.0" font-size="7.5" class="m" text-anchor="start">7</text>
+<text x="1700.0" y="654.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT5</text>
+<line x1="1706.0" y1="676.0" x2="1740.0" y2="676.0" class="p"/>
+<text x="1749.0" y="679.0" font-size="7.5" class="m" text-anchor="start">8</text>
+<text x="1700.0" y="672.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT6</text>
+<line x1="1706.0" y1="694.0" x2="1740.0" y2="694.0" class="p"/>
+<text x="1749.0" y="697.0" font-size="7.5" class="m" text-anchor="start">9</text>
+<text x="1700.0" y="690.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT7</text>
+<line x1="1706.0" y1="712.0" x2="1740.0" y2="712.0" class="p"/>
+<text x="1749.0" y="715.0" font-size="7.5" class="m" text-anchor="start">10</text>
+<text x="1700.0" y="708.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT8</text>
+<line x1="1706.0" y1="730.0" x2="1740.0" y2="730.0" class="p"/>
+<text x="1749.0" y="733.0" font-size="7.5" class="m" text-anchor="start">11</text>
+<text x="1700.0" y="726.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
+<line x1="1706.0" y1="748.0" x2="1740.0" y2="748.0" class="p"/>
+<text x="1749.0" y="751.0" font-size="7.5" class="m" text-anchor="start">12</text>
+<text x="1700.0" y="744.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM5</text>
+<line x1="1706.0" y1="766.0" x2="1740.0" y2="766.0" class="p"/>
+<text x="1749.0" y="769.0" font-size="7.5" class="m" text-anchor="start">13</text>
+<text x="1700.0" y="762.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM6</text>
+<line x1="1706.0" y1="784.0" x2="1740.0" y2="784.0" class="p"/>
+<text x="1749.0" y="787.0" font-size="7.5" class="m" text-anchor="start">14</text>
+<text x="1700.0" y="780.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM7</text>
+<line x1="1706.0" y1="802.0" x2="1740.0" y2="802.0" class="p"/>
+<text x="1749.0" y="805.0" font-size="7.5" class="m" text-anchor="start">15</text>
+<text x="1700.0" y="798.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM8</text>
+<line x1="1706.0" y1="820.0" x2="1740.0" y2="820.0" class="p"/>
+<text x="1749.0" y="823.0" font-size="7.5" class="m" text-anchor="start">16</text>
+<text x="1700.0" y="816.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<rect x="1340.0" y="980.0" width="96.0" height="328.0" class="c" rx="3"/>
+<text x="1388.0" y="973.0" font-size="9" class="ref" text-anchor="middle">J4</text>
+<text x="1388.0" y="1321.0" font-size="8" class="val" text-anchor="middle">Ausg.-Platine</text>
+<circle cx="1352.0" cy="991.0" r="3.0" class="j"/>
+<text x="1360.0" y="994.0" font-size="6.5" class="m" text-anchor="start">1</text>
+<line x1="1306.0" y1="1010.0" x2="1340.0" y2="1010.0" class="p"/>
+<text x="1349.0" y="1013.0" font-size="7.5" class="m" text-anchor="start">1</text>
+<text x="1300.0" y="1006.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1306.0" y1="1028.0" x2="1340.0" y2="1028.0" class="p"/>
+<text x="1349.0" y="1031.0" font-size="7.5" class="m" text-anchor="start">2</text>
+<text x="1300.0" y="1024.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1306.0" y1="1046.0" x2="1340.0" y2="1046.0" class="p"/>
+<text x="1349.0" y="1049.0" font-size="7.5" class="m" text-anchor="start">3</text>
+<text x="1300.0" y="1042.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1306.0" y1="1064.0" x2="1340.0" y2="1064.0" class="p"/>
+<text x="1349.0" y="1067.0" font-size="7.5" class="m" text-anchor="start">4</text>
+<text x="1300.0" y="1060.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1306.0" y1="1082.0" x2="1340.0" y2="1082.0" class="p"/>
+<text x="1349.0" y="1085.0" font-size="7.5" class="m" text-anchor="start">5</text>
+<text x="1300.0" y="1078.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1306.0" y1="1100.0" x2="1340.0" y2="1100.0" class="p"/>
+<text x="1349.0" y="1103.0" font-size="7.5" class="m" text-anchor="start">6</text>
+<text x="1300.0" y="1096.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1306.0" y1="1118.0" x2="1340.0" y2="1118.0" class="p"/>
+<text x="1349.0" y="1121.0" font-size="7.5" class="m" text-anchor="start">7</text>
+<text x="1300.0" y="1114.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT9</text>
+<line x1="1306.0" y1="1136.0" x2="1340.0" y2="1136.0" class="p"/>
+<text x="1349.0" y="1139.0" font-size="7.5" class="m" text-anchor="start">8</text>
+<text x="1300.0" y="1132.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT10</text>
+<line x1="1306.0" y1="1154.0" x2="1340.0" y2="1154.0" class="p"/>
+<text x="1349.0" y="1157.0" font-size="7.5" class="m" text-anchor="start">9</text>
+<text x="1300.0" y="1150.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT11</text>
+<line x1="1306.0" y1="1172.0" x2="1340.0" y2="1172.0" class="p"/>
+<text x="1349.0" y="1175.0" font-size="7.5" class="m" text-anchor="start">10</text>
+<text x="1300.0" y="1168.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT12</text>
+<line x1="1306.0" y1="1190.0" x2="1340.0" y2="1190.0" class="p"/>
+<text x="1349.0" y="1193.0" font-size="7.5" class="m" text-anchor="start">11</text>
+<text x="1300.0" y="1186.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
+<line x1="1306.0" y1="1208.0" x2="1340.0" y2="1208.0" class="p"/>
+<text x="1349.0" y="1211.0" font-size="7.5" class="m" text-anchor="start">12</text>
+<text x="1300.0" y="1204.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM9</text>
+<line x1="1306.0" y1="1226.0" x2="1340.0" y2="1226.0" class="p"/>
+<text x="1349.0" y="1229.0" font-size="7.5" class="m" text-anchor="start">13</text>
+<text x="1300.0" y="1222.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM10</text>
+<line x1="1306.0" y1="1244.0" x2="1340.0" y2="1244.0" class="p"/>
+<text x="1349.0" y="1247.0" font-size="7.5" class="m" text-anchor="start">14</text>
+<text x="1300.0" y="1240.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM11</text>
+<line x1="1306.0" y1="1262.0" x2="1340.0" y2="1262.0" class="p"/>
+<text x="1349.0" y="1265.0" font-size="7.5" class="m" text-anchor="start">15</text>
+<text x="1300.0" y="1258.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM12</text>
+<line x1="1306.0" y1="1280.0" x2="1340.0" y2="1280.0" class="p"/>
+<text x="1349.0" y="1283.0" font-size="7.5" class="m" text-anchor="start">16</text>
+<text x="1300.0" y="1276.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<rect x="1740.0" y="980.0" width="96.0" height="328.0" class="c" rx="3"/>
+<text x="1788.0" y="973.0" font-size="9" class="ref" text-anchor="middle">J5</text>
+<text x="1788.0" y="1321.0" font-size="8" class="val" text-anchor="middle">Ausg.-Platine</text>
+<circle cx="1752.0" cy="991.0" r="3.0" class="j"/>
+<text x="1760.0" y="994.0" font-size="6.5" class="m" text-anchor="start">1</text>
+<line x1="1706.0" y1="1010.0" x2="1740.0" y2="1010.0" class="p"/>
+<text x="1749.0" y="1013.0" font-size="7.5" class="m" text-anchor="start">1</text>
+<text x="1700.0" y="1006.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1706.0" y1="1028.0" x2="1740.0" y2="1028.0" class="p"/>
+<text x="1749.0" y="1031.0" font-size="7.5" class="m" text-anchor="start">2</text>
+<text x="1700.0" y="1024.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+3V3</text>
+<line x1="1706.0" y1="1046.0" x2="1740.0" y2="1046.0" class="p"/>
+<text x="1749.0" y="1049.0" font-size="7.5" class="m" text-anchor="start">3</text>
+<text x="1700.0" y="1042.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1706.0" y1="1064.0" x2="1740.0" y2="1064.0" class="p"/>
+<text x="1749.0" y="1067.0" font-size="7.5" class="m" text-anchor="start">4</text>
+<text x="1700.0" y="1060.5" font-size="8" class="pwr" text-anchor="end" font-weight="700">+5V</text>
+<line x1="1706.0" y1="1082.0" x2="1740.0" y2="1082.0" class="p"/>
+<text x="1749.0" y="1085.0" font-size="7.5" class="m" text-anchor="start">5</text>
+<text x="1700.0" y="1078.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1706.0" y1="1100.0" x2="1740.0" y2="1100.0" class="p"/>
+<text x="1749.0" y="1103.0" font-size="7.5" class="m" text-anchor="start">6</text>
+<text x="1700.0" y="1096.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
+<line x1="1706.0" y1="1118.0" x2="1740.0" y2="1118.0" class="p"/>
+<text x="1749.0" y="1121.0" font-size="7.5" class="m" text-anchor="start">7</text>
+<text x="1700.0" y="1114.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT13</text>
+<line x1="1706.0" y1="1136.0" x2="1740.0" y2="1136.0" class="p"/>
+<text x="1749.0" y="1139.0" font-size="7.5" class="m" text-anchor="start">8</text>
+<text x="1700.0" y="1132.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT14</text>
+<line x1="1706.0" y1="1154.0" x2="1740.0" y2="1154.0" class="p"/>
+<text x="1749.0" y="1157.0" font-size="7.5" class="m" text-anchor="start">9</text>
+<text x="1700.0" y="1150.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT15</text>
+<line x1="1706.0" y1="1172.0" x2="1740.0" y2="1172.0" class="p"/>
+<text x="1749.0" y="1175.0" font-size="7.5" class="m" text-anchor="start">10</text>
+<text x="1700.0" y="1168.5" font-size="8" class="net" text-anchor="end" font-weight="600">OUT16</text>
+<line x1="1706.0" y1="1190.0" x2="1740.0" y2="1190.0" class="p"/>
+<text x="1749.0" y="1193.0" font-size="7.5" class="m" text-anchor="start">11</text>
+<text x="1700.0" y="1186.5" font-size="8" class="net" text-anchor="end" font-weight="600">DIR_OUT</text>
+<line x1="1706.0" y1="1208.0" x2="1740.0" y2="1208.0" class="p"/>
+<text x="1749.0" y="1211.0" font-size="7.5" class="m" text-anchor="start">12</text>
+<text x="1700.0" y="1204.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM13</text>
+<line x1="1706.0" y1="1226.0" x2="1740.0" y2="1226.0" class="p"/>
+<text x="1749.0" y="1229.0" font-size="7.5" class="m" text-anchor="start">13</text>
+<text x="1700.0" y="1222.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM14</text>
+<line x1="1706.0" y1="1244.0" x2="1740.0" y2="1244.0" class="p"/>
+<text x="1749.0" y="1247.0" font-size="7.5" class="m" text-anchor="start">14</text>
+<text x="1700.0" y="1240.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM15</text>
+<line x1="1706.0" y1="1262.0" x2="1740.0" y2="1262.0" class="p"/>
+<text x="1749.0" y="1265.0" font-size="7.5" class="m" text-anchor="start">15</text>
+<text x="1700.0" y="1258.5" font-size="8" class="net" text-anchor="end" font-weight="600">RDM16</text>
+<line x1="1706.0" y1="1280.0" x2="1740.0" y2="1280.0" class="p"/>
+<text x="1749.0" y="1283.0" font-size="7.5" class="m" text-anchor="start">16</text>
+<text x="1700.0" y="1276.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
 <rect x="1060.0" y="840.0" width="84.0" height="128.0" class="c" rx="3"/>
 <text x="1102.0" y="833.0" font-size="9" class="ref" text-anchor="middle">J6</text>
 <text x="1102.0" y="981.0" font-size="8" class="val" text-anchor="middle">OLED (optional)</text>
@@ -1216,13 +1216,13 @@
 <line x1="1026.0" y1="1138.0" x2="1060.0" y2="1138.0" class="p"/>
 <text x="1069.0" y="1141.0" font-size="7.5" class="m" text-anchor="start">5</text>
 <text x="1020.0" y="1134.5" font-size="8" class="gnd" text-anchor="end" font-weight="700">GND</text>
-<rect x="1180.0" y="1225.0" width="660.0" height="105.0" class="tb" rx="4"/>
-<text x="1192.0" y="1245.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">Hinweise</text>
-<line x1="1190.0" y1="1252.0" x2="1830.0" y2="1252.0" class="wt"/>
-<text x="1192.0" y="1268.0" font-size="7.8" class="note" text-anchor="start">GP23/24/25/29 sind beim Pico nicht herausgeführt; DIR_OUT und MUX_SEL liegen deshalb am PCF8574.</text>
-<text x="1192.0" y="1281.0" font-size="7.8" class="note" text-anchor="start">I²C1: GP26 = SDA, GP27 = SCL, 400 kHz; Adressen 0x20 (PCF8574) und 0x3C/0x3D (OLED).</text>
-<text x="1192.0" y="1294.0" font-size="7.8" class="note" text-anchor="start">5 V / 5 A einspeisen; 3,3 V kommen aus dem Pico (max. ca. 300 mA). USB kann gesteckt bleiben.</text>
-<text x="1192.0" y="1307.0" font-size="7.8" class="note" text-anchor="start">Alle GND-Pins des Pico und aller Steckverbinder sind miteinander verbunden.</text>
-<text x="1180.0" y="500.0" font-size="8" class="note" text-anchor="start">J2..J5: OUT1..16, DIR_OUT, RDM1..16</text>
-<text x="1180.0" y="514.0" font-size="8" class="note" text-anchor="start">J1: gemeinsame TXD_IN/DIR_IN-Leitungen</text>
+<rect x="1605.0" y="870.0" width="295.0" height="125.0" class="tb" rx="4"/>
+<text x="1617.0" y="890.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">Hinweise</text>
+<line x1="1615.0" y1="897.0" x2="1890.0" y2="897.0" class="wt"/>
+<text x="1617.0" y="913.0" font-size="6.7" class="note" text-anchor="start">GP23/24/25/29 nicht herausgef.; DIR_OUT/MUX_SEL am PCF8574.</text>
+<text x="1617.0" y="921.2" font-size="6.7" class="note" text-anchor="start">I²C1: GP26=SDA, GP27=SCL, 400 kHz; 0x20/0x3C/0x3D.</text>
+<text x="1617.0" y="929.4" font-size="6.7" class="note" text-anchor="start">5 V / 5 A einspeisen; 3,3 V aus Pico (max. ca. 300 mA).</text>
+<text x="1617.0" y="937.6" font-size="6.7" class="note" text-anchor="start">Alle GND-Pins von Pico/Steckverbindern verbunden.</text>
+<text x="1290.0" y="455.0" font-size="8" class="note" text-anchor="start">J2..J5: OUT1..16, DIR_OUT, RDM1..16</text>
+<text x="1290.0" y="469.0" font-size="8" class="note" text-anchor="start">J1: gemeinsame TXD_IN/DIR_IN-Leitungen</text>
 </svg>

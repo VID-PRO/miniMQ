@@ -50,7 +50,7 @@ def sheet_overview(path: str):
         d.rect(70, y, 80, 48, "c", rx=3)
         d.text(110, y + 21, f"IN{i + 1}", size=9, cls="t", anchor="middle",
                weight=700)
-        d.text(110, y + 36, "XLR5 female", size=6.8, cls="val",
+        d.text(110, y + 36, "XLR5 male", size=6.8, cls="val",
                anchor="middle")
         d.arrow(150, y + 24, 250, y + 24)
 
@@ -107,7 +107,7 @@ def sheet_overview(path: str):
             "4 × ISO1410DWR",
             f"OUT{4 * i + 1}..OUT{4 * i + 4}",
         ])
-        block(d, 1240, y, 170, 90, "4 × XLR5 male", [
+        block(d, 1240, y, 170, 90, "4 × XLR5 female", [
             f"OUT{4 * i + 1}..OUT{4 * i + 4}",
             "560 Ω Bias",
         ])
@@ -129,15 +129,15 @@ def sheet_overview(path: str):
         ("Platine / Stecker", "Datenleitungen", "RDM-Rückkanal",
          "DMX-Ports", "Bemerkung"),
         ("Eingangsplatine J1", "TXD_IN Pin 7..10",
-         "RXI1..4 Pin 12..15", "IN1..4", "4 × XLR5 female"),
+         "RXI1..4 Pin 12..15", "IN1..4", "4 × XLR5 male"),
         ("Ausgang #1 J2", "OUT1..4 Pin 7..10",
-         "RDM1..4 → MUX1 D0..D3", "OUT1..4", "XLR5 male"),
+         "RDM1..4 → MUX1 D0..D3", "OUT1..4", "XLR5 female"),
         ("Ausgang #2 J3", "OUT5..8 Pin 7..10",
-         "RDM5..8 → MUX1 D4..D7", "OUT5..8", "XLR5 male"),
+         "RDM5..8 → MUX1 D4..D7", "OUT5..8", "XLR5 female"),
         ("Ausgang #3 J4", "OUT9..12 Pin 7..10",
-         "RDM9..12 → MUX2 D0..D3", "OUT9..12", "XLR5 male"),
+         "RDM9..12 → MUX2 D0..D3", "OUT9..12", "XLR5 female"),
         ("Ausgang #4 J5", "OUT13..16 Pin 7..10",
-         "RDM13..16 → MUX2 D4..D7", "OUT13..16", "XLR5 male"),
+         "RDM13..16 → MUX2 D4..D7", "OUT13..16", "XLR5 female"),
     ]
     table(d, 60, 700, [230, 250, 330, 180, 500], rows)
 

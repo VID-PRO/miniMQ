@@ -36,25 +36,25 @@
 <text x="70.0" y="152.0" font-size="9.5" class="t" text-anchor="start" font-weight="700">DMX/RDM-Eingänge</text>
 <rect x="70.0" y="170.0" width="80.0" height="48.0" class="c" rx="3"/>
 <text x="110.0" y="191.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN1</text>
-<text x="110.0" y="206.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<text x="110.0" y="206.0" font-size="6.8" class="val" text-anchor="middle">XLR5 male</text>
 <line x1="150.0" y1="194.0" x2="250.0" y2="194.0" class="w"/>
 <line x1="250.0" y1="194.0" x2="239.2" y2="201.2" class="w"/>
 <line x1="250.0" y1="194.0" x2="239.2" y2="186.8" class="w"/>
 <rect x="70.0" y="232.0" width="80.0" height="48.0" class="c" rx="3"/>
 <text x="110.0" y="253.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN2</text>
-<text x="110.0" y="268.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<text x="110.0" y="268.0" font-size="6.8" class="val" text-anchor="middle">XLR5 male</text>
 <line x1="150.0" y1="256.0" x2="250.0" y2="256.0" class="w"/>
 <line x1="250.0" y1="256.0" x2="239.2" y2="263.2" class="w"/>
 <line x1="250.0" y1="256.0" x2="239.2" y2="248.8" class="w"/>
 <rect x="70.0" y="294.0" width="80.0" height="48.0" class="c" rx="3"/>
 <text x="110.0" y="315.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN3</text>
-<text x="110.0" y="330.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<text x="110.0" y="330.0" font-size="6.8" class="val" text-anchor="middle">XLR5 male</text>
 <line x1="150.0" y1="318.0" x2="250.0" y2="318.0" class="w"/>
 <line x1="250.0" y1="318.0" x2="239.2" y2="325.2" class="w"/>
 <line x1="250.0" y1="318.0" x2="239.2" y2="310.8" class="w"/>
 <rect x="70.0" y="356.0" width="80.0" height="48.0" class="c" rx="3"/>
 <text x="110.0" y="377.0" font-size="9" class="t" text-anchor="middle" font-weight="700">IN4</text>
-<text x="110.0" y="392.0" font-size="6.8" class="val" text-anchor="middle">XLR5 female</text>
+<text x="110.0" y="392.0" font-size="6.8" class="val" text-anchor="middle">XLR5 male</text>
 <line x1="150.0" y1="380.0" x2="250.0" y2="380.0" class="w"/>
 <line x1="250.0" y1="380.0" x2="239.2" y2="387.2" class="w"/>
 <line x1="250.0" y1="380.0" x2="239.2" y2="372.8" class="w"/>
@@ -100,7 +100,7 @@
 <text x="1085.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="192.5" font-size="7.6" class="note" text-anchor="middle">OUT1..OUT4</text>
 <rect x="1240.0" y="140.0" width="170.0" height="90.0" class="c" rx="5"/>
-<text x="1325.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="162.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 female</text>
 <text x="1325.0" y="180.0" font-size="7.6" class="note" text-anchor="middle">OUT1..OUT4</text>
 <text x="1325.0" y="192.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
 <line x1="1170.0" y1="185.0" x2="1240.0" y2="185.0" class="w"/>
@@ -115,7 +115,7 @@
 <text x="1085.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="317.5" font-size="7.6" class="note" text-anchor="middle">OUT5..OUT8</text>
 <rect x="1240.0" y="265.0" width="170.0" height="90.0" class="c" rx="5"/>
-<text x="1325.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="287.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 female</text>
 <text x="1325.0" y="305.0" font-size="7.6" class="note" text-anchor="middle">OUT5..OUT8</text>
 <text x="1325.0" y="317.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
 <line x1="1170.0" y1="310.0" x2="1240.0" y2="310.0" class="w"/>
@@ -130,7 +130,7 @@
 <text x="1085.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="442.5" font-size="7.6" class="note" text-anchor="middle">OUT9..OUT12</text>
 <rect x="1240.0" y="390.0" width="170.0" height="90.0" class="c" rx="5"/>
-<text x="1325.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="412.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 female</text>
 <text x="1325.0" y="430.0" font-size="7.6" class="note" text-anchor="middle">OUT9..OUT12</text>
 <text x="1325.0" y="442.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
 <line x1="1170.0" y1="435.0" x2="1240.0" y2="435.0" class="w"/>
@@ -145,7 +145,7 @@
 <text x="1085.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">4 × ISO1410DWR</text>
 <text x="1085.0" y="567.5" font-size="7.6" class="note" text-anchor="middle">OUT13..OUT16</text>
 <rect x="1240.0" y="515.0" width="170.0" height="90.0" class="c" rx="5"/>
-<text x="1325.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 male</text>
+<text x="1325.0" y="537.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">4 × XLR5 female</text>
 <text x="1325.0" y="555.0" font-size="7.6" class="note" text-anchor="middle">OUT13..OUT16</text>
 <text x="1325.0" y="567.5" font-size="7.6" class="note" text-anchor="middle">560 Ω Bias</text>
 <line x1="1170.0" y1="560.0" x2="1240.0" y2="560.0" class="w"/>
@@ -182,7 +182,7 @@
 <line x1="870.0" y1="734.0" x2="870.0" y2="768.0" class="frm"/>
 <text x="878.0" y="754.0" font-size="8.2" class="note" text-anchor="start">IN1..4</text>
 <line x1="1050.0" y1="734.0" x2="1050.0" y2="768.0" class="frm"/>
-<text x="1058.0" y="754.0" font-size="8.2" class="note" text-anchor="start">4 × XLR5 female</text>
+<text x="1058.0" y="754.0" font-size="8.2" class="note" text-anchor="start">4 × XLR5 male</text>
 <rect x="60.0" y="768.0" width="1490.0" height="34.0" class="tb"/>
 <text x="68.0" y="788.0" font-size="8.2" class="note" text-anchor="start">Ausgang #1 J2</text>
 <line x1="290.0" y1="768.0" x2="290.0" y2="802.0" class="frm"/>
@@ -192,7 +192,7 @@
 <line x1="870.0" y1="768.0" x2="870.0" y2="802.0" class="frm"/>
 <text x="878.0" y="788.0" font-size="8.2" class="note" text-anchor="start">OUT1..4</text>
 <line x1="1050.0" y1="768.0" x2="1050.0" y2="802.0" class="frm"/>
-<text x="1058.0" y="788.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<text x="1058.0" y="788.0" font-size="8.2" class="note" text-anchor="start">XLR5 female</text>
 <rect x="60.0" y="802.0" width="1490.0" height="34.0" class="tb"/>
 <text x="68.0" y="822.0" font-size="8.2" class="note" text-anchor="start">Ausgang #2 J3</text>
 <line x1="290.0" y1="802.0" x2="290.0" y2="836.0" class="frm"/>
@@ -202,7 +202,7 @@
 <line x1="870.0" y1="802.0" x2="870.0" y2="836.0" class="frm"/>
 <text x="878.0" y="822.0" font-size="8.2" class="note" text-anchor="start">OUT5..8</text>
 <line x1="1050.0" y1="802.0" x2="1050.0" y2="836.0" class="frm"/>
-<text x="1058.0" y="822.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<text x="1058.0" y="822.0" font-size="8.2" class="note" text-anchor="start">XLR5 female</text>
 <rect x="60.0" y="836.0" width="1490.0" height="34.0" class="tb"/>
 <text x="68.0" y="856.0" font-size="8.2" class="note" text-anchor="start">Ausgang #3 J4</text>
 <line x1="290.0" y1="836.0" x2="290.0" y2="870.0" class="frm"/>
@@ -212,7 +212,7 @@
 <line x1="870.0" y1="836.0" x2="870.0" y2="870.0" class="frm"/>
 <text x="878.0" y="856.0" font-size="8.2" class="note" text-anchor="start">OUT9..12</text>
 <line x1="1050.0" y1="836.0" x2="1050.0" y2="870.0" class="frm"/>
-<text x="1058.0" y="856.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<text x="1058.0" y="856.0" font-size="8.2" class="note" text-anchor="start">XLR5 female</text>
 <rect x="60.0" y="870.0" width="1490.0" height="34.0" class="tb"/>
 <text x="68.0" y="890.0" font-size="8.2" class="note" text-anchor="start">Ausgang #4 J5</text>
 <line x1="290.0" y1="870.0" x2="290.0" y2="904.0" class="frm"/>
@@ -222,7 +222,7 @@
 <line x1="870.0" y1="870.0" x2="870.0" y2="904.0" class="frm"/>
 <text x="878.0" y="890.0" font-size="8.2" class="note" text-anchor="start">OUT13..16</text>
 <line x1="1050.0" y1="870.0" x2="1050.0" y2="904.0" class="frm"/>
-<text x="1058.0" y="890.0" font-size="8.2" class="note" text-anchor="start">XLR5 male</text>
+<text x="1058.0" y="890.0" font-size="8.2" class="note" text-anchor="start">XLR5 female</text>
 <rect x="60.0" y="920.0" width="1060.0" height="190.0" class="tb" rx="4"/>
 <text x="72.0" y="940.0" font-size="10.5" class="t" text-anchor="start" font-weight="700">Systemhinweise</text>
 <line x1="70.0" y1="947.0" x2="1110.0" y2="947.0" class="wt"/>

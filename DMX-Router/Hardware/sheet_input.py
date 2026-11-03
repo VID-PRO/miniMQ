@@ -104,7 +104,7 @@ def sheet_input(path: str):
     d = D()
     frame(d, W, H,
           "Eingangsplatine 4 × DMX/RDM",
-          "4 × isolierter ISO1410DWR-Empfänger · XLR5 female · 120 Ω Abschluss · 5 V über B0505S-1W",
+          "4 × isolierter ISO1410DWR-Empfänger · XLR5 male · 120 Ω Abschluss · 5 V über B0505S-1W",
           1, 4,
           "Eine Platine. Alle vier Kanäle sind identisch; J1 verbindet die Platine mit dem Controller.")
 
@@ -181,7 +181,7 @@ def sheet_input(path: str):
         "4 × U1..U4    ISO1410DWR (SOIC-16 DW)",
         "4 × U5..U8    B0505S-1W",
         "4 × D1..D4    SM712 (SOT-23)",
-        "4 × J2..J5    XLR5 female, PCB",
+        "4 × J2..J5    XLR5 male, PCB",
         "1 × J1        2×8 Wannenstecker",
         "8 × R1,R2,R4,R5,R7,R8,R10,R11   10 Ω",
         "4 × R3,R6,R9,R12                120 Ω",

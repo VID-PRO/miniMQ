@@ -116,7 +116,7 @@ def sheet_output(path: str):
     d = D()
     frame(d, W, H,
           "Ausgangsplatine 4 × DMX (4× identisch)",
-          "4 × isolierter ISO1410DWR-Treiber · XLR5 male · 560 Ω Fail-Safe-Bias · optionaler 120-Ω-Abschluss",
+          "4 × isolierter ISO1410DWR-Treiber · XLR5 female · 560 Ω Fail-Safe-Bias · optionaler 120-Ω-Abschluss",
           2, 4,
           "Diese Platine wird viermal gebaut. Tabelle rechts: Zuordnung der Platine zu OUT1..OUT16.")
 
@@ -197,7 +197,7 @@ def sheet_output(path: str):
         "4 × U1..U4    ISO1410DWR (SOIC-16 DW)",
         "4 × U5..U8    B0505S-1W",
         "4 × D1..D4    SM712 (SOT-23)",
-        "4 × J2..J5    XLR5 male, PCB",
+        "4 × J2..J5    XLR5 female, PCB",
         "1 × J1        2×8 Wannenstecker",
         "8 × R1,R2,R4,R5,R7,R8,R10,R11   10 Ω",
         "8 × R13..R20  560 Ω 1 % (Bias)",
