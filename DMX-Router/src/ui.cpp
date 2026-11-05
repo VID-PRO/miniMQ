@@ -75,7 +75,11 @@ void RouterUi::onUp() {
   if (_mode == STATUS) {
     _page = (_page + 1) & 1;
   } else if (_mode == SELECT) {
-    _selected = (uint8_t)((_selected + 1) % board::NUM_OUTPUTS);
+    for (uint8_t i = 0; i < board::NUM_OUTPUTS; i++) {
+      _selected = (uint8_t)((_selected + 1) % board::NUM_OUTPUTS);
+      uint8_t bank = _selected / 4;
+      if (board::detected_out_banks & (1 << bank)) break;
+    }
   } else {
     _editMask = (uint8_t)((_editMask + 1) & 0x0F);
   }
@@ -86,8 +90,11 @@ void RouterUi::onDown() {
   if (_mode == STATUS) {
     _page = (_page + 1) & 1;
   } else if (_mode == SELECT) {
-    _selected =
-        (uint8_t)((_selected + board::NUM_OUTPUTS - 1) % board::NUM_OUTPUTS);
+    for (uint8_t i = 0; i < board::NUM_OUTPUTS; i++) {
+      _selected = (uint8_t)((_selected + board::NUM_OUTPUTS - 1) % board::NUM_OUTPUTS);
+      uint8_t bank = _selected / 4;
+      if (board::detected_out_banks & (1 << bank)) break;
+    }
   } else {
     _editMask = (uint8_t)((_editMask + 15) & 0x0F);
   }
@@ -96,12 +103,36 @@ void RouterUi::onDown() {
 void RouterUi::onOk() {
   _dirty = true;
   if (_mode == STATUS) {
-    _selected = (uint8_t)(_page * 8);
+    uint8_t start = (uint8_t)(_page * 8);
+    _selected = start;
+    for (uint8_t i = 0; i < 8; i++) {
+      uint8_t out = (uint8_t)(start + i);
+      if (out >= board::NUM_OUTPUTS) break;
+      uint8_t bank = out / 4;
+      if (board::detected_out_banks & (1 << bank)) {
+        _selected = out;
+        break;
+      }
+    }
+    // If no detected outputs found, just stay in status
+    uint8_t selBank = _selected / 4;
+    if (!(board::detected_out_banks & (1 << selBank))) {
+      return;
+    }
     _mode = SELECT;
   } else if (_mode == SELECT) {
+    uint8_t bank = _selected / 4;
+    if (!(board::detected_out_banks & (1 << bank))) {
+      return;
+    }
     _editMask = config.route(_selected);
     _mode = EDIT;
   } else {
+    uint8_t bank = _selected / 4;
+    if (!(board::detected_out_banks & (1 << bank))) {
+      _mode = SELECT;
+      return;
+    }
     config.setRoute(_selected, _editMask, true);
     Serial.printf("[ui] OUT%u route = 0x%X (saved)\n", _selected + 1,
                   _editMask);
@@ -147,6 +178,9 @@ void RouterUi::drawStatus(const DmxInput *inputs, uint8_t count) {
   for (uint8_t row = 0; row < 4; row++) {
     for (uint8_t col = 0; col < 2; col++) {
       uint8_t out = (uint8_t)(_page * 8 + col * 4 + row);
+      if (out >= board::NUM_OUTPUTS) continue;
+      uint8_t bank = out / 4;
+      if (!(board::detected_out_banks & (1 << bank))) continue;
       int x = col ? 64 : 0;
       int y = 36 + row * 7;
       maskText(config.route(out), m, sizeof(m));

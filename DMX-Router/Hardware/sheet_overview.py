@@ -117,9 +117,9 @@ def sheet_overview(path: str):
                anchor="middle")
 
     # --- power -----------------------------------------------------
-    block(d, 250, 560, 190, 80, "5 V / 5 A", [
-        "Pico VSYS",
-        "B0505S über J1..J5",
+    block(d, 250, 560, 190, 80, "5 V / 5 A Netzteil", [
+        "J8 -> Controllerplatine",
+        "verteilt über J1..J5",
     ])
     d.arrow(345, 560, 345, 500)
     d.text(352, 535, "5 V", size=8, cls="pwr", weight=700)

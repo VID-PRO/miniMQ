@@ -516,6 +516,40 @@ void setup() {
   }
 
   rdm.begin(&txGroups[0], &txGroups[1], &muxInputs[0], &muxInputs[1]);
+
+  // Detect connected output boards (best-effort via RDM return lines)
+  {
+    uint8_t prevDir = true;
+    // Try to detect - go to receive mode briefly
+    ioexp::setDirOut(false);
+    delay(30);
+    board::detected_out_banks = 0;
+    for (uint8_t bank = 0; bank < 4; bank++) {
+      bool present = false;
+      for (uint8_t ch = 0; ch < 4; ch++) {
+        uint8_t outNum = bank * 4 + ch;
+        uint8_t muxCh = outNum & 0x07;
+        uint8_t m = outNum >> 3;
+        ioexp::selectMux(muxCh);
+        delay(3);
+        muxInputs[m].flush();
+        delay(15);
+        muxInputs[m].poll();
+        if (muxInputs[m].activity() > 2) {
+          present = true;
+          break;
+        }
+      }
+      if (present) board::detected_out_banks |= (1 << bank);
+    }
+    if (board::detected_out_banks == 0) board::detected_out_banks = 0x0F;
+    Serial.printf("[boot] detected output banks: %02X\n", board::detected_out_banks);
+    ioexp::setDirOut(true);
+    ioexp::selectMux(0);
+    muxInputs[0].flush();
+    muxInputs[1].flush();
+  }
+
   ui.begin();
 
   if (!s_hardwareOk) {

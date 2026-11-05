@@ -156,9 +156,9 @@
 <line x1="1000.0" y1="560.0" x2="989.2" y2="552.8" class="w"/>
 <text x="950.0" y="552.0" font-size="8" class="net" text-anchor="middle">J5</text>
 <rect x="250.0" y="560.0" width="190.0" height="80.0" class="c" rx="5"/>
-<text x="345.0" y="582.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">5 V / 5 A</text>
-<text x="345.0" y="600.0" font-size="7.6" class="note" text-anchor="middle">Pico VSYS</text>
-<text x="345.0" y="612.5" font-size="7.6" class="note" text-anchor="middle">B0505S über J1..J5</text>
+<text x="345.0" y="582.0" font-size="10.5" class="t" text-anchor="middle" font-weight="700">5 V / 5 A Netzteil</text>
+<text x="345.0" y="600.0" font-size="7.6" class="note" text-anchor="middle">J8 -&gt; Controllerplatine</text>
+<text x="345.0" y="612.5" font-size="7.6" class="note" text-anchor="middle">verteilt über J1..J5</text>
 <line x1="345.0" y1="560.0" x2="345.0" y2="500.0" class="w"/>
 <line x1="345.0" y1="500.0" x2="352.2" y2="510.8" class="w"/>
 <line x1="345.0" y1="500.0" x2="337.8" y2="510.8" class="w"/>

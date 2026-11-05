@@ -88,4 +88,9 @@ constexpr uint8_t RDM_SUB_START_CODE = 0x01;
 // absent for HTP merging.
 constexpr uint32_t INPUT_TIMEOUT_MS = 1000;
 
+// Bitmask of detected output banks (bit 0 -> outputs 1-4 / J2, bit 1 -> 5-8 / J3,
+// bit 2 -> 9-12 / J4, bit 3 -> 13-16 / J5).  Populated at boot by board
+// detection.  All bits set if detection has not run or failed.
+extern uint8_t detected_out_banks;
+
 }  // namespace board
