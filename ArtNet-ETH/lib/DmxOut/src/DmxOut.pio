@@ -1,0 +1,31 @@
+// ------------------------------------------------------------------
+// DMX512 transmitter for the RP2040 PIO.
+//
+// Bit rate target: 250 kbaud (4 us per data bit). The state machine runs
+// at 1 MHz (one cycle = 1 us) via a clock divider in the driver.
+//
+// Framing (ANSI E1.11 compliant, with margin for strict receivers):
+//   BREAK  ~185 us   (spec minimum 92 us)
+//   MAB    16 us     (spec minimum 8 us)
+//   START   4 us
+//   8 data bits at 4 us each
+//
+// Each write() restarts the SM at the top of the program so exactly one
+// BREAK is emitted per frame; when the DMA run ends the SM parks at
+// 'byte' (mark) and no extra dangling BREAK is produced.
+// ------------------------------------------------------------------
+.program dmx_tx
+.side_set 1 opt
+    set x, 23      side 0 [0]   ; BREAK low (~185 us)
+break:
+    jmp x--, break [7]          ; loop 23x, 8 us each (line held low)
+    nop            side 1 [7]   ; MAB high 8 us ...
+    nop            side 1 [7]   ; ... + 8 us = 16 us total
+    .wrap_target
+byte:
+    pull block     side 1 [7]   ; wait for a data byte; mark 8 us
+    set x, 7       side 0 [3]   ; START bit low 4 us
+bit:
+    out pins, 1                 ; shift one bit out (1 us)
+    jmp x--, bit [2]            ; +3 us => 4 us per data bit
+    .wrap

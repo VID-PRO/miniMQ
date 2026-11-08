@@ -6,7 +6,7 @@
 # Targets:
 #   make                     -> help
 #   make build               -> build all projects
-#   make build-<proj>        -> build one project (artnet | dmxrouter | encoder | wing)
+#   make build-<proj>        -> build one project (artnet | artneteth | dmxrouter | encoder | wing)
 #   make upload              -> upload all projects
 #   make upload-<proj>       -> upload one project
 #   make monitor-<proj>      -> open the serial monitor of one project
@@ -17,12 +17,13 @@
 PIO ?= pio
 
 # short name -> project directory
-PROJECTS := artnet dmxrouter encoder wing
+PROJECTS := artnet artneteth dmxrouter encoder wing
 
 define PROJECT_DEF
 PROJECT_DIR_$(1) := $(2)
 endef
 $(eval $(call PROJECT_DEF,artnet,ArtNet-USB))
+$(eval $(call PROJECT_DEF,artneteth,ArtNet-ETH))
 $(eval $(call PROJECT_DEF,dmxrouter,DMX-Router))
 $(eval $(call PROJECT_DEF,encoder,Enncoder))
 $(eval $(call PROJECT_DEF,wing,Wing))
@@ -36,10 +37,10 @@ PROJECT_GROUPS := build upload clean monitor
 
 all: help
 
-## build: compile all four project firmwares
+## build: compile all project firmwares
 build: $(addprefix build-,$(PROJECTS))
 
-## upload: flash all four project firmwares
+## upload: flash all project firmwares
 upload: $(addprefix upload-,$(PROJECTS))
 
 ## clean: remove build artifacts of all four projects
@@ -67,7 +68,7 @@ clean-%:
 help:
 	@echo "miniMQ global PlatformIO targets:"
 	@echo ""
-	@echo "  Projects: artnet, dmxrouter, encoder, wing"
+	@echo "  Projects: artnet, artneteth, dmxrouter, encoder, wing"
 	@echo ""
 	@echo "  make build              build all projects"
 	@echo "  make build-<proj>       build one project"

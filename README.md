@@ -20,13 +20,15 @@ and a dedicated show PC.
 
 ## 1. The layout (physical arrangement)
 
-The suite consists of four Pico firmwares, one show-PC image and two design folders:
+The suite consists of five Pico firmwares, one show-PC image and two design folders:
 
 ```
   [ Enncoder ]        [ Wing ]             [ ArtNet-USB ]        [ DMX-Router ]
    2x RP2040 Zero     11 faders            4x DMX ports          4 in / 16 out
    (4 encoders ea.)   + 5x13 key grid      Art-Net over USB      DMX/RDM matrix
       |                   |                     |                    |
+      |                   |              [ ArtNet-ETH ]              |
+      |                   |              4x DMX/RDM, RJ45           |
       +---------+---------+                     |                    |
                 |                               |                    |
         [ magicq wing.3mf ]  <---- 3D enclosure + easyEDA/ design files
@@ -40,6 +42,7 @@ The suite consists of four Pico firmwares, one show-PC image and two design fold
 | Folder | What it does |
 |--------|--------------|
 | [ArtNet-USB/](ArtNet-USB/) | Raspberry Pi Pico 4-port **Art-Net ↔ DMX512** bridge over USB. The Pico enumerates as a USB Ethernet (CDC-NCM) adapter on the PC, answers ArtPoll, and drives four DMX ports (GPIO 2–5), each configurable as input or output, with RDM gateway and a config web page (http://10.0.0.10/). PlatformIO / Arduino-Pico. |
+| [ArtNet-ETH/](ArtNet-ETH/) | **4-port Art-Net/DMX/RDM node with real Ethernet** on a WIZnet W5100S-EVB-Pico. Four MAX3485 ports on 3-pin XLR, each switchable between output and input, RDM gateway, DHCP client with static fallback (`2.0.0.10/8`), web UI, and a local SSD1306/4-key menu. PlatformIO / Arduino-Pico. |
 | [Enncoder/](Enncoder/) | **ChamSys MagicQ encoder controller**: two Raspberry Pi Pico (RP2040 Zero) modules — left and right — each with 4 rotary encoders with push switches. The modules emulate an **absolute + relative USB HID mouse** that moves the cursor onto the on-screen encoders and scrolls/clicks there. Identical firmware and pinout on both sides, separate calibration per module (LittleFS `/ecal.bin`). PlatformIO / Arduino-Pico. |
 | [Wing/](Wing/) | **DIY MagicQ Compact Mini Connect Wing**: 11 linear faders (10 playback + grand master) read through a 74HC4067 multiplexer and a 5×13 button matrix (46 keys), all over USB HID (keyboard + absolute mouse for the fader drags) — latency-optimized C++ firmware (PlatformIO / Arduino-Pico). |
 | [DMX-Router/](DMX-Router/) | **4 → 16 DMX/RDM matrix splitter**: four DMX/RDM inputs (PIO UART), sixteen DMX outputs (two PIO bit-plane groups + DMA), per-output HTP routing, best-effort RDM store-and-forward relay via two 74HC151 multiplexers, optional SSD1306/PCF8574 UI and LittleFS configuration. The project README documents the complete pin map and wiring. |
@@ -54,6 +57,7 @@ The suite consists of four Pico firmwares, one show-PC image and two design fold
 | Faders on MagicQ's Full Panel + flash/GO keys | [Wing/](Wing/) |
 | Turn / click the MagicQ on-screen encoders | [Enncoder/](Enncoder/) |
 | Feed DMX512 fixtures from the PC over USB | [ArtNet-USB/](ArtNet-USB/) |
+| Feed DMX512 fixtures from the PC over Ethernet | [ArtNet-ETH/](ArtNet-ETH/) |
 | Split / merge 4 DMX consoles onto 16 outputs | [DMX-Router/](DMX-Router/) |
 | Boot a small PC straight into MagicQ | [Linux-Installer/](Linux-Installer/) |
 | Print the enclosure / edit the PCB | [3D/](3D/), [easyEDA/](easyEDA/) |
@@ -66,6 +70,9 @@ The suite consists of four Pico firmwares, one show-PC image and two design fold
 | 5×13 key matrix (dioded) | Wing | rows GP2–GP6, columns GP7–GP19 |
 | Rotary encoders (A/B) + push switches | Enncoder (per module) | A = GP26–GP29, B = GP3–GP6, switches GP15/7/14/8 (identical on both modules) |
 | MAX485 / MAX3485 transceivers | ArtNet-USB | DMX ports on GPIO 2–5 via PIO |
+| MAX3485 transceivers | ArtNet-ETH | TX GP2–GP5, RX GP10–GP13, DE/RE GP6–GP9 via PIO |
+| W5100S Ethernet | ArtNet-ETH | SPI0: MISO GP16, CS GP17, SCK GP18, MOSI GP19, RST GP20, INT GP21 |
+| SSD1306 + 4 keys | ArtNet-ETH | I2C1 SDA GP26 / SCL GP27, keys GP14/15/22/28 |
 | 2× 74HC151 8:1 multiplexers + ADM2483 | DMX-Router | RDM return path OUT 1–8 / 9–16, select on GP22–GP24 |
 | Dell Wyse 3040 (eMMC) | Linux-Installer | — (runs MagicQ as show computer) |
 
@@ -75,7 +82,7 @@ Prerequisite: [PlatformIO Core](https://platformio.org/) installed.
 
 ```bash
 # Switch to the project you want to build
-cd Wing           # or Enncoder / ArtNet-USB / DMX-Router
+cd Wing           # or Enncoder / ArtNet-USB / ArtNet-ETH / DMX-Router
 
 # Compile the firmware
 pio run
@@ -108,7 +115,8 @@ drive.
 > **Note:** `Wing`, `Enncoder` and `DMX-Router` set `board_build.filesystem_size = 64k`. That
 > 64 KB **LittleFS** partition is what their runtime data writes to (`/fcal.bin`, `/ecal.bin`,
 > `/router.cfg`) — without it `LittleFS.begin()` fails and nothing is saved. `ArtNet-USB` needs
-> no filesystem.
+> no filesystem. `ArtNet-ETH` uses a different board (`wiznet_5100s_evb_pico`), so its UF2 is at
+> `.pio/build/w5100s/firmware.uf2`.
 >
 > **The unit suffix matters:** the Raspberry Pi platform parses a **bare number as bytes**, so `64`
 > means 64 *bytes*, not 64 KB. A 64-byte partition makes the LittleFS format loop forever with
@@ -123,6 +131,7 @@ miniMQ/
 ├── Makefile
 ├── platformio.ini        # Workspace-level PlatformIO config
 ├── ArtNet-USB/           # Art-Net over USB -> 4x DMX512 (Pico firmware)
+├── ArtNet-ETH/           # Art-Net over Ethernet -> 4x DMX/RDM (W5100S firmware)
 ├── DMX-Router/           # 4 -> 16 DMX/RDM matrix splitter (Pico firmware)
 ├── Enncoder/             # 2x RP2040 Zero (4 rotary encoders each) -> MagicQ
 ├── Wing/                # 11 faders + 5x13 keys -> MagicQ (Pico firmware)
