@@ -36,7 +36,7 @@ Web- und OLED-Quellen.
 ## Hardware
 
 | Bauteil | Funktion |
-|---|---|
+| --- | --- |
 | U5 | WIZnet W5100S-EVB-Pico (RP2040, W5100S, RJ45) |
 | U11–U14 | MAX485 (im Schaltbild als MAX3485EPA bezeichnet), RS485-Transceiver je DMX-Port |
 | U1–U4 | CT3-12AFAP-EP, 3-polige XLR-Einbaubuchse |
@@ -69,7 +69,7 @@ Adapter verwenden.
 ## Pin-Belegung
 
 | Funktion | GPIO |
-|---|---|
+| --- | --- |
 | DMX TX / DI (Treiber-Eingang) | GP2, GP3, GP4, GP5 |
 | DMX RX / RO (Empfänger-Ausgang) | GP10, GP11, GP12, GP13 |
 | DE/RE (Richtung, HIGH = senden) | GP6, GP7, GP8, GP9 |
@@ -219,7 +219,7 @@ Treiber liegt als lokaler Override unter `lib/tusb-ncm`.
 ## OLED-Menü und Tasten
 
 | Taste | Funktion |
-|---|---|
+| --- | --- |
 | UP / DOWN | Statusseite wechseln, Menüeintrag wählen, Wert ändern |
 | OK | Menü öffnen, Eintrag auswählen, nächstes Feld |
 | BACK | Menü verlassen, Port-Editor beenden und speichern |
@@ -265,9 +265,9 @@ make build-artneteth
 
 Alternativ die `.uf2` im BOOTSEL-Modus auf das Board kopieren:
 
-| Firmware | Projekt-Build | Root-Env |
-|---|---|---|
-| RJ45 + USB-NCM | `.pio/build/w5100s/firmware.uf2` | `.pio/build/artneteth/firmware.uf2` |
+| Firmware        | Projekt-Build                         | Root-Env                             |
+|-----------------|---------------------------------------|--------------------------------------|
+| RJ45 + USB-NCM  | `.pio/build/w5100s/firmware.uf2`      | `.pio/build/artneteth/firmware.uf2`  |
 
 Die serielle Konsole läuft über native USB mit 115200 Baud. Im NCM-Modus
 teilen sich Konsole (CDC) und Netzwerk (NCM) denselben USB-Port; die
@@ -314,7 +314,7 @@ behandeln.
 ## Unterschiede zu ArtNet-USB
 
 | | ArtNet-USB | ArtNet-ETH |
-|---|---|---|
+| --- | --- | --- |
 | Netzwerk | CDC-NCM über USB | automatisch: W5100S + RJ45 oder CDC-NCM (USB-Datenhost) |
 | DHCP | DHCP-Server für den Host | RJ45: DHCP-Client mit Fallback; NCM: DHCP-Server für den Host |
 | USB | Netzwerk + Konsole | RJ45: nur Konsole/Flashen; NCM: Netzwerk + Konsole |
