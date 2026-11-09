@@ -34,6 +34,18 @@ void ArtnetConfig::begin() {
     EEPROM.get(45, long_name);
     short_name[CFG_SHORT_NAME_SZ - 1] = '\0';
     long_name[CFG_LONG_NAME_SZ - 1] = '\0';
+
+    // Devices that still carry the old factory names are migrated in RAM;
+    // custom user names are left untouched.  Empty names also fall back to
+    // the factory defaults so ArtPollReply never advertises a blank node.
+    if (short_name[0] == '\0' || strcmp(short_name, "ArtNet-ETH") == 0) {
+      strncpy(short_name, "VID-PRO ArtNet", CFG_SHORT_NAME_SZ - 1);
+      short_name[CFG_SHORT_NAME_SZ - 1] = '\0';
+    }
+    if (long_name[0] == '\0' || strcmp(long_name, "ArtNet-ETH 4xDMX node") == 0) {
+      strncpy(long_name, "VID-PRO 4x ArtNet Node", CFG_LONG_NAME_SZ - 1);
+      long_name[CFG_LONG_NAME_SZ - 1] = '\0';
+    }
     if (ok) return;
     // fall through: corrupted or stale layout -> defaults
   }
@@ -52,9 +64,9 @@ void ArtnetConfig::reset() {
   memcpy(ip, def_ip, 4);
   memcpy(mask, def_mask, 4);
   dhcp_enabled = true;
-  strncpy(short_name, "ArtNet-ETH", sizeof(short_name) - 1);
+  strncpy(short_name, "VID-PRO ArtNet", sizeof(short_name) - 1);
   short_name[sizeof(short_name) - 1] = '\0';
-  strncpy(long_name, "ArtNet-ETH 4xDMX node", sizeof(long_name) - 1);
+  strncpy(long_name, "VID-PRO 4x ArtNet Node", sizeof(long_name) - 1);
   long_name[sizeof(long_name) - 1] = '\0';
   save();
 }

@@ -9,9 +9,9 @@
 //   6..9     subnet[4]    (Art-Net subnet 0..15  per port)
 //   10..13   universe[4]  (Art-Net universe 0..15 per port)
 //   14..17   direction[4] (0 = output, 1 = input per port)
-//   18..21   ip[4]        (static fallback IP of the node)
+//   18..21   ip[4]        (node IP / static fallback)
 //   22..25   mask[4]      (netmask)
-//   26       dhcp_enabled (1 = DHCP client, 0 = static only)
+//   26       dhcp_enabled (RJ45: DHCP client, USB NCM: DHCP server)
 //   27..44   short_name[18] (NUL-terminated, ArtPollReply ShortName)
 //   45..108  long_name[64]  (NUL-terminated, ArtPollReply LongName)
 #define CFG_MAGIC        0xAA

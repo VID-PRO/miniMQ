@@ -10,8 +10,9 @@ struct NodeRuntime {
   IPAddress ip;          // current IP (DHCP lease or static fallback)
   IPAddress mask;
   IPAddress gateway;
-  bool linkUp;           // W5100S reports a physical link
-  bool dhcpActive;       // an address was obtained over DHCP
+  bool linkUp;           // network stack reports the link as up
+  bool usbNcm;           // true = USB CDC-NCM, false = W5100S/RJ45
+  bool dhcpActive;       // RJ45: DHCP lease; USB NCM: DHCP server enabled
   bool netReady;         // Ethernet + UDP + web server are running
   uint32_t artFps;       // Art-Net packets in the last second
   uint32_t lastArtMs[board::NUM_PORTS];  // last ArtDmx for an output port

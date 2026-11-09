@@ -14,7 +14,8 @@
 //
 //  The web UI remains the primary configuration interface; the local
 //  menu can edit each port's direction and Art-Net address, toggle the
-//  DHCP client, save/reboot and restore factory defaults.
+//  DHCP mode (client on the RJ45 build, host server on the USB-NCM
+//  build), save/reboot and restore factory defaults.
 // ==================================================================
 
 class NodeUi {

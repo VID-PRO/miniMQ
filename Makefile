@@ -43,27 +43,27 @@ build: $(addprefix build-,$(PROJECTS))
 ## upload: flash all project firmwares
 upload: $(addprefix upload-,$(PROJECTS))
 
-## clean: remove build artifacts of all four projects
+## clean: remove build artifacts of all projects
 clean: $(addprefix clean-,$(PROJECTS))
 
-## monitor: open the serial monitor for all four projects
+## monitor: open the serial monitor for all projects
 monitor: $(addprefix monitor-,$(PROJECTS))
 
 build-%:
-	@echo ">> Building $(PROJECT_DIR_$*) ..."
-	$(PIO) run -d $(PROJECT_DIR_$*)
+	@echo ">> Building $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) ..."
+	$(PIO) run -d $(PROJECT_DIR_$*) $(PROJECT_ENV_$*)
 
 upload-%:
-	@echo ">> Uploading $(PROJECT_DIR_$*) ..."
-	$(PIO) run -d $(PROJECT_DIR_$*) -t upload
+	@echo ">> Uploading $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) ..."
+	$(PIO) run -d $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) -t upload
 
 monitor-%:
-	@echo ">> Monitoring $(PROJECT_DIR_$*) ..."
-	$(PIO) device monitor -d $(PROJECT_DIR_$*)
+	@echo ">> Monitoring $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) ..."
+	$(PIO) device monitor -d $(PROJECT_DIR_$*) $(PROJECT_ENV_$*)
 
 clean-%:
-	@echo ">> Cleaning $(PROJECT_DIR_$*) ..."
-	$(PIO) run -d $(PROJECT_DIR_$*) -t clean
+	@echo ">> Cleaning $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) ..."
+	$(PIO) run -d $(PROJECT_DIR_$*) $(PROJECT_ENV_$*) -t clean
 
 help:
 	@echo "miniMQ global PlatformIO targets:"

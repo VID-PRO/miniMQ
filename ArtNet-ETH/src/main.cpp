@@ -4,10 +4,21 @@
 #include <cstdio>
 #include <cstring>
 
-// Real Ethernet on the W5100S-EVB-Pico.  The on-board W5100S is driven
-// through SPI0 by the lwIP W5100 driver (not the blocking
-// ArduinoWiznet5100lwIP wrapper, so DHCP can time out into a fallback).
+// Board pin map and transport detection timeout.
+#include "board.h"
+
+// Both network transports are compiled into the same firmware:
+//  - on-board W5100S over SPI0 (lwIP W5100 driver, DHCP client with a
+//    static fallback), and
+//  - CDC-NCM "Ethernet over USB" via the vendored lwIP_USB_NCM library.
+// setup() waits briefly for a USB data host to enumerate the composite
+// device.  If one is present the NCM link is used; a power-only USB
+// connection (charger) never mounts and the W5100S/RJ45 port is used.
+#include <NCMEthernetlwIP.h>
 #include <W5100lwIP.h>
+#include <dhcpserver/dhcpserver.h>
+#include <tusb.h>
+#include <USB.h>
 // lwIP UDP sockets (Art-Net) and HTTP server on top of the same netif.
 #include <WiFiUdp.h>
 #include <WebServer.h>
@@ -19,8 +30,7 @@
 #include "artnet_config.h"
 // Embedded single-page web UI (channels + settings).
 #include "index_html.h"
-// Board pin map, shared runtime state, OLED/keys UI.
-#include "board.h"
+// Shared runtime state, OLED/keys UI.
 #include "node.h"
 #include "ui.h"
 
@@ -37,10 +47,20 @@ static RdmPort rdm_port[board::NUM_PORTS];
 static ArtnetRdm *artnet_rdm = nullptr;
 
 // ------------------------------------------------------------------
-// Ethernet.  GP17 = CS, GP21 = W5100S interrupt (hard-wired on the
-// board).  SPI0 is the default Arduino SPI bus.
+// Network interfaces.  Only the selected one is brought up; the other
+// object stays uninitialised.  Both raw-device constructors are
+// effectively no-ops, so they can coexist in one firmware.
+//   W5100S: on-board RJ45, GP17 = CS, GP21 = interrupt, SPI0.
+//   NCM:    CDC-NCM Ethernet over the native USB port.  The node keeps
+//           its configured static address and can serve DHCP to the
+//           host (config.dhcp_enabled).
 // ------------------------------------------------------------------
-static Wiznet5100lwIP Ethernet(board::ETH_CS, SPI, board::ETH_IRQ);
+static Wiznet5100lwIP EthW5100(board::ETH_CS, SPI, board::ETH_IRQ);
+static NCMEthernetlwIP NcmEth;
+static dhcp_server_t dhcp_server;
+
+// Runtime transport chosen once at boot (see detectTransport()).
+static bool usb_ncm = false;
 
 static WiFiUDP artnet_udp;
 static WebServer http(80);
@@ -96,12 +116,27 @@ static void resetInputState(uint8_t p) {
   in_idx[p] = 0;
 }
 
+// Accessors for the transport that was selected at boot.  With NCM the
+// netif exists as soon as begin() has run; before that the configured
+// static address is used, exactly like the W5100S fallback path.
+static IPAddress activeLocalIP() {
+  return usb_ncm ? NcmEth.localIP() : EthW5100.localIP();
+}
+
+static IPAddress activeSubnetMask() {
+  return usb_ncm ? NcmEth.subnetMask() : EthW5100.subnetMask();
+}
+
+static IPAddress activeGatewayIP() {
+  return usb_ncm ? NcmEth.gatewayIP() : EthW5100.gatewayIP();
+}
+
 // Directed broadcast of the currently active interface (DHCP lease or
 // static fallback).  Broadcasts must follow the real netmask, not the
 // stored fallback.
 static IPAddress currentBroadcast() {
-  IPAddress ip = Ethernet.localIP();
-  IPAddress mask = Ethernet.subnetMask();
+  IPAddress ip = activeLocalIP();
+  IPAddress mask = activeSubnetMask();
   if (ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0) {
     ip = config.ipAddr();
     mask = config.maskAddr();
@@ -116,7 +151,7 @@ static IPAddress currentBroadcast() {
 }
 
 static IPAddress currentIP() {
-  IPAddress ip = Ethernet.localIP();
+  IPAddress ip = activeLocalIP();
   if (ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0) {
     ip = config.ipAddr();
   }
@@ -124,7 +159,7 @@ static IPAddress currentIP() {
 }
 
 static IPAddress currentMask() {
-  IPAddress mask = Ethernet.subnetMask();
+  IPAddress mask = activeSubnetMask();
   if (mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0) {
     mask = config.maskAddr();
   }
@@ -132,8 +167,15 @@ static IPAddress currentMask() {
 }
 
 // Stable, locally administered MAC derived from the RP2040 unique ID.
-// Multiple nodes therefore never share a MAC address.
+// Multiple W5100S nodes therefore never share a MAC address.
+//
+// The USB NCM link instead uses the fixed address that the vendored
+// library put into the USB descriptor at boot; see board::NCM_MAC.
 static void buildMac(uint8_t mac[6]) {
+  if (usb_ncm) {
+    memcpy(mac, board::NCM_MAC, 6);
+    return;
+  }
   const char *id = rp2040.getChipID();
   uint32_t h = 2166136261u;
   for (const char *p = id; p && *p; p++) {
@@ -189,12 +231,12 @@ static void buildPollReply(uint8_t *p) {
   p[25] = (ARTNET_ESTA >> 8) & 0xFF;
 
   const char *shortName = config.short_name;
-  if (shortName[0] == '\0') shortName = "ArtNet-ETH";
+  if (shortName[0] == '\0') shortName = "VID-PRO ArtNet";
   strncpy((char *)&p[26], shortName, 17);
   p[26 + 17] = 0x00;
 
   const char *longName = config.long_name;
-  if (longName[0] == '\0') longName = "ArtNet-ETH 4xDMX node";
+  if (longName[0] == '\0') longName = "VID-PRO 4x ArtNet Node";
   strncpy((char *)&p[44], longName, 63);
   p[44 + 63] = 0x00;
 
@@ -523,6 +565,7 @@ static void webStatus() {
   String j = "{\"ip\":\"" + ipString(currentIP()) + "\",";
   j.reserve(values_changed ? 4096 : 512);
   j += "\"mask\":\"" + ipString(currentMask()) + "\",";
+  j += "\"usb_ncm\":" + String(usb_ncm ? "true" : "false") + ",";
   j += "\"static_ip\":\"" + ipString(config.ipAddr()) + "\",";
   j += "\"static_mask\":\"" + ipString(config.maskAddr()) + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",";
@@ -575,6 +618,7 @@ static void webStatus() {
 static void webGetConfig() {
   String j = "{\"ip\":\"" + ipString(config.ipAddr()) + "\",";
   j.reserve(512);
+  j += "\"usb_ncm\":" + String(usb_ncm ? "true" : "false") + ",";
   j += "\"mask\":\"" + ipString(config.maskAddr()) + "\",";
   j += "\"dhcp\":" + String(config.dhcp_enabled ? "true" : "false") + ",\"net\":[";
   for (int i = 0; i < NUM_UNIVERSES; i++) {
@@ -674,33 +718,113 @@ static void startWebServer() {
 }
 
 // ------------------------------------------------------------------
-// Network bring-up: DHCP client, static fallback after timeout.
+// Transport selection and network bring-up.
+//   USB NCM: the node always uses its configured static address; the
+//            USB host gets a DHCP lease when config.dhcp_enabled is set.
+//   W5100S:  DHCP client with static fallback after a timeout.
 // ------------------------------------------------------------------
+
+// A USB data host sets the device configuration (tud_mounted()).  A
+// charger only supplies VBUS and never mounts the device, so this
+// reliably distinguishes "USB network" from "USB power only".
+static void detectTransport() {
+  uint32_t t0 = millis();
+  while (!tud_mounted() && millis() - t0 < board::USB_DETECT_TIMEOUT_MS) {
+    delay(10);
+  }
+  usb_ncm = tud_mounted();
+  Serial.printf("Transport: %s\n",
+                usb_ncm ? "USB CDC-NCM" : "W5100S SPI Ethernet / RJ45");
+}
+
 static bool bringUpNetwork() {
   if (net_ready) return true;
 
+  if (usb_ncm) {
+    // eth.begin() can only run once per boot, so the stack and servers are
+    // started on the first call.  Later calls just wait for the host to
+    // enumerate the NCM interface (e.g. after a warm reboot/re-plug).
+    static bool ncm_started = false;
+    IPAddress node_ip = config.ipAddr();
+
+    if (!ncm_started) {
+      bool ok = false;
+      for (int attempt = 1; attempt <= 5 && !ok; attempt++) {
+        // Gateway = node address: there is no router on the USB link.
+        NcmEth.config(node_ip, node_ip, config.maskAddr());
+        // Fixed MAC must match the NCM descriptor registered at boot (see
+        // NCMEthernet.cpp and initVariant() below).
+        ok = NcmEth.begin(our_mac);
+        if (!ok) {
+          Serial.printf("NCM Ethernet init attempt %d failed; retrying\n",
+                        attempt);
+          delay(500);
+        }
+      }
+      if (!ok) {
+        Serial.println("NCM Ethernet init FAILED");
+        return false;
+      }
+      ncm_started = true;
+
+      NcmEth.macAddress(our_mac);
+
+      if (config.dhcp_enabled) {
+        struct netif *nif = NcmEth.getNetIf();
+        dhcp_server_init(&dhcp_server, &nif->ip_addr, &nif->netmask, nif);
+        Serial.printf("DHCP server for USB host: %u.%u.%u.1-.9\n",
+                      node_ip[0], node_ip[1], node_ip[2]);
+      } else {
+        Serial.println("DHCP server disabled (configure the USB host manually)");
+      }
+
+      artnet_udp.begin(board::ARTNET_UDP_PORT);
+      services_started = true;
+      startWebServer();
+    }
+
+    // Only report ready once the host has actually enumerated the NCM
+    // interface.  Without this wait the node would look "up" while the
+    // host still has no link to it.
+    uint32_t t0 = millis();
+    while (NcmEth.linkStatus() != LinkON && millis() - t0 < 3000) {
+      delay(10);
+    }
+    if (NcmEth.linkStatus() != LinkON) {
+      Serial.println("Waiting for host to enumerate NCM interface...");
+      return false;
+    }
+    // Give the host a moment to finish DHCP/ARP before declaring ready.
+    delay(200);
+
+    dhcp_lease_active = config.dhcp_enabled;  // DHCP service active
+    net_ready = true;
+    return true;
+  }
+
+  // --- W5100S / RJ45 ------------------------------------------------
   bool lease = false;
 
   if (config.dhcp_enabled) {
     // Explicitly select DHCP mode.  This also resets the netif after a
     // failed static attempt earlier in this boot.
-    Ethernet.config(IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0),
+    EthW5100.config(IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0),
                     IPAddress(0, 0, 0, 0));
     Serial.printf("Ethernet: DHCP request (timeout %lu s)...\n",
                   (unsigned long)(board::DHCP_TIMEOUT_MS / 1000));
-    if (Ethernet.begin(our_mac)) {
+    if (EthW5100.begin(our_mac)) {
       uint32_t t0 = millis();
-      while (!Ethernet.connected() &&
+      while (!EthW5100.connected() &&
              millis() - t0 < board::DHCP_TIMEOUT_MS) {
         delay(10);
       }
-      lease = Ethernet.connected();
+      lease = EthW5100.connected();
     } else {
       Serial.println("Ethernet: begin() failed (DHCP)");
     }
     if (!lease) {
       Serial.println("Ethernet: no DHCP lease, using static fallback");
-      Ethernet.end();   // release the netif so config()/begin() can restart
+      EthW5100.end();   // release the netif so config()/begin() can restart
       delay(20);
     }
   }
@@ -708,21 +832,21 @@ static bool bringUpNetwork() {
   if (!lease) {
     IPAddress ip = config.ipAddr();
     IPAddress mask = config.maskAddr();
-    if (!Ethernet.config(ip, IPAddress(0, 0, 0, 0), mask,
+    if (!EthW5100.config(ip, IPAddress(0, 0, 0, 0), mask,
                          IPAddress(0, 0, 0, 0))) {
       Serial.println("Ethernet: static config rejected");
-      Ethernet.end();
+      EthW5100.end();
       return false;
     }
-    if (!Ethernet.begin(our_mac)) {
+    if (!EthW5100.begin(our_mac)) {
       Serial.println("Ethernet: begin() failed (static)");
-      Ethernet.end();
+      EthW5100.end();
       return false;
     }
   }
 
   dhcp_lease_active = lease;
-  Ethernet.macAddress(our_mac);
+  EthW5100.macAddress(our_mac);
 
   Serial.printf("Ethernet up: %s / %s (%s)\n",
                 ipString(currentIP()).c_str(),
@@ -764,9 +888,10 @@ bool nodeInputActive(uint8_t port) {
 
 static void updateRuntime() {
   uint32_t now = millis();
+  node.usbNcm = usb_ncm;
   node.ip = currentIP();
   node.mask = currentMask();
-  node.gateway = Ethernet.gatewayIP();
+  node.gateway = activeGatewayIP();
   node.linkUp = net_ready;
   node.netReady = net_ready;
   node.dhcpActive = dhcp_lease_active;
@@ -792,6 +917,20 @@ static void blinkLed(int times, int on_ms, int off_ms) {
 // ------------------------------------------------------------------
 static NodeUi ui;
 
+// The core calls this between C++ global construction and USB.begin().
+// The NCM interface must be registered unconditionally: the very first
+// enumeration must already contain CDC + NCM so that a USB data host is
+// detected here and creates the Ethernet interface immediately.  With
+// USB power only nothing mounts, and the W5100S/RJ45 port is used.
+void initVariant() {
+  // Names shown by the host (Device Manager / network adapter properties).
+  // Must happen before USB.begin(), which builds the device descriptor.
+  USB.setManufacturer("VID-PRO");
+  USB.setProduct("VID-PRO ArtNet Node");
+
+  NcmEth.usbRegisterInterfaces();
+}
+
 void setup() {
   pinMode(board::STATUS_LED, OUTPUT);
   digitalWrite(board::STATUS_LED, LOW);
@@ -803,6 +942,7 @@ void setup() {
 
   config.begin();
 
+  detectTransport();
   buildMac(our_mac);
 
   // OLED on I2C1 (GP26/GP27).  Wire1 is I2C1 on the Arduino-Pico core.

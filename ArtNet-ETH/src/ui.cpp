@@ -135,7 +135,7 @@ void NodeUi::menuSelect() {
     return;
   }
   switch (_menu) {
-    case 4:  // DHCP client on/off
+    case 4:  // DHCP client (RJ45) / DHCP server (USB NCM) on/off
       config.dhcp_enabled = !config.dhcp_enabled;
       config.save();
       break;
@@ -207,11 +207,15 @@ void NodeUi::drawStatus() {
     } else {
       snprintf(ip, sizeof(ip), "---");
     }
-    _oled.text(0, 0, "ArtNet-ETH");
+    _oled.text(0, 0, node.usbNcm ? "ArtNet-ETH USB" : "ArtNet-ETH");
     _oled.text(0, 12, "IP");
     _oled.text(18, 12, ip);
     if (node.netReady) {
-      _oled.text(0, 24, node.dhcpActive ? "DHCP  link up" : "STATIC link up");
+      if (node.usbNcm) {
+        _oled.text(0, 24, node.dhcpActive ? "USB DHCPsrv up" : "USB link up");
+      } else {
+        _oled.text(0, 24, node.dhcpActive ? "DHCP  link up" : "STATIC link up");
+      }
     } else {
       _oled.text(0, 24, node.linkUp ? "link up  init..." : "link down");
     }
@@ -237,8 +241,12 @@ void NodeUi::drawStatus() {
     _oled.textf(0, 12, "Up %02lu:%02lu:%02lu", (unsigned long)h,
                 (unsigned long)m, (unsigned long)s);
     _oled.textf(0, 24, "Art-Net %lu fps", (unsigned long)node.artFps);
-    _oled.text(0, 36, "RDM: ArtRdm");
-    _oled.textf(0, 48, "%s", node.dhcpActive ? "DHCP lease" : "statisch");
+    _oled.textf(0, 36, "RDM: ArtRdm");
+    if (node.usbNcm) {
+      _oled.textf(0, 48, "DHCP-Server %s", config.dhcp_enabled ? "AN" : "AUS");
+    } else {
+      _oled.textf(0, 48, "%s", node.dhcpActive ? "DHCP lease" : "statisch");
+    }
     _oled.text(0, 56, "UP/DOWN = Seite");
   }
 }
@@ -253,7 +261,13 @@ void NodeUi::drawMenu() {
     if (item >= MENU_ITEMS) break;
     char line[24];
     if (item == 4) {
-      snprintf(line, sizeof(line), "DHCP: %s", config.dhcp_enabled ? "AN" : "AUS");
+      if (node.usbNcm) {
+        snprintf(line, sizeof(line), "DHCP-Srv: %s",
+                 config.dhcp_enabled ? "AN" : "AUS");
+      } else {
+        snprintf(line, sizeof(line), "DHCP: %s",
+                 config.dhcp_enabled ? "AN" : "AUS");
+      }
     } else if (item == 5) {
       snprintf(line, sizeof(line), "Speichern+Neustart");
     } else if (item == 6) {

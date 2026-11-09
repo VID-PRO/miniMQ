@@ -68,10 +68,10 @@ body{padding-bottom:42px}
 </head>
 <body>
 <header>
-  <div class="title">ARTNET-ETH</div>
+  <div class="title">VID-PRO 4x ArtNet Node</div>
   <div class="pill">IP <b id="t-ip">-</b></div>
   <div class="pill">Mask <b id="t-mask">-</b></div>
-  <div class="pill"><span id="s-dhcp" class="dot warn"></span>DHCP <b id="t-dhcp">-</b></div>
+  <div class="pill"><span id="s-dhcp" class="dot warn"></span><span id="l-dhcp">DHCP</span> <b id="t-dhcp">-</b></div>
   <div class="pill"><span id="s-art" class="dot bad"></span>Art-Net <b id="t-fps">0</b> fps</div>
   <div class="pill" id="t-namepi" style="display:none">ID <b id="t-name">-</b></div>
   <div class="pill">Up <b id="t-up">-</b></div>
@@ -102,23 +102,23 @@ body{padding-bottom:42px}
     <form id="cfg-form">
       <fieldset><legend>Network</legend>
         <div class="row">
-          <div><label>Static fallback IP</label><input type="text" name="ip" spellcheck="false"></div>
+          <div><label id="lbl-ip">Static fallback IP</label><input type="text" name="ip" spellcheck="false"></div>
           <div><label>Netmask</label><input type="text" name="mask" spellcheck="false"></div>
-          <div><label style="display:flex;align-items:center;gap:8px">DHCP client<span class="switch"><input type="checkbox" name="dhcp"><span class="slider"></span></span></label>
-              <span class="hint">Request an address from the network automatically</span></div>
+          <div><label style="display:flex;align-items:center;gap:8px"><span id="lbl-dhcp">DHCP client</span><span class="switch"><input type="checkbox" name="dhcp"><span class="slider"></span></span></label>
+              <span class="hint" id="hint-dhcp">Request an address from the network automatically</span></div>
         </div>
-        <p class="hint">At boot the node requests a lease via DHCP. If no lease arrives within 8&nbsp;s, it falls back to the static address and netmask above. The fallback is also used when the DHCP client is switched off.</p>
+        <p class="hint" id="hint-net">At boot the node requests a lease via DHCP. If no lease arrives within 8&nbsp;s, it falls back to the static address and netmask above. The fallback is also used when the DHCP client is switched off.</p>
       </fieldset>
       <fieldset><legend>Node identity</legend>
         <div class="row">
-          <div><label>Short name</label><input type="text" name="name" maxlength="17" spellcheck="false" placeholder="ArtNet-ETH"></div>
-          <div><label>Long name</label><input type="text" name="longname" maxlength="63" spellcheck="false" placeholder="ArtNet-ETH 4xDMX node"></div>
+          <div><label>Short name</label><input type="text" name="name" maxlength="17" spellcheck="false" placeholder="VID-PRO ArtNet"></div>
+          <div><label>Long name</label><input type="text" name="longname" maxlength="63" spellcheck="false" placeholder="VID-PRO 4x ArtNet Node"></div>
         </div>
-        <p class="hint">Advertised in ArtPollReply; MagicQ lists this name in its DMX output node list. Visible next to the Art-Net tablet in the header.</p>
+        <p class="hint">Advertised in ArtPollReply.</p>
       </fieldset>
       <fieldset><legend>Art-Net ports</legend>
         <div class="row" id="univ-rows"></div>
-        <p class="hint">Each port is either an <b>output</b> (ArtDmx &rarr; DMX out) or an <b>input</b> (DMX in &rarr; ArtDmx), on its own Art-Net address: <b>net</b> 0-127, <b>subnet</b> 0-15, <b>universe</b> 0-15. MagicQ discovers the mapping via ArtPollReply.</p>
+        <p class="hint">Each port is either an <b>output</b> (ArtDmx &rarr; DMX out) or an <b>input</b> (DMX in &rarr; ArtDmx), on its own Art-Net address: <b>net</b> 0-127, <b>subnet</b> 0-15, <b>universe</b> 0-15. The mapping is discovered via ArtPollReply.</p>
       </fieldset>
       <div class="btns">
         <button class="btn" type="button" onclick="save()">Save &amp; reboot</button>
@@ -128,7 +128,7 @@ body{padding-bottom:42px}
     </form>
   </section>
 </main>
-<footer>ArtNet-ETH node &middot; <a href="https://www.chamsys.com" target="_blank" rel="noopener">MagicQ compatible</a></footer>
+<footer>VID-PRO 4x ArtNet Node</footer>
 <div id="toast"></div>
 
 <script>
@@ -187,13 +187,38 @@ function fmtUp(ms){
   return (h?h+':':'')+(h?(''+m).padStart(2,'0'):m)+':'+(''+s).padStart(2,'0');
 }
 
+function setNetLabels(usb){
+  var li=document.getElementById('lbl-ip');
+  var ld=document.getElementById('lbl-dhcp');
+  var hd=document.getElementById('hint-dhcp');
+  var h=document.getElementById('hint-net');
+  if(!li||!ld||!hd||!h) return;
+  if(usb){
+    li.textContent='Node IP (USB link)';
+    ld.textContent='DHCP server for host';
+    hd.textContent='Give the USB host an address automatically';
+    h.innerHTML='The node always uses this static address on the USB link. When the DHCP server is enabled, the host receives an address from the same subnet (.1-.9). Disable it to configure the host manually.';
+  } else {
+    li.textContent='Static fallback IP';
+    ld.textContent='DHCP client';
+    hd.textContent='Request an address from the network automatically';
+    h.innerHTML='At boot the node requests a lease via DHCP. If no lease arrives within 8&nbsp;s, it falls back to the static address and netmask above. The fallback is also used when the DHCP client is switched off.';
+  }
+}
+
 function update(d){
   var name=d.longname||d.name||'';
+  var usb=!!d.usb_ncm;
   document.getElementById('t-ip').textContent=d.ip;
   document.getElementById('t-mask').textContent=d.mask;
-  var dhcpText=d.dhcp ? (d.dhcp_active?'lease':'fallback') : 'off';
+  setNetLabels(usb);
+  document.getElementById('l-dhcp').textContent=usb?'DHCP srv':'DHCP';
+  var dhcpText=usb ? (d.dhcp?'server':'off')
+                   : (d.dhcp ? (d.dhcp_active?'lease':'fallback') : 'off');
   document.getElementById('t-dhcp').textContent=dhcpText;
-  document.getElementById('s-dhcp').className='dot '+(d.dhcp_active?'ok':(d.dhcp?'warn':'bad'));
+  document.getElementById('s-dhcp').className='dot '+
+    (usb ? (d.dhcp?'ok':'bad')
+         : (d.dhcp_active?'ok':(d.dhcp?'warn':'bad')));
   document.getElementById('s-art').className='dot '+(d.artnet.connected?'ok':'bad');
   document.getElementById('t-fps').textContent=d.artnet.fps;
   document.getElementById('t-up').textContent=fmtUp(d.uptime_ms);
@@ -255,6 +280,7 @@ function setPort(){ port=+document.getElementById('port').value; poll(); }
 setInterval(poll, 300); poll(); build(); render();
 
 function fill(cfg){
+  setNetLabels(!!cfg.usb_ncm);
   document.getElementById('cfg-form').elements['ip'].value=cfg.ip;
   document.getElementById('cfg-form').elements['mask'].value=cfg.mask;
   document.getElementById('cfg-form').elements['dhcp'].checked=cfg.dhcp;
@@ -308,7 +334,7 @@ function factory(){ if(confirm('Reset all settings to defaults and reboot?')) re
 
 fetch('api/config').then(r=>r.json()).then(fill).catch(function(){
   // still populate the universe fields with a sensible default
-  fill({ip:'2.0.0.10',mask:'255.0.0.0',dhcp:true,net:[0,0,0,0],subnet:[0,0,0,0],universe:[0,1,2,3],direction:[0,0,0,0],name:'ArtNet-ETH',longname:'ArtNet-ETH 4xDMX node'});
+  fill({ip:'2.0.0.10',mask:'255.0.0.0',dhcp:true,net:[0,0,0,0],subnet:[0,0,0,0],universe:[0,1,2,3],direction:[0,0,0,0],name:'VID-PRO ArtNet',longname:'VID-PRO 4x ArtNet Node'});
 });
 </script>
 </body>
